@@ -1,0 +1,19 @@
+.tile {
+    width: 40px;
+    height: 40px;
+    box-sizing: border-box;
+    position: relative;
+    display: inline-block;
+}
+
+.tile.empty {
+    background-color: #ddd;
+}
+
+.tile.solid {
+    background-color: #555;
+}
+
+.tile.breakable {
+    background-color: #b5651d;
+}
