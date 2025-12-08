@@ -1,489 +1,375 @@
-# Developer 1 — Step-by-Step Implementation Plan (Frontend / Game Engine)
+# 🟦 **SPRINT 1 — Core UI Framework + Static Game Board (3–4 days)**
 
-## 1. Project setup & scaffolding
+## 🎯 **Goals**
 
---Goal: Create a clean repo structure and minimal playable shell so later pieces slot in easily.
-### Tasks
---Initialize project (git, npm, project structure).
---Create basic HTML lobby page + game page (no canvas — purely DOM).
---Add a simple CSS reset and layout container for the game grid and HUD.
---Create a small dev server command (e.g., npm run dev) for static files.
---Add linting (ESLint) and a basic build step if desired.
-### Estimated time
-2–4 hours
-### Technical aspects / learning
-HTML semantics, ES modules
-Basic npm scripts
-Simple dev server (e.g., lite-server, serve, or http-server)
+* Build the static DOM structure of the game.
+* Create reusable UI components (menus, overlays).
+* Start a modular file organization.
+* Set up the render loop structure (empty for now).
 
-### Testing criteria
-index.html loads in browser and shows lobby and game screens.
-Dev server runs and auto-reloads on file change (if using a watcher).
+---
 
-2. DOM map/grid system (Bomberman-style map)
+## 🧩 **Tasks**
 
-Goal: Implement the game board as a DOM grid of pre-created tile elements. No per-frame DOM creation/destruction.
+### 1. Create base HTML structure
 
-Tasks
+* Add root containers:
 
-Design tile types: floor, unbreakable wall, breakable block.
+  * `menu-screen`
+  * `game-screen`
+  * `pause-overlay`
+  * `scoreboard`
+  * `timer`
+* Include CSS reset + grid styles.
 
-Pre-create DOM elements for the entire map at level load.
+### 2. Build DOM-based tile grid
 
-Use CSS grid or absolutely positioned tiles (absolute + transforms recommended).
+* Use a single 2D array to generate tiles.
+* Produce consistent tile IDs (`cell-0-0`, etc.).
+* Use classes for wall, soft block, empty tile.
 
-Add data attributes (data-x, data-y, data-type) for logic.
+### 3. Create modular render system
 
-Estimated time
+* `grid.js` → renders the grid once.
+* `renderer.js` → orchestrates the render calls.
+* `main.js` → starts the render loop.
 
-1–2 days
+### 4. Create menu UI
 
-Technical aspects / learning
+* Join game menu
+* Name input
+* Game mode selection
+* Difficulty selection for Single Player (but no logic yet)
+* Start game button
 
-CSS Grid vs absolute positioning performance trade-offs.
+### 5. Add simple CSS styling
 
-Prefer transforming elements instead of changing layout-affecting properties.
+* Flexbox-based layout
+* Basic tile visuals (placeholder colors)
+* Responsive design for different screens
 
-Use will-change: transform on moving items to hint the compositor.
+---
 
-Testing criteria
+## ✔️ **Acceptance / Testing Criteria**
 
-Map renders correctly with all tile types.
+* Game loads showing main menu.
+* Pressing “Start Game” hides menu and shows grid.
+* Grid is generated correctly every time with consistent tile coordinates.
+* No scrollbars (unless intended).
+* Grid fits within screen on desktop + mobile.
+* All UI elements show/hide correctly via JS.
+* render loop is running (even if empty).
 
-No runtime DOM creations when moving players; tiles are reused.
+---
 
-Inspect the Elements panel: number of nodes is stable during play.
+## ⏱ **Est. Time: 3–4 days**
 
-3. Player character rendering & movement system (60 FPS)
+---
 
-Goal: Smooth, responsive, keyboard-controlled character movement using requestAnimationFrame + transforms.
+## 📘 **Required Knowledge**
 
-Tasks
+* DOM creation & manipulation
+* CSS grid / Flexbox
+* ES Modules structuring
+* requestAnimationFrame basics
 
-Represent players as absolutely positioned DOM elements (one element per player).
+---
 
-Implement a key state map using keydown/keyup (no long-press glitches).
+## 📚 **Learning Resources**
 
-Implement movement logic with a fixed logic timestep (e.g., 60 Hz) and render with rAF:
+* MDN: document.createElement
+  [https://developer.mozilla.org/en-US/docs/Web/API/Document/createElement](https://developer.mozilla.org/en-US/docs/Web/API/Document/createElement)
+* MDN: Grid layout
+  [https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout)
+* Render loop basics:
+  [https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame)
 
-Separate update (game logic) and render (apply transforms to DOM).
+---
 
-Use transform: translate3d(x, y, 0) for moving player elements.
+# 🟦 **SPRINT 2 — Player Rendering + Animation System (4–5 days)**
 
-Implement collision with walls/blocks and tile-grid snapping (Bomberman step movement).
+## 🎯 **Goals**
 
-Provide smooth interpolation when necessary.
+* Create a system to render players and animate movement.
+* Build interpolation-friendly animation logic.
+* Add keyboard input → local rendering (no server yet).
+* Create player DOM elements dynamically.
 
-Estimated time
+---
 
-2–3 days
+## 🧩 **Tasks**
 
-Technical aspects / learning
+### 1. Player DOM renderer
 
-requestAnimationFrame, fixed timestep / accumulator pattern (game loop).
+* Render player at tile position (px-based).
+* Smooth player movement with CSS transforms.
+* Add color-coded player skins.
 
-Key handling pattern:
+### 2. Input handling module
 
-const keyState = {};
-window.addEventListener('keydown', e => { keyState[e.code] = true; });
-window.addEventListener('keyup', e => { keyState[e.code] = false; });
+* Keydown / keyup listeners
+* Maintain input state object
+* Prevent long-press repeated events
+* Custom movement smoothing function
 
+### 3. Local animation loop
 
-Use transforms for movement; avoid top/left changes per frame.
+* Move player locally (temporary)
+* Interpolate and render at 60 FPS
+* Ensure no stutter or jitter
 
-Performance tips: batch DOM writes, avoid layout thrashing.
+### 4. Camera / viewport adjustment (optional)
 
-Testing criteria
+* Auto-center player on various screen sizes
 
-Movement is responsive with no input delay (latency < ~50ms perceived).
+---
 
-No long-press accumulation issues: hold and release actions behave predictably.
+## ✔️ **Acceptance / Testing Criteria**
 
-FPS is stable at ~60 on target machines (see §Performance testing).
+* Player moves smoothly from one tile to another.
+* Movement is consistent at 60 FPS.
+* No movement when keys aren't pressed.
+* No "sticky key" bug.
+* Player DOM element updates position smoothly (pixel-level).
+* Animation continues even if map is large.
 
-Players cannot pass through walls or blocks.
+---
 
-4. Bomb placement & explosion propagation
+## ⏱ **Est. Time: 4–5 days**
 
-Goal: Bomb placement by player, timed explosion, blast propagation along grid, tile destruction.
+---
 
-Tasks
+## 📘 **Required Knowledge**
 
-Add bomb DOM element(s) that sit on grid tiles.
+* CSS transforms (`translate`)
+* requestAnimationFrame timing
+* Linear interpolation (LERP)
+* Keyboard event handling
 
-On placement, schedule explosion after a delay (e.g., 2s).
+---
 
-On explosion: highlight blast tiles, destroy breakable blocks, damage players.
+## 📚 **Learning Resources**
 
-Implement chain reactions (bomb triggers bombs in its radius).
+* LERP basics: [https://gamedevbeginner.com/the-ultimate-guide-to-lerp-linear-interpolation/](https://gamedevbeginner.com/the-ultimate-guide-to-lerp-linear-interpolation/)
+* Smooth animation with transforms:
+  [https://developer.mozilla.org/en-US/docs/Web/CSS/transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform)
 
-Provide visual and audio cues for countdown and explosion.
+---
 
-Estimated time
+# 🟦 **SPRINT 3 — Bombs, Explosions, and Visual Effects (4–5 days)**
 
-3–4 days
+## 🎯 **Goals**
 
-Technical aspects / learning
+* Render bombs and explosions.
+* Sync styling to match game mechanics.
+* DOM-based animation of cross-shaped explosions.
 
-Use game state to mark bombs and explosion tiles instead of frequent DOM operations.
+---
 
-Perform explosion algorithm purely on grid coordinates, then update the DOM in one batch.
+## 🧩 **Tasks**
 
-Keep explosion animation done with CSS animations or transitions, but state changes (tile destruction) should be handled via JS in one repaint.
+### 1. Bomb creation and rendering (client side)
 
-Testing criteria
+* Temporary local bombs until server integration.
+* Bomb sprite or simple DOM element.
+* Bomb fuse animation (CSS-based).
 
-Bombs explode after the correct delay.
+### 2. Explosion rendering system
 
-Explosion radius propagates correctly and stops at unbreakable walls.
+* Render explosion tiles in cross shape.
+* Add fade-out animation.
+* Explosion should last ~500ms for visual effect.
 
-Chain reactions occur reliably.
+### 3. Layering system
 
-No frame drops when multiple bombs explode (use batched DOM updates).
+* Ensure correct z-index ordering:
 
-5. Breakable/unbreakable blocks & power-up spawning
+  * Tiles
+  * Soft blocks
+  * Bombs
+  * Explosions
+  * Players
 
-Goal: Implement destructible blocks that sometimes spawn power-ups when destroyed.
+### 4. Optimize DOM updates
 
-Tasks
+* Minimize layout thrashing.
+* Pre-append explosion tiles + reuse.
 
-Implement logic to remove breakable block DOM and replace with floor.
+---
 
-Implement a power-up spawn chance on block destruction.
+## ✔️ **Acceptance / Testing Criteria**
 
-Add at least 2 power-ups (you specified two — e.g., Speed Up and Extra Bomb/Blast Up).
+* Bombs appear exactly where player drops them.
+* Explosion correctly fills cross shape (range adjustable).
+* Explosion animation fades cleanly.
+* Explosion DOM removed after animation.
+* Rendering has no visible lag or frame drops.
 
-Represent power-ups as DOM elements; pickup removes power-up and applies effect.
+---
 
-Estimated time
+## ⏱ **Est. Time: 4–5 days**
 
-2–3 days
+---
 
-Technical aspects / learning
+## 📘 **Required Knowledge**
 
-Power-up effects must update player stats (speed, bomb count, blast radius).
+* DOM layering / stacking contexts
+* CSS transitions
+* Animation timing
+* Efficient DOM manipulation patterns
 
-Make power-up effects finite or permanent based on game design.
+---
 
-Ensure power-up DOM creation is limited and batched.
+## 📚 **Learning Resources**
 
-Testing criteria
+* Stacking contexts:
+  [https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_positioned_layout/Understanding_z-index](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_positioned_layout/Understanding_z-index)
+* CSS transitions:
+  [https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_transitions/Using_CSS_transitions](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_transitions/Using_CSS_transitions)
 
-Breakable blocks are destroyed by blasts and sometimes spawn power-ups.
+---
 
-Power-ups can be collected by any player and affect stats equally.
+# 🟦 **SPRINT 4 — Powerups + UI Polish + Responsiveness (3 days)**
 
-Power-ups appear/disappear correctly across clients (tie-in with networking).
+## 🎯 **Goals**
 
-6. HUD, timer, scoreboard, and lives/score system
+* Implement DOM representation of powerups.
+* Add UI elements (score, lives, timer).
+* Make the game visually polished and responsive.
 
-Goal: Real-time visible scoreboard, lives display, and a shared timer.
+---
 
-Tasks
+## 🧩 **Tasks**
 
-Design HUD area: player list, lives, score, timer, round time.
+### 1. Render powerup items
 
-Timer: either count-up or countdown (decide with team). Implement as authoritative value from server in multiplayer mode, local in single-player.
+* Speed Up
+* Bomb Range Up
+* Color-coded icons
 
-Score updates: bombs destroyed, eliminations, power-up pickups.
+### 2. Powerup collection animation
 
-Display end-of-game winner screen.
+* Small scale animation when picked up.
 
-Estimated time
+### 3. Add timer UI
 
-1 day
+* Matches server tick
+* Local animation for countdown
 
-Technical aspects / learning
+### 4. Scoreboard UI
 
-DOM updates for HUD should be done only when values change.
+* DOM-based list of players + scores
 
-Use accessible markup (ARIA) for HUD items for better inclusivity.
+### 5. Responsive CSS polish
 
-Testing criteria
+* Scale grid on smaller screens
+* Keep game playable on mobile
 
-HUD updates in real time with no visible lag.
+---
 
-Timer is synchronized to server in multiplayer; shows same value to all players.
+## ✔️ **Acceptance / Testing Criteria**
 
-Winner screen displays correct player name.
+* Powerups appear correctly and can be collected visually.
+* Timer updates smoothly (no stutters).
+* Scoreboard updates dynamically.
+* UI never overlaps the grid.
+* Game playable on desktop + tablet/mobile.
 
-7. Pause / Resume / Quit menu and global notifications
+---
 
-Goal: Implement in-game menu that can pause/resume/quit; show who performed action to all players.
+## ⏱ **Est. Time: 3 days**
 
-Tasks
+---
 
-Implement pause modal with Resume and Quit actions.
+# 🟦 **SPRINT 5 — Full WebSocket Integration (With Dev 2) (3–4 days)**
 
-Implement notification banner (e.g., “Alex paused the game”).
+> Note: This sprint overlaps with Dev 2’s work.
 
-Ensure pausing does not stop requestAnimationFrame (rAF continues but game update loop halts or uses a paused flag), so DevTools performance is stable.
+## 🎯 **Goals**
 
-Ensure pause/resume/quit events are emitted to server for multiplayer and displayed to all players.
+* Integrate server data into rendering.
+* Move from local temporary logic → fully server-authoritative mode.
 
-Estimated time
+---
 
-1 day
+## 🧩 **Tasks**
 
-Technical aspects / learning
+### 1. Create clientState.js to store server snapshots
 
-Pause pattern: keep rAF running but early-exit update step based on isPaused flag; render still runs to keep UI responsive.
+* Player position
+* Bombs
+* Explosions
+* Powerups
+* NPC positions
+* Timer
+* Game running flag
 
-Avoid canceling rAF on pause — that would cause inconsistent frame sets on resume.
+### 2. Load WebSocket snapshot into renderer
 
-Testing criteria
+* Apply interpolation for smooth movement.
+* Handle new players joining.
+* Handle NPCs appearing/disappearing.
 
-Pausing shows banner with player name to all players.
+### 3. Health & death animations (optional)
 
-Resuming shows banner with player name.
+* Blink effect
+* Fade away
 
-Quitting shows banner and returns players to lobby.
+---
 
-No dropped frames reported when pausing/resuming (rAF still active).
+## ✔️ **Acceptance / Testing Criteria**
 
-8. Sound effects & audio
+* All game content fully renders from server snapshots.
+* No jitter even when latency is 50–100ms.
+* Player sees other players move smoothly.
+* NPCs render correctly.
+* Bombs/explosions match server timing.
 
-Goal: Integrate sound effects for start/end, bomb tick/explosion, power-up pickup.
+---
 
-Tasks
+## ⏱ **Est. Time: 3–4 days**
 
-Select or create small SFX files (WAV/MP3/OGG).
+---
 
-Implement a simple audio manager (play/stop/volume).
+# 🟦 **SPRINT 6 — Final Polish & Optimizations (2–3 days)**
 
-Use Web Audio API or a tiny library (optional) — you can write a lightweight wrapper over Audio or AudioContext.
+## 🎯 **Goals**
 
-Hook sounds to events (bomb placed, explosion, powerup pickup, game start/end).
+* Improve performance.
+* Fix UI bugs.
+* Add audio system.
+* Add final polish for release.
 
-Respect browser autoplay policies (require user gesture before starting audio or show a “Click to enable sound” prompt).
+---
 
-Estimated time
+## 🧩 **Tasks**
 
-6–8 hours
+* Add sound effects (bomb drop, explosion, powerup pickup).
+* Optimize memory usage (remove unused DOM nodes).
+* Use CSS transitions instead of JS where possible.
+* Add final visual polish:
 
-Technical aspects / learning
+  * Better colors
+  * Drop shadows
+  * Animations on menu transitions
 
-Web Audio API basics; handling decode and play.
+---
 
-Mobile & autoplay constraints.
+## ✔️ **Acceptance / Testing Criteria**
 
-Testing criteria
+* Zero frame drops on desktop.
+* Minimum 40+ FPS on Android.
+* Audio transitions clean.
+* All UI states consistent.
 
-Sounds play at the right times.
+---
 
-Audio does not block the main thread.
+## ⏱ **Est. Time: 2–3 days**
 
-Volume controls (optional) work.
+---
 
-9. Performance optimization & 60 FPS guarantee
+# ⭐ Total Estimated Time for Dev 1
 
-Goal: Ensure the game runs smoothly at 60 FPS; eliminate jank.
+### **19–24 days**
 
-Tasks
-
-Use requestAnimationFrame for rendering. Use a fixed logic timestep for game updates.
-
-Avoid layout thrashing:
-
-Read from DOM once, write in batches.
-
-Avoid querying layout (offsetWidth, getBoundingClientRect) inside the main loop unless necessary.
-
-Use transform for moving elements.
-
-Reuse DOM nodes; avoid creating or removing DOM frequently.
-
-Use CSS animations for purely visual things (like bomb pulsing) where possible.
-
-Use the Performance API (performance.now()) to measure frame times.
-
-Create a small FPS monitor overlay for debugging (compute frames over last 1s).
-
-Test on target devices; profile in Chrome DevTools Performance panel.
-
-Estimated time
-
-2–3 days
-
-Technical aspects / learning
-
-requestAnimationFrame
-
-fixed timestep pattern (e.g., 60Hz logic step)
-
-batching DOM writes
-
-CSS will-change, transform: translate3d, opacity vs layout properties
-
-DevTools Performance profiling
-
-Testing criteria
-
-Average frame time < 16.67ms (60 FPS), spikes rare and short.
-
-FPS monitor stays pinned near 60 during normal gameplay and during explosions.
-
-CPU usage is reasonable (no runaway event handlers).
-
-No dropped frames when pausing/resuming.
-
-10. Integration hooks for networking & NPC
-
-Goal: Make frontend capable of syncing with Node server and NPC manager (Developer 2 & 3 work).
-
-Tasks
-
-Define a client-side network interface module (e.g., networkClient.send(msg) / networkClient.on('state', handler)).
-
-Expose game engine functions to accept authoritative state updates:
-
-applyRemotePlayerState(id, x, y, bombs, ... )
-
-applyExplosionEvent(...)
-
-Make sure the local update/render loop uses server updates for remote players but still renders them as DOM elements.
-
-Implement interpolation/extrapolation for remote players to hide latency.
-
-Estimated time
-
-1–2 days
-
-Technical aspects / learning
-
-WebSocket event-driven structure
-
-Interpolation strategies: linear interpolation between server updates
-
-Reconciliation for local player vs server authoritative state
-
-Testing criteria
-
-With simulated network latency, remote players' movement is smooth.
-
-Local player input feels immediate (client-side prediction if implemented).
-
-Game stays at 60 FPS while network messages are processed.
-
-11. Polish, accessibility, and final testing
-
-Goal: Final checks, accessibility, cross-browser issues, and bug fixes.
-
-Tasks
-
-Add keyboard remapping option (optional).
-
-Ensure color contrast and ARIA labels for HUD.
-
-Test in Chrome, Firefox, Edge.
-
-Run stress tests with 4 players and many bombs/powerups.
-
-Create test checklist and known issues log for the team.
-
-Estimated time
-
-2–3 days
-
-Testing criteria
-
-Cross-browser functional parity.
-
-Accessibility basics present.
-
-No crashes under stress test.
-
-Test report with performance metrics and bug list.
-
-Total estimated time (Developer 1)
-
-~3–4 weeks (approx. 120–160 hours), depending on depth of polish and device testing. If you must compress schedule, prioritize minimal viable mechanics (movement, bombs, explosions, HUD, multiplayer hooks) and defer polish.
-
-Testing / QA Checklist (summary)
-
- Game loads and lobby works.
-
- 2–4 player DOM elements render and are visible.
-
- Player movement is smooth and responsive (no input lag).
-
- Bombs place and explode correctly; chain reactions work.
-
- Breakable blocks are destroyed; power-ups spawn and apply effects.
-
- HUD updates live for score/lives; timer synchronized.
-
- Pause/Resume/Quit shows who performed the action to all players.
-
- rAF loop runs continuously; update loop can be paused without stopping rAF.
-
- FPS stays at ~60 on target hardware; frame durations mostly < 16.67ms.
-
- Keyboard controls have no long-press glitches.
-
- Sounds play correctly and do not block main thread.
-
- Game works with simulated latency; remote players are smooth.
-
- No use of <canvas> anywhere.
-
-Practical code & technique notes (quick tips)
-
-Movement rendering: set elem.style.transform = translate3d(${x}px, ${y}px, 0); instead of top/left.
-
-Game loop skeleton (fixed timestep + rAF):
-
-const STEP = 1000/60; // 16.666ms
-let last = performance.now();
-let acc = 0;
-
-function gameLoop(now) {
-  acc += now - last;
-  last = now;
-  while (acc >= STEP) {
-    update(STEP); // game logic
-    acc -= STEP;
-  }
-  render(acc / STEP); // interpolation if needed
-  requestAnimationFrame(gameLoop);
-}
-requestAnimationFrame(gameLoop);
-
-
-Key handling: keep a key-state map; use keydown/keyup only to set booleans (avoid repeated processing in keydown).
-
-Batch DOM updates: compute all new transform values in JS, then apply them in a single loop (writing only to style.transform).
-
-Minimize reflow: do reads (getBoundingClientRect etc.) before writes and avoid them inside loops.
-
-Learning resources (recommended)
-
-MDN
-
-requestAnimationFrame — https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
-
-Web Audio API — https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API
-
-Performance & performance.now() — https://developer.mozilla.org/en-US/docs/Web/API/Performance
-
-Game loop & fixed timestep articles
-
-“Fix Your Timestep” by Glenn Fiedler — https://gafferongames.com/post/fix_your_timestep/
-
-Performance & rendering
-
-“Jank-free animations” patterns and CSS will-change — articles on web.dev (search “avoid layout thrash” / “compositing and rendering”)
-
-Google Web Fundamentals: Rendering performance — https://developers.google.com/web/fundamentals/performance/rendering
-
-WebSocket basics
-
-MDN WebSockets — https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API
-
-Audio
-
-Howler.js docs (optional lightweight library) — https://howlerjs.com/
-
-Pathfinding / AI resources to coordinate with Developer 3
-
-A* basics: https://www.redblobgames.com/pathfinding/a-star/introduction.html
+(~4–5 weeks)
