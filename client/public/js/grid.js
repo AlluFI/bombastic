@@ -3,7 +3,7 @@ const GRID_ROWS = 13
 
 const gridElement = document.getElementById('grid')
 
-let map = []
+export let map = []
 
 function generateMap() {
     for (let r = 0; r < GRID_ROWS; r++) {
