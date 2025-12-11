@@ -9,6 +9,7 @@ const socket = io();
 intializeMenu()
 
 let player
+let lastPosition = { x: 1, y: 1 }
 
 // Socket event handlers
 socket.on('connect', () => {
