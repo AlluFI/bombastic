@@ -15,10 +15,6 @@ let lastPosition = { x: 1, y: 1 }
 socket.on('connect', () => {
     console.log('Connected with ID:', socket.id)
     
-    // Create local player with socket ID
-    const colors = ['blue', 'red', 'green', 'yellow', 'purple', 'orange']
-    const randomColor = colors[Math.floor(Math.random() * colors.length)]
-    
     // Tell server we joined
     socket.emit('player:join', {
         name: 'Player',
