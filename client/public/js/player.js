@@ -4,15 +4,22 @@ import { map } from "./grid.js"
 
 const gridElement = document.getElementById('grid')
 
+const startPos = [
+    { x: 1, y: 1, },
+    { x: 1, y: 13 },
+    { x: 11, y: 1 },
+    { x: 11, y: 13 },
+]
+
 //Player object constructor class
 class Player {
-    constructor(id, name, row, col, color = 'blue') {
+    constructor(id, name, x, y, color = 'blue') {
         this.id = id //add socket id later
         this.name = name
-        this.row = row
-        this.col = col
-        this.color = color //adding just a color for now
-        this.element = null //dom element reference
+        this.x = x
+        this.y = y
+        this.color = color 
+        this.element = null 
     }
 
     createDomElement() {
@@ -29,7 +36,7 @@ class Player {
         if(!this.element) return
 
         //get player current position on the dom by referancing to the tile position
-        const tile = document.getElementById(`tile-${this.row}-${this.col}`)
+        const tile = document.getElementById(`tile-${this.x}-${this.y}`)
         const tilePosition = tile.getBoundingClientRect()
 
         //Align the player to the tile
@@ -41,34 +48,72 @@ class Player {
 }
 
 let localPlayer
+export const remotePlayers = new Map()
 
-export function createLocalPlayer() {
+export function createLocalPlayer(id, name, x, y, color) {
     localPlayer = new Player(
-        'local',
-        'Player1',
-        1,
-        1,
-        'blue'
-    )
+       id || 'local',
+     name || 'Player1',
+        x || 1,
+        y || 1,
+    color || 'blue'
+    );
 
     localPlayer.createDomElement()
     gridElement.appendChild(localPlayer.element)
     return localPlayer
 }
 
-export function updatePlayerMovement(player) {
-    let newRow = player.row
-    let newCol = player.col
+export function createRemotePlayer(playerData) {
+    
+    const player = new Player(
+        playerData.id,
+        playerData.name,
+        playerData.x,
+        playerData.y,
+        playerData.color
+    )
 
-    if (keys.up) newRow--
-    if (keys.down) newRow++
-    if (keys.left) newCol--
-    if (keys.right) newCol++
+    player.createDomElement()
+    gridElement.appendChild(player.element)
+    remotePlayers.set(playerData.id, player)
+    return player
+}
+
+export function removeRemotePlayer(playerId) {
+    const player = remotePlayers.get(playerId)
+    if (player && player.element) {
+        player.element.remove()
+        remotePlayers.delete(playerId)
+    }
+}
+
+export function updateRemotePlayer(playerId, x, y) {
+    const player = remotePlayers.get(playerId)
+    if (player) {
+        player.x = x
+        player.y = y
+        player.updatePosition()
+    }
+}
+
+export function getLocalPlayer() {
+    return localPlayer
+}
+
+export function updatePlayerMovement(player) {
+    let newX = player.x
+    let newY = player.y
+
+    if (keys.up) newX--
+    if (keys.down) newX++
+    if (keys.left) newY--
+    if (keys.right) newY++
 
     //check if player can move 
-    if(map[newRow] && map[newRow][newCol] === 'empty') {
-        player.row = newRow
-        player.col = newCol
+    if(map[newX] && map[newX][newY] === 'empty') {
+        player.x = newX
+        player.y = newY
         player.updatePosition()
     }
 }
