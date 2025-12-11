@@ -35,8 +35,42 @@ export function showEndScreen() {
     endScreen.classList.remove('hidden')
 }
 
+function handleStartGame() {
+    console.log('start button clicked')
+
+    playerData.name = playerNameInput.value.trim()
+    playerData.mode = modeSelect.value
+    playerData.difficulty = difficultySelect.value
+
+    console.log('player data recorder', playerData)
+
+    //enable gamescreen
+    showGameScreen()
+}
+
+function handleModeChange() {
+    const selectedMode = modeSelect.value
+    difficultySection.classList.toggle('hidden', selectedMode !== 'single')
+    console.log('player mode changed to :' + selectedMode)
+}
+
+function handleDifficultyChange() {
+    playerData.difficulty = difficultySelect.value
+    console.log('difficulty changed to :' + difficultySelect.value)
+}
+
 export function intializeMenu() {
     console.log('menue intialized')
 
-    //To be implemented
+    //start button is disabled by default 
+    //input checks if the length of the input is 2 or more to enable start playing
+    playerNameInput.addEventListener('input', () => {
+    const name = playerNameInput.value.trim()
+    startButton.disabled = name.length < 2
+    })
+    modeSelect.addEventListener('change', handleModeChange)
+    difficultySelect.addEventListener('change', handleDifficultyChange)
+    startButton.addEventListener('click', handleStartGame)
+
+    console.log(playerData)
 }

@@ -3,10 +3,12 @@ import { updatePlayerMovement } from "./player.js";
 import { updatePlayerRender } from "./renderPlayer.js";
 import { intializeMenu } from "./ui/menu.js";
 import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
+import { isPaused, initializePauseMenu } from "./ui/pause.js";
 
 const socket = io();
 
 intializeMenu()
+initializePauseMenu()
 
 let player
 let lastPosition = { x: 1, y: 1 }
@@ -57,9 +59,11 @@ function gameLoop() {
         requestAnimationFrame(gameLoop)
         return
     }
-    
-    updatePlayerMovement(player)
-    updatePlayerRender(player)
+    if(!isPaused) {
+        updatePlayerMovement(player)
+        updatePlayerRender(player)
+    }
+
     
     // Send position to server if changed
     if (player.x !== lastPosition.x || player.y !== lastPosition.y) {
@@ -72,5 +76,4 @@ function gameLoop() {
     
     requestAnimationFrame(gameLoop)
 }
-
 gameLoop()
