@@ -1,3 +1,6 @@
+
+import { socket } from '../main.js'
+
 //ui screen sections
 const menuScreen = document.getElementById('menue-screen')
 const gameScreen = document.getElementById('game-screen')
@@ -16,6 +19,7 @@ export const playerData = {
     mode: 'multi', //multi player mode set to default
     difficulty: 'easy' //multi mode has only one level
 }
+
 
 export function showMenuScreen() {
     menuScreen.classList.remove('hidden')
@@ -42,10 +46,13 @@ function handleStartGame() {
     playerData.mode = modeSelect.value
     playerData.difficulty = difficultySelect.value
 
-    console.log('player data recorder', playerData)
+    console.log('player data recorder', playerData)    
 
     //enable gamescreen
-    showGameScreen()
+    
+        socket.emit('player:join', {
+        name: 'Player',
+    }) 
 }
 
 function handleModeChange() {
