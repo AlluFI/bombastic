@@ -1,4 +1,4 @@
-import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, getLocalPlayer, remotePlayers } from "./player.js";
+import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, remotePlayers } from "./player.js";
 import { updatePlayerMovement } from "./player.js";
 import { updatePlayerRender } from "./renderPlayer.js";
 import { intializeMenu } from "./ui/menu.js";
@@ -60,7 +60,7 @@ function gameLoop() {
         return
     }
     if (!isPaused) {
-        
+    
         updatePlayerMovement(player)
         updatePlayerRender(player)
         

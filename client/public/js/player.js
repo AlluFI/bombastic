@@ -4,13 +4,6 @@ import { map } from "./grid.js"
 
 const gridElement = document.getElementById('grid')
 
-const startPos = [
-    { x: 1, y: 1, },
-    { x: 1, y: 13 },
-    { x: 11, y: 1 },
-    { x: 11, y: 13 },
-]
-
 //Player object constructor class
 class Player {
     constructor(id, name, x, y, color = 'blue') {
