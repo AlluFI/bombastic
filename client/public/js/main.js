@@ -3,12 +3,19 @@ import { updatePlayerMovement } from "./player.js";
 import { updatePlayerRender } from "./renderPlayer.js";
 import { intializeMenu } from "./ui/menu.js";
 import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
-import { isPaused, initializePauseMenu } from "./ui/pause.js";
+import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
+import { showGameScreen } from "./ui/menu.js";
+
+
 
 const socket = io();
+export { socket };
 
 intializeMenu()
 initializePauseMenu()
+
+// // Pass socket to pause module so it can emit events
+// setSocket(socket)
 
 let player
 let lastPosition = { x: 1, y: 1 }
@@ -17,10 +24,7 @@ let lastPosition = { x: 1, y: 1 }
 socket.on('connect', () => {
     console.log('Connected with ID:', socket.id)
     
-    // Tell server we joined
-    socket.emit('player:join', {
-        name: 'Player',
-    })
+    
 })
 
 // Receive current game state (existing players)
@@ -30,11 +34,18 @@ socket.on('game:state', (state) => {
 
     player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
 
+    showGameScreen()
+    
     state.allPlayers.forEach(p => {
         if (p.id !== socket.id) {
             createRemotePlayer(p)
         }
     })
+})
+
+socket.on('error', (data) => {
+alert(data.message)
+
 })
 
 // New player joined
@@ -54,13 +65,17 @@ socket.on('player:left', (playerId) => {
     removeRemotePlayer(playerId)
 })
 
+// Game pause/resume broadcast from server
+socket.on('game:pause', (payload) => {
+    setPaused(payload.paused, payload)
+})
+
 function gameLoop() {
     if (!player) {
         requestAnimationFrame(gameLoop)
         return
     }
     if (!isPaused) {
-    
         updatePlayerMovement(player)
         updatePlayerRender(player)
         
@@ -68,7 +83,7 @@ function gameLoop() {
         remotePlayers.forEach(remotePlayer => {
             updatePlayerRender(remotePlayer)
         })
-    }
+    } 
     
 
     

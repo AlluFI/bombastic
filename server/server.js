@@ -32,7 +32,12 @@ const colors = [
 io.on('connection', socket => {
  
   // Initialize new player
-    socket.on('player:join', () => {
+  socket.on('player:join', () => {
+      
+    if (allPlayers.size === 4) {
+      socket.emit('error', {message: "Lobby is full"})
+      return
+    }
        
 
       // Get the next available spawn position & colo
@@ -77,6 +82,27 @@ io.on('connection', socket => {
     })
   })
 
+  // Handle game pause/resume
+  socket.on('game:pause', (payload) => {
+    const player = allPlayers.get(socket.id)
+    if (!player) return
+
+    console.log(`${player.name} ${payload.paused ? 'paused' : 'resumed'} the game`)
+
+    // Broadcast to ALL clients (including sender) for sync
+    io.emit('game:pause', {
+      paused: !!payload.paused,
+      by: socket.id,
+      ts: Date.now()
+    })
+  })
+
+  socket.on('game:quit', () => {
+    const player = allPlayers.get(socket.id)
+    if (!player) return
+    socket.broadcast.emit('player:left', socket.id)
+  })
+
   // Handle disconnect
   socket.on('disconnect', () => {
     const player = allPlayers.get(socket.id)
@@ -88,6 +114,7 @@ io.on('connection', socket => {
       socket.broadcast.emit('player:left', socket.id)
     }
   })
+
 })
 
 server.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`))
