@@ -1,4 +1,4 @@
-import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, getLocalPlayer } from "./player.js";
+import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, getLocalPlayer, remotePlayers } from "./player.js";
 import { updatePlayerMovement } from "./player.js";
 import { updatePlayerRender } from "./renderPlayer.js";
 import { intializeMenu } from "./ui/menu.js";
@@ -59,10 +59,17 @@ function gameLoop() {
         requestAnimationFrame(gameLoop)
         return
     }
-    if(!isPaused) {
+    if (!isPaused) {
+        
         updatePlayerMovement(player)
         updatePlayerRender(player)
+        
+        // Also update all remote players' rendering
+        remotePlayers.forEach(remotePlayer => {
+            updatePlayerRender(remotePlayer)
+        })
     }
+    
 
     
     // Send position to server if changed
