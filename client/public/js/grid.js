@@ -1,3 +1,5 @@
+// Server coordinates: x = row (vertical), y = col (horizontal)
+
 const GRID_COLS = 15
 const GRID_ROWS = 13
 
@@ -68,7 +70,7 @@ function renderMap() {
             tile.id = `tile-${r}-${c}`
             tile.classList.add('tile', map[r][c])
             tile.dataset.row = r
-            tile.dataset.col = r
+            tile.dataset.col = c
 
             gridElement.appendChild(tile)
         }
