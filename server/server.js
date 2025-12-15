@@ -15,13 +15,14 @@ app.use(express.static(path.join(__dirname, '../client')))
 
 // Game state
 const allPlayers = new Map()
+
 const startPos = [
     { x: 1, y: 1, },
     { x: 1, y: 13 },
     { x: 11, y: 1 },
     { x: 11, y: 13 },
 ]
-const colors = [
+const colors =[
     'blue',
     'red',
     'green',
@@ -29,6 +30,8 @@ const colors = [
     'purple',
     'orange']
 
+
+//Connect client
 io.on('connection', socket => {
  
   // Initialize new player
@@ -38,8 +41,7 @@ io.on('connection', socket => {
       socket.emit('error', {message: "Lobby is full"})
       return
     }
-       
-
+    
       // Get the next available spawn position & colo
       const spawnIndex = allPlayers.size % startPos.length
       const colorIndex = allPlayers.size % colors.length
@@ -93,14 +95,20 @@ io.on('connection', socket => {
     io.emit('game:pause', {
       paused: !!payload.paused,
       by: socket.id,
-      ts: Date.now()
+      ts: Date.now(),
+      name: player.name
     })
   })
 
   socket.on('game:quit', () => {
     const player = allPlayers.get(socket.id)
-    if (!player) return
-    socket.broadcast.emit('player:left', socket.id)
+    if (player) {
+      console.log(`${player.name} disconnected`)
+      allPlayers.delete(socket.id)
+      
+      // Notify others
+      socket.broadcast.emit('player:left', socket.id)
+    }
   })
 
   // Handle disconnect

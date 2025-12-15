@@ -2,6 +2,7 @@ import { showMenuScreen } from "./menu.js"
 import {socket} from "../main.js"
 
 const pauseOverlay = document.getElementById('pause-overlay')
+const pauseMessage = document.getElementById('pause-message')
 const resumeButton = document.getElementById('resume-id')
 const quitButton = document.getElementById('quit-button')
 
@@ -17,9 +18,11 @@ function resumeGame() {
 // Function to apply pause state from server
 export function setPaused(paused, meta = {}) {
     isPaused = !!paused
+    
     if (isPaused) {
         pauseOverlay.classList.remove('hidden')
-        console.log('Game paused', meta.by ? `by ${meta.by}` : '')
+        pauseMessage.textContent = meta.name ? `Game paused by ${meta.name}` : 'Paused'
+        console.log('Game paused', meta.name ? `by ${meta.name}` : '')
     } else {
         pauseOverlay.classList.add('hidden')
         console.log('Game resumed')
