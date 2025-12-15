@@ -109,8 +109,6 @@ function gameLoop() {
         })
     } 
     
-
-    
     // Send position to server if changed
     if (player.x !== lastPosition.x || player.y !== lastPosition.y) {
         socket.emit('player:move', {
