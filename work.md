@@ -11,7 +11,7 @@ These functions are currently only implemented on client side need to be connect
 -Player can quit to main menu from pause menu.
 -When lobby exceeds 4 player limit, the server alerts 'lobby is full' and does -not allow new players to join.
 
-13.13 - Hasitha
+13.12 - Hasitha
 - Implemented Heads up display with timer
 - Time pausing and resuming implemented -> 
     -To be implemented
@@ -19,3 +19,7 @@ These functions are currently only implemented on client side need to be connect
     * Reset time on quitting
 - Scoreboard initialized but need to optimize for socket  
 
+15.12
+- implemented css for bombs
+- bomb rendering and explosion implemented
+- Test bomb placed in main.js at line 51
