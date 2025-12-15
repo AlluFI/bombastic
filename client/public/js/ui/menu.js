@@ -51,7 +51,7 @@ function handleStartGame() {
     //enable gamescreen
     
         socket.emit('player:join', {
-        name: 'Player',
+        name: playerData.name,
     }) 
 }
 
@@ -78,6 +78,4 @@ export function intializeMenu() {
     modeSelect.addEventListener('change', handleModeChange)
     difficultySelect.addEventListener('change', handleDifficultyChange)
     startButton.addEventListener('click', handleStartGame)
-
-    console.log(playerData)
 }

@@ -5,7 +5,8 @@ import { intializeMenu } from "./ui/menu.js";
 import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
 import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen } from "./ui/menu.js";
-
+import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
+import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard } from "./ui/scoreboard.js";
 
 
 const socket = io();
@@ -13,6 +14,8 @@ export { socket };
 
 intializeMenu()
 initializePauseMenu()
+intializeTimer()
+intializeScorboard()
 
 // // Pass socket to pause module so it can emit events
 // setSocket(socket)
@@ -35,6 +38,9 @@ socket.on('game:state', (state) => {
     player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
 
     showGameScreen()
+    startTimer()
+
+    renderScoreboard(state.allPlayers, socket.id)
     
     state.allPlayers.forEach(p => {
         if (p.id !== socket.id) {
@@ -52,6 +58,8 @@ alert(data.message)
 socket.on('player:joined', (playerData) => {
     console.log('Player joined:', playerData.name)
     createRemotePlayer(playerData)
+
+    addPlayerToScoreboard(playerData)
 })
 
 // Other player moved
@@ -63,11 +71,19 @@ socket.on('player:moved', (moveData) => {
 socket.on('player:left', (playerId) => {
     console.log('Player left:', playerId)
     removeRemotePlayer(playerId)
+
+    removePlayerFromScoreboard(playerId)
 })
 
 // Game pause/resume broadcast from server
 socket.on('game:pause', (payload) => {
     setPaused(payload.paused, payload)
+
+    if(payload.paused) {
+        stopTimer()
+    } else {
+        startTimer()
+    }
 })
 
 function gameLoop() {

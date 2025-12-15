@@ -12,6 +12,8 @@ class Player {
         this.x = x
         this.y = y
         this.color = color 
+        this.lives = 3
+        this.score = 0
         this.element = null 
     }
 
