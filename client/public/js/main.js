@@ -55,6 +55,17 @@ socket.on('game:state', (state) => {
     }, 2000);
 })
 
+socket.on('room:created', data => {
+    console.log("Room created:", data.roomCode);
+    console.log("Players: ", data.players);
+    
+})
+
+socket.on('room:updated', data => {
+    console.log("Room updated:", data.players);
+    
+})
+
 socket.on('error', (data) => {
 alert(data.message)
 

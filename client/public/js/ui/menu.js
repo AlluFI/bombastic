@@ -78,7 +78,7 @@ function handleDifficultyChange() {
 function handleHostGame() {
 
     playerData.name = playerNameInput.value.trim()
-    socket.emit('game:host', {
+    socket.emit('room:host', {
         name: playerData.name
     })
 }
@@ -89,7 +89,7 @@ function handleJoinGame() {
     const roomId = joinInput.value.trim()
 
     if (roomId) {
-     socket.emit('game:join',{
+     socket.emit('room:join',{
         roomId: roomId,
         name: playerData.name,
  })
@@ -118,5 +118,4 @@ export function intializeMenu() {
     startButton.addEventListener('click', handleStartGame)
     hostButton.addEventListener('click', handleHostGame)
     joinButton.addEventListener('click', handleJoinGame)
-    startGameBtn.addEventListener('click', )
 }
