@@ -14,6 +14,8 @@ const PORT = process.env.PORT || 3000
 app.use(express.static(path.join(__dirname, '../client')))
 
 // Game state
+
+const rooms = new Map()
 const allPlayers = new Map()
 
 const startPos = [
@@ -35,13 +37,13 @@ const colors =[
 io.on('connection', socket => {
  
   // Initialize new player
-  socket.on('player:join', () => {
+  socket.on('game:host', (data) => {
       
     if (allPlayers.size === 4) {
       socket.emit('error', {message: "Lobby is full"})
       return
     }
-    
+ 
       // Get the next available spawn position & colo
       const spawnIndex = allPlayers.size % startPos.length
       const colorIndex = allPlayers.size % colors.length
@@ -50,7 +52,7 @@ io.on('connection', socket => {
       
     allPlayers.set(socket.id, {
       id: socket.id,
-      name: `Player${allPlayers.size + 1}`,
+      name: data.name || `Player${allPlayers.size + 1}`,
       x: spawn.x,
       y: spawn.y,
       color: color

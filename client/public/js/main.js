@@ -26,8 +26,7 @@ let lastPosition = { x: 1, y: 1 }
 
 // Socket event handlers
 socket.on('connect', () => {
-    console.log('Connected with ID:', socket.id)
-    
+    console.log('Connected with ID:', socket.id) 
 })
 
 // Receive current game state (existing players)
