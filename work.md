@@ -28,3 +28,4 @@ These functions are currently only implemented on client side need to be connect
 - Implemented a room system on the server to allow multiple games to be played simultaneously.
 - If client hosts a new game, a new room is created and the host is placed in that room and room ID is displayed on the game screen.
 - Other players can join the host's game by entering the room ID on the main menu screen
+- Added chat functionality for players in the same room to communicate with each other.
