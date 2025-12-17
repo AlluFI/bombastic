@@ -42,3 +42,7 @@ These functions are currently only implemented on client side need to be connect
     - utils/DangerDetector.js - Danger detection utilities
     - utils/ItemEvaluator.js - Item evaluation utilities
 - added config.js for feature flags
+- Game state sync helper function (syncRoomGameState)
+- Sync calls after room creation, player join, and player movement
+- set-game-mode event handler
+- configure-npcs event handler
