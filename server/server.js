@@ -3,13 +3,15 @@ const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const { log } = require('console')
+const { ENABLE_NPC, ENABLE_SINGLE_PLAYER_MODE, PORT, WS_PATH } = require('./config')
+
+// NPC module (feature-flagged)
+const { NPC } = require('./npc')
 
 //socket.io setup
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server)
-
-const PORT = process.env.PORT || 3000
 
 // Serve all static files from the client folder
 app.use(express.static(path.join(__dirname, '../client')))
@@ -85,7 +87,18 @@ io.on('connection', socket => {
     host: socket.id,
     players: new Map(),
     started: false,
-    chats: []
+    chats: [],
+    // Full game state for NPCs
+    gameState: {
+      players: [],      // Array format (synced from players Map)
+      bombs: [],
+      powerups: [],
+      board: null,      // Will be initialized when game starts
+      gameMode: 'multiplayer', // 'multiplayer' | 'single-player'
+      isRunning: false,
+    },
+    // NPC instances (only for single-player mode)
+    npcs: new Map(),    // npc.id -> NPC instance
   })
   
   const room = rooms.get(roomId)

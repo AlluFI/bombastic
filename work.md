@@ -29,3 +29,16 @@ These functions are currently only implemented on client side need to be connect
 - If client hosts a new game, a new room is created and the host is placed in that room and room ID is displayed on the game screen.
 - Other players can join the host's game by entering the room ID on the main menu screen
 - Added chat functionality for players in the same room to communicate with each other.
+
+17.12. - Aleksi
+- Copied npc folder to main branch.
+  - Folder contains:
+    - NPC.js - Main NPC class
+    - DifficultyProfiles.js - Difficulty configurations
+    - BehaviorStrategies.js - Behavior strategies
+    - index.js - Module exports
+    - test-npc.js - Test script
+    - utils/Pathfinder.js - Pathfinding utilities
+    - utils/DangerDetector.js - Danger detection utilities
+    - utils/ItemEvaluator.js - Item evaluation utilities
+- added config.js for feature flags
