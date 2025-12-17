@@ -42,3 +42,24 @@ These functions are currently only implemented on client side need to be connect
     - utils/DangerDetector.js - Danger detection utilities
     - utils/ItemEvaluator.js - Item evaluation utilities
 - added config.js for feature flags
+- Game state sync helper function (syncRoomGameState)
+- Sync calls after room creation, player join, and player movement
+- set-game-mode event handler
+- configure-npcs event handler
+- NPC Action Handler Function (handleNPCAction)
+  - Processes NPC MOVE and BOMB actions
+  - Updates NPC positions and broadcasts to room
+  - Handles bomb placement (currently logs, TODO for integration)
+- Room Join Handler Update
+  - Added check to reject joins when room is in single-player mode
+- Disconnect Handler Update
+  - Added room cleanup logic
+  - Removes player from room.players Map
+  - Cleans up NPCs when host disconnects
+  - Syncs game state and notifies room
+- Game Loop (60 FPS)
+  - Processes all running games
+  - Syncs player state (Map → Array)
+  - Updates NPCs in single-player mode
+  - Calls NPC decision-making and action processing
+  - Broadcasts game state to rooms

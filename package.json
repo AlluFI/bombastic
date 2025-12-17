@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "cd server && nodemon server.js"
+    "start": "cd server && nodemon server.js",
+    "test:npc": "node server/npc/test-npc.js"
   },
   "author": "",
   "license": "ISC",

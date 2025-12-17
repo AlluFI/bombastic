@@ -80,6 +80,52 @@ function syncRoomGameState(room) {
   });
 }
 
+/**
+ * Processes an NPC action and updates room state
+ */
+function handleNPCAction(room, roomId, npcId, action) {
+  const npc = room.npcs.get(npcId);
+  if (!npc) return;
+  
+  if (action.type === 'MOVE') {
+    // Update NPC position
+    const direction = action.direction;
+    let newX = npc.position.x;
+    let newY = npc.position.y;
+    
+    if (direction === 'UP') newY--;
+    else if (direction === 'DOWN') newY++;
+    else if (direction === 'LEFT') newX--;
+    else if (direction === 'RIGHT') newX++;
+    
+    // Validate move (check board bounds, walls, etc.)
+    // TODO: Add board validation when board is implemented
+    
+    npc.position.x = newX;
+    npc.position.y = newY;
+    
+    // Update room.players Map
+    const npcPlayer = room.players.get(npcId);
+    if (npcPlayer) {
+      npcPlayer.x = newX;
+      npcPlayer.y = newY;
+    }
+    
+    // Broadcast to room
+    io.to(roomId).emit('player:moved', {
+      id: npcId,
+      x: newX,
+      y: newY,
+    });
+    
+  } else if (action.type === 'BOMB') {
+    // Place bomb (same as player bomb placement)
+    // TODO: Integrate with bomb system when implemented
+    // For now, just log
+    console.log(`NPC ${npcId} placed bomb at (${npc.position.x}, ${npc.position.y})`);
+  }
+}
+
 //Connect client
 io.on('connection', socket => {
  
@@ -174,6 +220,12 @@ io.on('connection', socket => {
   
   if (!room) {
     socket.emit('error', { message: 'Room not found' })
+    return
+  }
+  
+  // Reject if single-player mode
+  if (room.gameState.gameMode === 'single-player') {
+    socket.emit('error', { message: 'Room is in single-player mode' })
     return
   }
     
@@ -381,8 +433,65 @@ io.on('connection', socket => {
       // Notify others
       socket.broadcast.emit('player:left', socket.id)
     }
+    
+    // Clean up from room
+    const room = rooms.get(socket.roomCode);
+    if (room) {
+      // Remove player from room
+      room.players.delete(socket.id);
+      
+      // If host disconnected, handle room cleanup
+      if (room.host === socket.id) {
+        // Clean up NPCs
+        room.npcs.clear();
+        // Optionally: delete room or transfer host
+      }
+      
+      // Sync game state
+      syncRoomGameState(room);
+      
+      // Notify room
+      io.to(socket.roomCode).emit('room:updated', {
+        players: Array.from(room.players.values()),
+        roomCode: socket.roomCode,
+        chats: room.chats,
+      });
+    }
   })
 
 })
+
+// Game loop (runs at 60 FPS)
+setInterval(() => {
+  rooms.forEach((room, roomId) => {
+    // Only process running games
+    if (!room.gameState.isRunning) return;
+    
+    // Sync player state (Map → Array)
+    syncRoomGameState(room);
+    
+    // Update NPCs (only in single-player mode)
+    if (ENABLE_NPC && room.gameState.gameMode === 'single-player') {
+      room.npcs.forEach((npc, npcId) => {
+        // Update NPC with current game state
+        npc.updateWorldState(room.gameState);
+        
+        // Get next action
+        const action = npc.getNextCommand(Date.now());
+        if (action) {
+          handleNPCAction(room, roomId, npcId, action);
+        }
+      });
+      
+      // Sync again after NPC updates
+      syncRoomGameState(room);
+    }
+    
+    // TODO: Update bomb timers, explosions (when implemented by Joel)
+    
+    // Broadcast updated game state to room
+    io.to(roomId).emit('game-state', room.gameState);
+  });
+}, 1000 / 60); // 60 FPS
 
 server.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`))
