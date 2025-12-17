@@ -13,7 +13,14 @@ const PORT = process.env.PORT || 3000
 // Serve all static files from the client folder
 app.use(express.static(path.join(__dirname, '../client')))
 
+// Generate random room code
+function generateRoomCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase()
+}
+
 // Game state
+
+const rooms = new Map()
 const allPlayers = new Map()
 
 const startPos = [
@@ -35,13 +42,13 @@ const colors =[
 io.on('connection', socket => {
  
   // Initialize new player
-  socket.on('player:join', () => {
+  socket.on('player:join', (data) => {
       
     if (allPlayers.size === 4) {
       socket.emit('error', {message: "Lobby is full"})
       return
     }
-    
+ 
       // Get the next available spawn position & colo
       const spawnIndex = allPlayers.size % startPos.length
       const colorIndex = allPlayers.size % colors.length
@@ -50,7 +57,7 @@ io.on('connection', socket => {
       
     allPlayers.set(socket.id, {
       id: socket.id,
-      name: `Player${allPlayers.size + 1}`,
+      name: data.name || `Player${allPlayers.size + 1}`,
       x: spawn.x,
       y: spawn.y,
       color: color
@@ -68,16 +75,91 @@ io.on('connection', socket => {
     console.log(`${allPlayers.get(socket.id).name} joined at (${allPlayers.get(socket.id).x}, ${allPlayers.get(socket.id).y})`)
   })
 
+  //Room logic
+  socket.on('room:host', (data) => {
+  const roomId = generateRoomCode() 
+  
+  // Create room data structure with a NEW Map for players
+  rooms.set(roomId, {
+    host: socket.id,
+    players: new Map(),
+    started: false
+  })
+  
+  const room = rooms.get(roomId)
+  
+  // Add host as first player
+  room.players.set(socket.id, {
+    id: socket.id,
+    name: data.name,
+    x: startPos[0].x,
+    y: startPos[0].y,
+    color: colors[0]
+  })
+  
+  //  JOIN THE SOCKET.IO ROOM
+  socket.join(roomId)
+  
+  // STORE ROOM CODE ON SOCKET (for later use)
+  socket.roomCode = roomId
+  
+  // Send room info back to client
+  socket.emit('room:created', {
+    roomCode: roomId,
+    players: Array.from(room.players.values())
+  })
+})
+
+  socket.on('room:join', (data) => {
+  const roomId = data.roomId
+  const room = rooms.get(roomId)
+  
+  if (!room) {
+    socket.emit('error', { message: 'Room not found' })
+    return
+  }
+    
+    if (room.players.size === 4) {
+      socket.emit('error', { message: "Lobby is full" })
+      return
+    }
+  
+  // Add new player to room
+  room.players.set(socket.id, {
+    id: socket.id,
+    name: data.name,
+    x: startPos[room.players.size].x,
+    y: startPos[room.players.size].y,
+    color: colors[room.players.size]
+  })
+  
+  // JOIN THE SOCKET.IO ROOM
+  socket.join(roomId)
+  
+  //  STORE ROOM CODE ON SOCKET
+    socket.roomCode = roomId
+        
+  // Notify all players in this room
+  io.to(roomId).emit('room:updated', {
+    players: Array.from(room.players.values()),
+    roomCode : roomId
+  })
+})
+  
+
   // Handle player movement
   socket.on('player:move', (moveData) => {
-    const player = allPlayers.get(socket.id)
+    const room = rooms.get(socket.roomCode)
+    if (!room) return
+    
+    const player = room.players.get(socket.id)
     if (!player) return
 
     player.x = moveData.x
     player.y = moveData.y
 
-    // Broadcast movement to all other clients
-    socket.broadcast.emit('player:moved', {
+    // Broadcast movement to players in the same room only
+    socket.to(socket.roomCode).emit('player:moved', {
       id: socket.id,
       x: moveData.x,
       y: moveData.y

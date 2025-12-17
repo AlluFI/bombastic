@@ -18,17 +18,13 @@ initializePauseMenu()
 intializeTimer()
 intializeScorboard()
 
-// // Pass socket to pause module so it can emit events
-// setSocket(socket)
 
 let player
 let lastPosition = { x: 1, y: 1 }
 
 // Socket event handlers
 socket.on('connect', () => {
-    console.log('Connected with ID:', socket.id)
-    
-    
+    console.log('Connected with ID:', socket.id) 
 })
 
 // Receive current game state (existing players)
@@ -55,6 +51,45 @@ socket.on('game:state', (state) => {
             console.log(`Bomb ${bombId} exploded at (${x}, ${y})!`)
         })
     }, 2000);
+})
+
+socket.on('room:created', (state) => {
+
+    const myPlayer = state.players.find(p => p.id === socket.id)
+
+    player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+
+    state.players.forEach(p => {
+        if (p.id !== socket.id) {
+            createRemotePlayer(p)
+        }
+    })
+
+    showGameScreen(state.roomCode)
+    renderScoreboard(state.players, socket.id)
+})
+
+socket.on('room:updated', (state) => {
+    console.log("Room updated:", state.players);
+    
+    // Only create local player if it doesn't exist yet
+    if (!player) {
+        const myPlayer = state.players.find(p => p.id === socket.id)
+        player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+        showGameScreen(state.roomCode)
+        renderScoreboard(state.players, socket.id)
+
+    }
+
+    // Only create remote players that don't already exist
+    state.players.forEach(p => {
+        if (p.id !== socket.id && !remotePlayers.has(p.id)) {
+            createRemotePlayer(p)
+            renderScoreboard(state.players, socket.id)
+            
+
+        }
+    })
 })
 
 socket.on('error', (data) => {

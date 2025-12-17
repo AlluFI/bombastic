@@ -33,13 +33,18 @@
                     <option value="hard">Hard</option>
                 </select>
             </div>
-            <button id="start-button" disabled>Start Game</button>
+            <button id="start-button" class="menue-section hidden" disabled>Start Game</button>
+            <button id="host-button" class="menue-section" disabled>Host</button>
+            <button id="join-button" class="menue-section" disabled >Join</button>
+            <input type="text" id="join-input" placeholder="room id" class="menue-section">
         </div>
 
         <div id="game-screen" class="screen hidden">
             <div id="game-wrapper">
+                <!-- <button id="start-game-button">START</button> -->
                 <div id="grid"></div>
                 <div id="hud">
+                    <div id="room-code"></div>
                     <div id="timer">00:00</div>
                     <div id="scoreboard"></div>
                 </div>
