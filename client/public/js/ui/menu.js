@@ -16,6 +16,8 @@ const startButton = document.getElementById('start-button')
 const joinButton = document.getElementById('join-button')
 const hostButton = document.getElementById('host-button')
 const joinInput = document.getElementById('join-input')
+
+
 // const startGameBtn = document.getElementById('start-game-button')
 
 //player choices

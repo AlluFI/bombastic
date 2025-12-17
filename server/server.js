@@ -2,6 +2,7 @@ const path = require('path')
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
+const { log } = require('console')
 
 //socket.io setup
 const app = express()
@@ -83,7 +84,8 @@ io.on('connection', socket => {
   rooms.set(roomId, {
     host: socket.id,
     players: new Map(),
-    started: false
+    started: false,
+    chats: []
   })
   
   const room = rooms.get(roomId)
@@ -106,7 +108,8 @@ io.on('connection', socket => {
   // Send room info back to client
   socket.emit('room:created', {
     roomCode: roomId,
-    players: Array.from(room.players.values())
+    players: Array.from(room.players.values()),
+    chats: room.chats
   })
 })
 
@@ -142,7 +145,8 @@ io.on('connection', socket => {
   // Notify all players in this room
   io.to(roomId).emit('room:updated', {
     players: Array.from(room.players.values()),
-    roomCode : roomId
+    roomCode : roomId,
+    chats: room.chats
   })
 })
   
@@ -180,6 +184,36 @@ io.on('connection', socket => {
       ts: Date.now(),
       name: player.name
     })
+  })
+
+  socket.on('chat:send', (data) => {
+    const room = rooms.get(socket.roomCode)
+    if (!room) {
+      console.log("error: room not found");
+      socket.emit('error', { message: "room not found" })
+      return
+    } 
+    
+
+    const player = room.players.get(socket.id)
+    if (!player) {
+      console.log("error: player not found");
+      socket.emit('error', { message: "player not found" })
+      return
+    } 
+
+    const chatMessage = {
+      message: data.chatMsg,
+      by: player.name,
+      timestamp: Date.now()
+    }
+
+    // Store message in room history
+    room.chats.push(chatMessage)
+
+    // Broadcast to room (including sender for consistency)
+    io.to(socket.roomCode).emit('chat:toAll', chatMessage)
+    
   })
 
   socket.on('game:quit', () => {

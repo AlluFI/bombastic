@@ -47,6 +47,13 @@
                     <div id="room-code"></div>
                     <div id="timer">00:00</div>
                     <div id="scoreboard"></div>
+                    <div id="chat-container">
+                        <div id="chat-messages"></div>
+                        <form id="chat-form">
+                            <input id="chat-input" type="text" placeholder="Type a message..." autocomplete="off" maxlength="200" />
+                            <button type="submit">Send</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -68,5 +75,9 @@
     <script src="./public/js/controls.js" type="module" defer></script>
     <script src="./public/js/renderPlayer.js" type="module" defer></script>
     <script src="./public/js/main.js" type="module" defer></script>
+    <script src="./public/js/ui/chat.js" type="module"></script>
+
+    
+    
 </body>
 </html>
