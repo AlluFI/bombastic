@@ -1,23 +1,25 @@
+
+
+import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
 import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, remotePlayers } from "./player.js";
 import { updatePlayerMovement } from "./player.js";
 import { updatePlayerRender } from "./renderPlayer.js";
 import { intializeMenu } from "./ui/menu.js";
-import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
 import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen } from "./ui/menu.js";
 import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
 import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard } from "./ui/scoreboard.js";
 import { renderBomb } from "./render/bombRender.js";
+import { loadChatHistory, initializeChat } from "./ui/chat.js";
 
-
-const socket = io();
+const socket = io()
 export { socket };
 
 intializeMenu()
 initializePauseMenu()
 intializeTimer()
 intializeScorboard()
-
+initializeChat(socket)
 
 let player
 let lastPosition = { x: 1, y: 1 }
@@ -67,6 +69,7 @@ socket.on('room:created', (state) => {
 
     showGameScreen(state.roomCode)
     renderScoreboard(state.players, socket.id)
+    loadChatHistory(state.chats)
 })
 
 socket.on('room:updated', (state) => {
@@ -78,7 +81,7 @@ socket.on('room:updated', (state) => {
         player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
         showGameScreen(state.roomCode)
         renderScoreboard(state.players, socket.id)
-
+        loadChatHistory(state.chats)
     }
 
     // Only create remote players that don't already exist
@@ -86,8 +89,6 @@ socket.on('room:updated', (state) => {
         if (p.id !== socket.id && !remotePlayers.has(p.id)) {
             createRemotePlayer(p)
             renderScoreboard(state.players, socket.id)
-            
-
         }
     })
 })
