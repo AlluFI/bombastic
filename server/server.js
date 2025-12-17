@@ -79,7 +79,7 @@ io.on('connection', socket => {
   socket.on('room:host', (data) => {
   const roomId = generateRoomCode() 
   
-  // Create room data structure
+  // Create room data structure with a NEW Map for players
   rooms.set(roomId, {
     host: socket.id,
     players: new Map(),
@@ -118,6 +118,11 @@ io.on('connection', socket => {
     socket.emit('error', { message: 'Room not found' })
     return
   }
+    
+    if (room.players.size === 4) {
+      socket.emit('error', { message: "Lobby is full" })
+      return
+    }
   
   // Add new player to room
   room.players.set(socket.id, {
@@ -132,11 +137,12 @@ io.on('connection', socket => {
   socket.join(roomId)
   
   //  STORE ROOM CODE ON SOCKET
-  socket.roomCode = roomId
-  
+    socket.roomCode = roomId
+        
   // Notify all players in this room
   io.to(roomId).emit('room:updated', {
-    players: Array.from(room.players.values())
+    players: Array.from(room.players.values()),
+    roomCode : roomId
   })
 })
   

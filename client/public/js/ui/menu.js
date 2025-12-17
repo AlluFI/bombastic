@@ -5,6 +5,7 @@ import { socket } from '../main.js'
 const menuScreen = document.getElementById('menue-screen')
 const gameScreen = document.getElementById('game-screen')
 const endScreen = document.getElementById('end-screen')
+const codeElement= document.getElementById('room-code')
 
 //game control elements
 const playerNameInput = document.getElementById('player-name')
@@ -25,16 +26,19 @@ export const playerData = {
 }
 
 
+
+
 export function showMenuScreen() {
     menuScreen.classList.remove('hidden')
     gameScreen.classList.add('hidden')
     endScreen.classList.add('hidden')
 }
 
-export function showGameScreen() {
+export function showGameScreen(roomCode) {
     menuScreen.classList.add('hidden')
     gameScreen.classList.remove('hidden')
     endScreen.classList.add('hidden')
+    codeElement.textContent = `Room code: ${roomCode}`
 }
 
 export function showEndScreen() {
@@ -94,7 +98,6 @@ function handleJoinGame() {
         name: playerData.name,
  })
 }
-    console.log("Room ID:", roomId);   
 }
 
 export function intializeMenu() {
@@ -113,6 +116,7 @@ export function intializeMenu() {
         hostButton.disabled = joinInput.value
         joinButton.disabled = joinInput.value.trim() < 2
     })
+
     modeSelect.addEventListener('change', handleModeChange)
     difficultySelect.addEventListener('change', handleDifficultyChange)
     startButton.addEventListener('click', handleStartGame)
