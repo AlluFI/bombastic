@@ -40,6 +40,45 @@ const colors =[
     'purple',
     'orange']
 
+/**
+ * Syncs room.players Map to room.gameState.players Array
+ * This makes the room state compatible with NPCs
+ */
+function syncRoomGameState(room) {
+  room.gameState.players = Array.from(room.players.values()).map(p => ({
+    id: p.id,
+    name: p.name,
+    x: p.x,
+    y: p.y,
+    color: p.color,
+    alive: p.alive !== false,  // Default: true
+    score: p.score || 0,
+    lives: p.lives || 1,
+    isNPC: false,  // Human players
+  }));
+  
+  // Also include NPCs in the players array
+  room.npcs.forEach((npc, npcId) => {
+    const npcPlayer = room.gameState.players.find(p => p.id === npcId);
+    if (!npcPlayer) {
+      room.gameState.players.push({
+        id: npcId,
+        name: npc.name,
+        x: npc.position.x,
+        y: npc.position.y,
+        alive: npc.alive,
+        score: npc.score,
+        isNPC: true,
+      });
+    } else {
+      // Update existing NPC player
+      npcPlayer.x = npc.position.x;
+      npcPlayer.y = npc.position.y;
+      npcPlayer.alive = npc.alive;
+      npcPlayer.score = npc.score;
+    }
+  });
+}
 
 //Connect client
 io.on('connection', socket => {
@@ -112,6 +151,9 @@ io.on('connection', socket => {
     color: colors[0]
   })
   
+  // Sync game state after room creation
+  syncRoomGameState(room)
+  
   //  JOIN THE SOCKET.IO ROOM
   socket.join(roomId)
   
@@ -149,6 +191,9 @@ io.on('connection', socket => {
     color: colors[room.players.size]
   })
   
+  // Sync game state after player joins
+  syncRoomGameState(room)
+  
   // JOIN THE SOCKET.IO ROOM
   socket.join(roomId)
   
@@ -174,6 +219,9 @@ io.on('connection', socket => {
 
     player.x = moveData.x
     player.y = moveData.y
+
+    // Sync game state after player moves
+    syncRoomGameState(room)
 
     // Broadcast movement to players in the same room only
     socket.to(socket.roomCode).emit('player:moved', {
@@ -228,6 +276,89 @@ io.on('connection', socket => {
     io.to(socket.roomCode).emit('chat:toAll', chatMessage)
     
   })
+
+  // Set game mode (single-player vs multiplayer)
+  socket.on('set-game-mode', (data) => {
+    const room = rooms.get(socket.roomCode);
+    if (!room || room.host !== socket.id) {
+      socket.emit('error', { message: 'Only host can set game mode' });
+      return;
+    }
+    
+    if (!ENABLE_SINGLE_PLAYER_MODE) {
+      socket.emit('error', { message: 'Single-player mode is disabled' });
+      return;
+    }
+    
+    room.gameState.gameMode = data.mode; // 'multiplayer' | 'single-player'
+    
+    // If switching to single-player, reject new joins
+    if (data.mode === 'single-player') {
+      // Reject any pending joins (handled in room:join)
+    }
+    
+    // Notify room
+    io.to(socket.roomCode).emit('game-mode-changed', { mode: data.mode });
+  });
+
+  // Configure NPCs for single-player mode
+  socket.on('configure-npcs', (data) => {
+    const room = rooms.get(socket.roomCode);
+    if (!room || room.host !== socket.id) {
+      socket.emit('error', { message: 'Only host can configure NPCs' });
+      return;
+    }
+    
+    if (!ENABLE_NPC || !ENABLE_SINGLE_PLAYER_MODE) {
+      socket.emit('error', { message: 'NPC mode is disabled' });
+      return;
+    }
+    
+    if (room.gameState.gameMode !== 'single-player') {
+      socket.emit('error', { message: 'NPCs only available in single-player mode' });
+      return;
+    }
+    
+    // Clear existing NPCs
+    room.npcs.clear();
+    
+    // Create new NPCs
+    const count = Math.min(data.count || 1, 3); // Max 3 NPCs
+    const difficulties = data.difficulties || ['medium', 'medium', 'medium'];
+    
+    for (let i = 0; i < count; i++) {
+      const npcId = `npc-${i + 1}`;
+      const difficulty = difficulties[i] || 'medium';
+      const npc = new NPC(npcId, `Bot ${i + 1}`, difficulty);
+      
+      room.npcs.set(npcId, npc);
+      
+      // Add NPC to room.players Map (for consistency)
+      room.players.set(npcId, {
+        id: npcId,
+        name: npc.name,
+        x: startPos[room.players.size].x,
+        y: startPos[room.players.size].y,
+        color: colors[room.players.size],
+        alive: true,
+        score: 0,
+        isNPC: true,
+      });
+    }
+    
+    // Sync game state
+    syncRoomGameState(room);
+    
+    // Notify room
+    io.to(socket.roomCode).emit('npcs-configured', {
+      count: room.npcs.size,
+      npcs: Array.from(room.npcs.values()).map(npc => ({
+        id: npc.id,
+        name: npc.name,
+        difficulty: npc.difficulty,
+      })),
+    });
+  });
 
   socket.on('game:quit', () => {
     const player = allPlayers.get(socket.id)
