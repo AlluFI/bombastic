@@ -83,6 +83,26 @@ export function removeRemotePlayer(playerId) {
     }
 }
 
+export function removeLocalPlayer() {
+    if (localPlayer && localPlayer.element) {
+        localPlayer.element.remove()
+        localPlayer = null
+    }
+}
+
+export function clearAllPlayers() {
+    // Remove local player
+    removeLocalPlayer()
+    
+    // Remove all remote players
+    remotePlayers.forEach((player, playerId) => {
+        if (player.element) {
+            player.element.remove()
+        }
+    })
+    remotePlayers.clear()
+}
+
 export function updateRemotePlayer(playerId, x, y) {
     const player = remotePlayers.get(playerId)
     if (player) {

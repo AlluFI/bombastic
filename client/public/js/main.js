@@ -24,6 +24,11 @@ initializeChat(socket)
 let player
 let lastPosition = { x: 1, y: 1 }
 
+export function resetPlayer() {
+    player = null
+    lastPosition = { x: 1, y: 1 }
+}
+
 // Socket event handlers
 socket.on('connect', () => {
     console.log('Connected with ID:', socket.id) 
