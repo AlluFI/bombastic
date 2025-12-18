@@ -147,13 +147,17 @@ io.on('connection', socket => {
 
   // Handle game pause/resume
   socket.on('game:pause', (payload) => {
-    const player = allPlayers.get(socket.id)
+
+    const room = rooms.get(socket.roomCode)
+    if (!room) return
+    
+    const player = room.players.get(socket.id)
     if (!player) return
 
     console.log(`${player.name} ${payload.paused ? 'paused' : 'resumed'} the game`)
 
     // Broadcast to ALL clients (including sender) for sync
-    io.emit('game:pause', {
+    io.to(socket.roomCode).emit('game:pause', {
       paused: !!payload.paused,
       by: socket.id,
       ts: Date.now(),
@@ -276,13 +280,14 @@ io.on('connection', socket => {
   });
 
   socket.on('game:quit', () => {
-    const player = allPlayers.get(socket.id)
+    const room = rooms.get(socket.roomCode)
+    const player = room.players.get(socket.id)
     if (player) {
       console.log(`${player.name} disconnected`)
-      allPlayers.delete(socket.id)
+      room.players.delete(socket.id)
       
       // Notify others
-      socket.broadcast.emit('player:left', socket.id)
+      socket.to(socket.roomCode).emit('player:left', socket.id)
     }
   })
 

@@ -1,5 +1,7 @@
 import { showMenuScreen } from "./menu.js"
 import {socket} from "../main.js"
+import { clearAllPlayers } from "../player.js"
+import { resetPlayer } from "../main.js"
 
 const pauseOverlay = document.getElementById('pause-overlay')
 const pauseMessage = document.getElementById('pause-message')
@@ -46,6 +48,8 @@ function quitGame() {
     //will be implemented in next step
     if (isPaused) resumeGame()
     socket.emit('game:quit')
+    clearAllPlayers()
+    resetPlayer()
     showMenuScreen()
 }
 
