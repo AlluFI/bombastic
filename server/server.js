@@ -2,8 +2,8 @@ const path = require('path')
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
-const { log } = require('console')
 const { ENABLE_NPC, ENABLE_SINGLE_PLAYER_MODE, PORT, WS_PATH } = require('./config')
+const {generateRoomCode, syncRoomGameState, handleNPCAction, colors, startPos} = require('./utils.js')
 
 // NPC module (feature-flagged)
 const { NPC } = require('./npc')
@@ -16,154 +16,14 @@ const io = new Server(server)
 // Serve all static files from the client folder
 app.use(express.static(path.join(__dirname, '../client')))
 
-// Generate random room code
-function generateRoomCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
-
-// Game state
-
 const rooms = new Map()
 const allPlayers = new Map()
 
-const startPos = [
-    { x: 1, y: 1, },
-    { x: 1, y: 13 },
-    { x: 11, y: 1 },
-    { x: 11, y: 13 },
-]
-const colors =[
-    'blue',
-    'red',
-    'green',
-    'yellow',
-    'purple',
-    'orange']
-
-/**
- * Syncs room.players Map to room.gameState.players Array
- * This makes the room state compatible with NPCs
- */
-function syncRoomGameState(room) {
-  room.gameState.players = Array.from(room.players.values()).map(p => ({
-    id: p.id,
-    name: p.name,
-    x: p.x,
-    y: p.y,
-    color: p.color,
-    alive: p.alive !== false,  // Default: true
-    score: p.score || 0,
-    lives: p.lives || 1,
-    isNPC: false,  // Human players
-  }));
-  
-  // Also include NPCs in the players array
-  room.npcs.forEach((npc, npcId) => {
-    const npcPlayer = room.gameState.players.find(p => p.id === npcId);
-    if (!npcPlayer) {
-      room.gameState.players.push({
-        id: npcId,
-        name: npc.name,
-        x: npc.position.x,
-        y: npc.position.y,
-        alive: npc.alive,
-        score: npc.score,
-        isNPC: true,
-      });
-    } else {
-      // Update existing NPC player
-      npcPlayer.x = npc.position.x;
-      npcPlayer.y = npc.position.y;
-      npcPlayer.alive = npc.alive;
-      npcPlayer.score = npc.score;
-    }
-  });
-}
-
-/**
- * Processes an NPC action and updates room state
- */
-function handleNPCAction(room, roomId, npcId, action) {
-  const npc = room.npcs.get(npcId);
-  if (!npc) return;
-  
-  if (action.type === 'MOVE') {
-    // Update NPC position
-    const direction = action.direction;
-    let newX = npc.position.x;
-    let newY = npc.position.y;
-    
-    if (direction === 'UP') newY--;
-    else if (direction === 'DOWN') newY++;
-    else if (direction === 'LEFT') newX--;
-    else if (direction === 'RIGHT') newX++;
-    
-    // Validate move (check board bounds, walls, etc.)
-    // TODO: Add board validation when board is implemented
-    
-    npc.position.x = newX;
-    npc.position.y = newY;
-    
-    // Update room.players Map
-    const npcPlayer = room.players.get(npcId);
-    if (npcPlayer) {
-      npcPlayer.x = newX;
-      npcPlayer.y = newY;
-    }
-    
-    // Broadcast to room
-    io.to(roomId).emit('player:moved', {
-      id: npcId,
-      x: newX,
-      y: newY,
-    });
-    
-  } else if (action.type === 'BOMB') {
-    // Place bomb (same as player bomb placement)
-    // TODO: Integrate with bomb system when implemented
-    // For now, just log
-    console.log(`NPC ${npcId} placed bomb at (${npc.position.x}, ${npc.position.y})`);
-  }
-}
 
 //Connect client
 io.on('connection', socket => {
  
-  // Initialize new player
-  socket.on('player:join', (data) => {
-      
-    if (allPlayers.size === 4) {
-      socket.emit('error', {message: "Lobby is full"})
-      return
-    }
- 
-      // Get the next available spawn position & colo
-      const spawnIndex = allPlayers.size % startPos.length
-      const colorIndex = allPlayers.size % colors.length
-      const color = colors[colorIndex]
-      const spawn = startPos[spawnIndex]
-      
-    allPlayers.set(socket.id, {
-      id: socket.id,
-      name: data.name || `Player${allPlayers.size + 1}`,
-      x: spawn.x,
-      y: spawn.y,
-      color: color
-      
-    })
-
-        // Send current allPlayers to new player
-        socket.emit('game:state', {        
-      allPlayers: Array.from(allPlayers.values())
-    })
-
-    // Broadcast new player to others
-    socket.broadcast.emit('player:joined', allPlayers.get(socket.id))
-    
-    console.log(`${allPlayers.get(socket.id).name} joined at (${allPlayers.get(socket.id).x}, ${allPlayers.get(socket.id).y})`)
-  })
-
-  //Room logic
+  //Host new room
   socket.on('room:host', (data) => {
   const roomId = generateRoomCode() 
   
@@ -173,6 +33,7 @@ io.on('connection', socket => {
     players: new Map(),
     started: false,
     chats: [],
+    
     // Full game state for NPCs
     gameState: {
       players: [],      // Array format (synced from players Map)
@@ -214,6 +75,7 @@ io.on('connection', socket => {
   })
 })
 
+  //Join to room
   socket.on('room:join', (data) => {
   const roomId = data.roomId
   const room = rooms.get(roomId)
@@ -299,6 +161,7 @@ io.on('connection', socket => {
     })
   })
 
+//Send a message 
   socket.on('chat:send', (data) => {
     const room = rooms.get(socket.roomCode)
     if (!room) {
@@ -495,3 +358,36 @@ setInterval(() => {
 }, 1000 / 60); // 60 FPS
 
 server.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`))
+
+ // socket.on('player:join', (data) => {
+      
+  //   if (allPlayers.size === 4) {
+  //     socket.emit('error', {message: "Lobby is full"})
+  //     return
+  //   }
+ 
+  //     // Get the next available spawn position & colo
+  //     const spawnIndex = allPlayers.size % startPos.length
+  //     const colorIndex = allPlayers.size % colors.length
+  //     const color = colors[colorIndex]
+  //     const spawn = startPos[spawnIndex]
+      
+  //   allPlayers.set(socket.id, {
+  //     id: socket.id,
+  //     name: data.name || `Player${allPlayers.size + 1}`,
+  //     x: spawn.x,
+  //     y: spawn.y,
+  //     color: color
+      
+  //   })
+
+  //       // Send current allPlayers to new player
+  //       socket.emit('game:state', {        
+  //     allPlayers: Array.from(allPlayers.values())
+  //   })
+
+  //   // Broadcast new player to others
+  //   socket.broadcast.emit('player:joined', allPlayers.get(socket.id))
+    
+  //   console.log(`${allPlayers.get(socket.id).name} joined at (${allPlayers.get(socket.id).x}, ${allPlayers.get(socket.id).y})`)
+  // })
