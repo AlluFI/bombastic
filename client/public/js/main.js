@@ -4,7 +4,7 @@ import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
 import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, remotePlayers } from "./player.js";
 import { updatePlayerMovement } from "./player.js";
 import { updatePlayerRender } from "./renderPlayer.js";
-import { intializeMenu } from "./ui/menu.js";
+import { intializeMenu, playerData } from "./ui/menu.js";
 import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen } from "./ui/menu.js";
 import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
@@ -61,7 +61,6 @@ socket.on('game:state', (state) => {
 })
 
 socket.on('room:created', (state) => {
-
     const myPlayer = state.players.find(p => p.id === socket.id)
 
     player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
@@ -75,6 +74,23 @@ socket.on('room:created', (state) => {
     showGameScreen(state.roomCode)
     renderScoreboard(state.players, socket.id)
     loadChatHistory(state.chats)
+    
+    // If this is a single-player game, configure NPCs
+    if (playerData.mode === 'single') {
+        // Set game mode to single-player
+        socket.emit('set-game-mode', {
+            mode: 'single-player'
+        })
+        
+        // Configure NPCs with selected count and difficulty
+        const difficulties = Array(playerData.npcCount).fill(playerData.difficulty)
+        socket.emit('configure-npcs', {
+            count: playerData.npcCount,
+            difficulties: difficulties
+        })
+        
+        console.log(`Single-player game started with ${playerData.npcCount} NPC(s) at ${playerData.difficulty} difficulty`)
+    }
 })
 
 socket.on('room:updated', (state) => {
@@ -83,19 +99,36 @@ socket.on('room:updated', (state) => {
     // Only create local player if it doesn't exist yet
     if (!player) {
         const myPlayer = state.players.find(p => p.id === socket.id)
-        player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
-        showGameScreen(state.roomCode)
-        renderScoreboard(state.players, socket.id)
-        loadChatHistory(state.chats)
+        if (myPlayer) {
+            player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+            showGameScreen(state.roomCode)
+            renderScoreboard(state.players, socket.id)
+            loadChatHistory(state.chats)
+        }
     }
 
-    // Only create remote players that don't already exist
+    // Create/update all players (including NPCs) that don't already exist
     state.players.forEach(p => {
         if (p.id !== socket.id && !remotePlayers.has(p.id)) {
+            // Create remote player (works for both human players and NPCs)
             createRemotePlayer(p)
-            renderScoreboard(state.players, socket.id)
         }
     })
+    
+    // Always update scoreboard to reflect current state (including NPCs)
+    renderScoreboard(state.players, socket.id)
+})
+
+// Handle NPC configuration confirmation
+socket.on('npcs-configured', (data) => {
+    console.log(`NPCs configured: ${data.count} NPC(s)`, data.npcs)
+    // Request room update to get NPCs in the players list
+    // The server will emit room:updated with NPCs included
+})
+
+// Handle game mode change confirmation
+socket.on('game-mode-changed', (data) => {
+    console.log(`Game mode changed to: ${data.mode}`)
 })
 
 socket.on('error', (data) => {

@@ -25,15 +25,25 @@
                     <option value="multi" selected>Multi Player</option>
                 </select>
             </div>
-            <div id="difficulty-section" class="menue-section hidden">
-                <label for="difficulty">Difficulty</label>
-                <select id="difficulty">
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                </select>
+            <div id="single-player-section" class="menue-section hidden">
+                <div id="npc-count-section" class="menue-section">
+                    <label for="npc-count">Number of Bots</label>
+                    <select id="npc-count">
+                        <option value="1">1 Bot</option>
+                        <option value="2" selected>2 Bots</option>
+                        <option value="3">3 Bots</option>
+                    </select>
+                </div>
+                <div id="difficulty-section" class="menue-section">
+                    <label for="difficulty">Difficulty</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
             </div>
-            <button id="start-button" class="menue-section hidden" disabled>Start Game</button>
+            <button id="start-button" class="menue-section hidden" disabled>Start Single-Player Game</button>
             <button id="host-button" class="menue-section" disabled>Host</button>
             <button id="join-button" class="menue-section" disabled >Join</button>
             <input type="text" id="join-input" placeholder="room id" class="menue-section">

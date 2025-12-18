@@ -3,18 +3,20 @@ const scoreboardElement = document.getElementById('scoreboard')
 let localPlayerId = null
 
 function createPlayerEntryHTML(playerData, isLocal = false) {
-    const {name,id, color, lives = 3, score} = playerData
+    const {name, id, color, lives = 3, score, isNPC = false} = playerData
 
     const heartsHTML = '❤️'.repeat(lives)
 
     const youLabel = isLocal ? '<span class="you-label">(You)</span>' : ''
+    const botLabel = isNPC ? '<span class="bot-label">(Bot)</span>' : ''
 
     return `
-        <div class="player-entry ${isLocal ? 'local-player' : ''}" data-player-id="${id}">
+        <div class="player-entry ${isLocal ? 'local-player' : ''} ${isNPC ? 'npc-player' : ''}" data-player-id="${id}">
             <div class="player-info">
                 <span class="player-color-indicator" style="background-color: ${color}"></span>
                 <span class="player-name">${name}</span>
                 ${youLabel}
+                ${botLabel}
             </div>
             <div class="player-stats">
                 <span class="player-lives">${heartsHTML}</span>

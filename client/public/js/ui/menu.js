@@ -10,6 +10,8 @@ const codeElement= document.getElementById('room-code')
 //game control elements
 const playerNameInput = document.getElementById('player-name')
 const modeSelect = document.getElementById('mode')
+const singlePlayerSection = document.getElementById('single-player-section')
+const npcCountSelect = document.getElementById('npc-count')
 const difficultySection = document.getElementById('difficulty-section')
 const difficultySelect = document.getElementById('difficulty')
 const startButton = document.getElementById('start-button')
@@ -24,7 +26,8 @@ const joinInput = document.getElementById('join-input')
 export const playerData = {
     name: '',
     mode: 'multi', //multi player mode set to default
-    difficulty: 'easy' //multi mode has only one level
+    difficulty: 'medium', //default difficulty
+    npcCount: 2 //default number of NPCs for single-player
 }
 
 
@@ -50,28 +53,36 @@ export function showEndScreen() {
 }
 
 function handleStartGame() {
-    console.log('start button clicked')
+    console.log('start button clicked - starting single-player game')
 
     playerData.name = playerNameInput.value.trim()
     playerData.mode = modeSelect.value
     playerData.difficulty = difficultySelect.value
+    playerData.npcCount = parseInt(npcCountSelect.value, 10)
 
-    console.log('player data recorder', playerData)    
+    console.log('player data recorded', playerData)    
 
-    //enable gamescreen
+    // For single-player mode:
+    // 1. First create a room (host)
+    socket.emit('room:host', {
+        name: playerData.name
+    })
     
-        socket.emit('player:join', {
-        name: playerData.name,
-    }) 
+    // The rest will be handled in the 'room:created' event handler in main.js
 }
 
 function handleModeChange() {
     const selectedMode = modeSelect.value
-    difficultySection.classList.toggle('hidden', selectedMode !== 'single')
-    startButton.classList.toggle('hidden', selectedMode !== 'single')
-    joinButton.classList.toggle('hidden', selectedMode !== 'multi')
-    hostButton.classList.toggle('hidden', selectedMode !== 'multi')
-    joinInput.classList.toggle('hidden', selectedMode !== 'multi')
+    const isSinglePlayer = selectedMode === 'single'
+    
+    // Show/hide single-player specific UI
+    singlePlayerSection.classList.toggle('hidden', !isSinglePlayer)
+    startButton.classList.toggle('hidden', !isSinglePlayer)
+    
+    // Show/hide multiplayer specific UI
+    joinButton.classList.toggle('hidden', isSinglePlayer)
+    hostButton.classList.toggle('hidden', isSinglePlayer)
+    joinInput.classList.toggle('hidden', isSinglePlayer)
 
     console.log('player mode changed to :' + selectedMode)
 }
@@ -79,6 +90,11 @@ function handleModeChange() {
 function handleDifficultyChange() {
     playerData.difficulty = difficultySelect.value
     console.log('difficulty changed to :' + difficultySelect.value)
+}
+
+function handleNPCCountChange() {
+    playerData.npcCount = parseInt(npcCountSelect.value, 10)
+    console.log('NPC count changed to :' + playerData.npcCount)
 }
 
 function handleHostGame() {
@@ -121,7 +137,11 @@ export function intializeMenu() {
 
     modeSelect.addEventListener('change', handleModeChange)
     difficultySelect.addEventListener('change', handleDifficultyChange)
+    npcCountSelect.addEventListener('change', handleNPCCountChange)
     startButton.addEventListener('click', handleStartGame)
     hostButton.addEventListener('click', handleHostGame)
     joinButton.addEventListener('click', handleJoinGame)
+    
+    // Initialize mode change handler to set initial UI state
+    handleModeChange()
 }

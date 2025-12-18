@@ -58,8 +58,13 @@
 
 /**
  * Processes an NPC action and updates room state
+ * @param {Object} io - Socket.io server instance
+ * @param {Object} room - Room object
+ * @param {string} roomId - Room ID
+ * @param {string} npcId - NPC ID
+ * @param {Object} action - Action object { type, direction? }
  */
- function handleNPCAction(room, roomId, npcId, action) {
+ function handleNPCAction(io, room, roomId, npcId, action) {
   const npc = room.npcs.get(npcId);
   if (!npc) return;
   

@@ -241,14 +241,36 @@ io.on('connection', socket => {
     // Clear existing NPCs
     room.npcs.clear();
     
-    // Create new NPCs
-    const count = Math.min(data.count || 1, 3); // Max 3 NPCs
-    const difficulties = data.difficulties || ['medium', 'medium', 'medium'];
+    // Support two formats:
+    // 1. Simple format: { count: number, difficulties: string[] }
+    // 2. Advanced format: { npcs: [{ id, name, difficulty, ... }] }
     
-    for (let i = 0; i < count; i++) {
-      const npcId = `npc-${i + 1}`;
-      const difficulty = difficulties[i] || 'medium';
-      const npc = new NPC(npcId, `Bot ${i + 1}`, difficulty);
+    let npcsToCreate = [];
+    
+    if (data.npcs && Array.isArray(data.npcs)) {
+      // Advanced format: individual NPC configs
+      npcsToCreate = data.npcs.slice(0, 3); // Max 3 NPCs
+    } else {
+      // Simple format: count + difficulties array
+      const count = Math.min(data.count || 1, 3); // Max 3 NPCs
+      const difficulties = data.difficulties || Array(count).fill('medium');
+      
+      for (let i = 0; i < count; i++) {
+        npcsToCreate.push({
+          id: `npc-${i + 1}`,
+          name: `Bot ${i + 1}`,
+          difficulty: difficulties[i] || 'medium',
+        });
+      }
+    }
+    
+    // Create NPCs
+    npcsToCreate.forEach((npcConfig, index) => {
+      const npcId = npcConfig.id || `npc-${index + 1}`;
+      const npcName = npcConfig.name || `Bot ${index + 1}`;
+      const difficulty = npcConfig.difficulty || 'medium';
+      
+      const npc = new NPC(npcId, npcName, difficulty);
       
       room.npcs.set(npcId, npc);
       
@@ -263,12 +285,12 @@ io.on('connection', socket => {
         score: 0,
         isNPC: true,
       });
-    }
+    });
     
     // Sync game state
     syncRoomGameState(room);
     
-    // Notify room
+    // Notify room (include updated players list with NPCs)
     io.to(socket.roomCode).emit('npcs-configured', {
       count: room.npcs.size,
       npcs: Array.from(room.npcs.values()).map(npc => ({
@@ -276,6 +298,13 @@ io.on('connection', socket => {
         name: npc.name,
         difficulty: npc.difficulty,
       })),
+    });
+    
+    // Also emit room:updated to sync NPCs to clients
+    io.to(socket.roomCode).emit('room:updated', {
+      players: Array.from(room.players.values()),
+      roomCode: socket.roomCode,
+      chats: room.chats,
     });
   });
 
@@ -347,7 +376,7 @@ setInterval(() => {
         // Get next action
         const action = npc.getNextCommand(Date.now());
         if (action) {
-          handleNPCAction(room, roomId, npcId, action);
+          handleNPCAction(io, room, roomId, npcId, action);
         }
       });
       
