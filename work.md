@@ -63,3 +63,7 @@ These functions are currently only implemented on client side need to be connect
   - Updates NPCs in single-player mode
   - Calls NPC decision-making and action processing
   - Broadcasts game state to rooms
+
+  19.12- Hasitha
+  - Bomb placement implemented across local and remote player
+  - Prevention implemented to avoid placing another bomb when a bomb is already placed.
