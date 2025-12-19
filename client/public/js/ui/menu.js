@@ -10,6 +10,7 @@ const codeElement= document.getElementById('room-code')
 //game control elements
 const playerNameInput = document.getElementById('player-name')
 const playerNameJoinInput = document.getElementById('player-name-join')
+const playerNameSingleInput = document.getElementById('player-name-single')
 const modeSelect = document.getElementById('mode')
 const multiModeBtn = document.getElementById('multi-mode-btn')
 const singleModeBtn = document.getElementById('single-mode-btn')
@@ -59,7 +60,7 @@ export function showEndScreen() {
 function handleStartGame() {
     console.log('start button clicked - starting single-player game')
 
-    playerData.name = playerNameInput.value.trim()
+    playerData.name = playerNameSingleInput.value.trim()
     playerData.mode = modeSelect.value
     playerData.difficulty = difficultySelect.value
     playerData.npcCount = parseInt(npcCountSelect.value, 10)
@@ -148,6 +149,12 @@ export function intializeMenu() {
         hostButton.disabled = name.length < 2
     })
 
+    //Start button - enable when single-player name has 2+ characters
+    playerNameSingleInput.addEventListener('input', () => {
+        const name = playerNameSingleInput.value.trim()
+        startButton.disabled = name.length < 2
+    })
+
     //Join button - enable when both room code and name are valid
     const checkJoinButton = () => {
         const name = playerNameJoinInput.value.trim()
@@ -167,4 +174,7 @@ export function intializeMenu() {
     
     // Initialize mode change handler to set initial UI state
     handleModeChange()
+    
+    // Initialize button states
+    startButton.disabled = playerNameSingleInput.value.trim().length < 2
 }
