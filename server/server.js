@@ -52,7 +52,7 @@ io.on('connection', socket => {
   // Add host as first player
   room.players.set(socket.id, {
     id: socket.id,
-    name: data.name,
+    name: data.name || `Player${room.players.size + 1}`,
     x: startPos[0].x,
     y: startPos[0].y,
     color: colors[0]

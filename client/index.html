@@ -13,19 +13,50 @@
 <body>
     <div id="app">
         <div id="menue-screen" class="screen">
-            <h1>Bomberman Live</h1>
-            <div class="menue-section">
-                <label for="player-name">Player Name</label>
-                <input type="text" id="player-name" placeholder="Enter your name" required minlength="2" maxlength="15">
+            <h1>Bombastic Live</h1>
+            
+            <!-- Game Mode Selection at top -->
+            <div class="mode-toggle">
+                <button id="multi-mode-btn" class="mode-btn active">Multi</button>
+                <button id="single-mode-btn" class="mode-btn">Single</button>
             </div>
-            <div class="menue-section">
-                <label for="mode">Game Mode</label>
-                <select id="mode">
-                    <option value="single">Single Player</option>
-                    <option value="multi" selected>Multi Player</option>
-                </select>
+            
+            <!-- Hidden select for compatibility -->
+            <select id="mode" style="display: none;">
+                <option value="multi" selected>Multi Player</option>
+                <option value="single">Single Player</option>
+            </select>
+            
+            <!-- Sections container -->
+            <div id="sections-container">
+                <!-- Multi-player section -->
+                <div id="multi-player-section">
+                <h2>Join A Game</h2>
+                <div class="menue-section">
+                    <label for="join-input">Lobby Code</label>
+                    <input type="text" id="join-input" placeholder="" spellcheck="false">
+                </div>
+                <div class="menue-section">
+                    <label for="player-name-join">Your Name</label>
+                    <input type="text" id="player-name-join" placeholder="" maxlength="12" spellcheck="false">
+                </div>
+                <button id="join-button" class="menue-section" disabled>Join</button>
+                
+                <h2>Create A Lobby</h2>
+                <div class="menue-section">
+                    <label for="player-name">Your Name</label>
+                    <input type="text" id="player-name" placeholder="" required minlength="2" maxlength="12" spellcheck="false">
+                </div>
+                <button id="host-button" class="menue-section" disabled>Create Lobby</button>
             </div>
+            
+            <!-- Single-player section -->
             <div id="single-player-section" class="menue-section hidden">
+                <h2>Single player</h2>
+                <div class="menue-section">
+                    <label for="player-name-single">Your Name</label>
+                    <input type="text" id="player-name-single" placeholder="" required minlength="2" maxlength="12" spellcheck="false">
+                </div>
                 <div id="npc-count-section" class="menue-section">
                     <label for="npc-count">Number of Bots</label>
                     <select id="npc-count">
@@ -42,11 +73,9 @@
                         <option value="hard">Hard</option>
                     </select>
                 </div>
+                <button id="start-button" class="menue-section">Start Single-Player Game</button>
             </div>
-            <button id="start-button" class="menue-section hidden" disabled>Start Single-Player Game</button>
-            <button id="host-button" class="menue-section" disabled>Host</button>
-            <button id="join-button" class="menue-section" disabled >Join</button>
-            <input type="text" id="join-input" placeholder="room id" class="menue-section">
+            </div>
         </div>
 
         <div id="game-screen" class="screen hidden">
