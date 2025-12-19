@@ -7,6 +7,7 @@ let chats = []
 // Function to render a single chat message
 function renderChatMessage(data) {
     const msgElement = document.createElement('div')
+    msgElement.style.color = "white";
     msgElement.innerHTML = `<p>${data.by}: ${data.message}</p>`
     chatMessages.appendChild(msgElement)
     chatMessages.scrollTop = chatMessages.scrollHeight

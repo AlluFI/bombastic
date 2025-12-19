@@ -9,7 +9,11 @@ const codeElement= document.getElementById('room-code')
 
 //game control elements
 const playerNameInput = document.getElementById('player-name')
+const playerNameJoinInput = document.getElementById('player-name-join')
 const modeSelect = document.getElementById('mode')
+const multiModeBtn = document.getElementById('multi-mode-btn')
+const singleModeBtn = document.getElementById('single-mode-btn')
+const multiPlayerSection = document.getElementById('multi-player-section')
 const singlePlayerSection = document.getElementById('single-player-section')
 const npcCountSelect = document.getElementById('npc-count')
 const difficultySection = document.getElementById('difficulty-section')
@@ -75,14 +79,20 @@ function handleModeChange() {
     const selectedMode = modeSelect.value
     const isSinglePlayer = selectedMode === 'single'
     
+    // Update button styles
+    if (isSinglePlayer) {
+        singleModeBtn.classList.add('active')
+        multiModeBtn.classList.remove('active')
+    } else {
+        multiModeBtn.classList.add('active')
+        singleModeBtn.classList.remove('active')
+    }
+    
     // Show/hide single-player specific UI
     singlePlayerSection.classList.toggle('hidden', !isSinglePlayer)
-    startButton.classList.toggle('hidden', !isSinglePlayer)
     
     // Show/hide multiplayer specific UI
-    joinButton.classList.toggle('hidden', isSinglePlayer)
-    hostButton.classList.toggle('hidden', isSinglePlayer)
-    joinInput.classList.toggle('hidden', isSinglePlayer)
+    multiPlayerSection.classList.toggle('hidden', isSinglePlayer)
 
     console.log('player mode changed to :' + selectedMode)
 }
@@ -107,7 +117,7 @@ function handleHostGame() {
 
 function handleJoinGame() {
 
-    playerData.name = playerNameInput.value.trim()
+    playerData.name = playerNameJoinInput.value.trim()
     const roomId = joinInput.value.trim()
 
     if (roomId) {
@@ -121,19 +131,32 @@ function handleJoinGame() {
 export function intializeMenu() {
     console.log('menue intialized')
 
-    //start button is disabled by default 
-    //input checks if the length of the input is 2 or more to enable start playing
+    //Mode toggle buttons
+    multiModeBtn.addEventListener('click', () => {
+        modeSelect.value = 'multi'
+        handleModeChange()
+    })
+
+    singleModeBtn.addEventListener('click', () => {
+        modeSelect.value = 'single'
+        handleModeChange()
+    })
+
+    //Host button - enable when player name has 2+ characters
     playerNameInput.addEventListener('input', () => {
-    const name = playerNameInput.value.trim()
-        startButton.disabled = name.length < 2
+        const name = playerNameInput.value.trim()
         hostButton.disabled = name.length < 2
     })
 
-    //join button is disabled by default
-    joinInput.addEventListener('input', () => {
-        hostButton.disabled = joinInput.value
-        joinButton.disabled = joinInput.value.trim() < 2
-    })
+    //Join button - enable when both room code and name are valid
+    const checkJoinButton = () => {
+        const name = playerNameJoinInput.value.trim()
+        const roomId = joinInput.value.trim()
+        joinButton.disabled = name.length < 2 || roomId.length < 2
+    }
+
+    playerNameJoinInput.addEventListener('input', checkJoinButton)
+    joinInput.addEventListener('input', checkJoinButton)
 
     modeSelect.addEventListener('change', handleModeChange)
     difficultySelect.addEventListener('change', handleDifficultyChange)
