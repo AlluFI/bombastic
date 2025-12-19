@@ -9,7 +9,7 @@ import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen } from "./ui/menu.js";
 import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
 import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard } from "./ui/scoreboard.js";
-import { renderBomb } from "./render/bombRender.js";
+import { placeRemoteBomb, clearPlayerBombs } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
 
 const socket = io()
@@ -50,14 +50,6 @@ socket.on('game:state', (state) => {
             createRemotePlayer(p)
         }
     })
-
-    //Bomb placement testing
-    setTimeout(() => {
-        console.log('Testing bomb placement')
-        renderBomb('test-bomb-1', 2, 1, 3000, (bombId, x, y) => {
-            console.log(`Bomb ${bombId} exploded at (${x}, ${y})!`)
-        })
-    }, 2000);
 })
 
 socket.on('room:created', (state) => {
@@ -155,6 +147,8 @@ socket.on('player:left', (playerId) => {
     removeRemotePlayer(playerId)
 
     removePlayerFromScoreboard(playerId)
+
+    clearPlayerBombs(playerId)
 })
 
 // Game pause/resume broadcast from server
@@ -166,6 +160,11 @@ socket.on('game:pause', (payload) => {
     } else {
         startTimer()
     }
+})
+
+socket.on('bomb:placed', (bombData) => {
+    console.log('Bomb placed by another player:', bombData)
+    placeRemoteBomb(bombData)
 })
 
 let lastFrameTime = performance.now();

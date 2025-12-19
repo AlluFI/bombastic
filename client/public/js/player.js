@@ -1,5 +1,6 @@
 import { keys } from "./controls.js"
 import { map } from "./grid.js"
+import { tryPlaceBomb } from "./game/bombController.js"
 
 
 const gridElement = document.getElementById('grid')
@@ -130,5 +131,10 @@ export function updatePlayerMovement(player) {
         player.x = newX
         player.y = newY
         player.updatePosition()
+    }
+
+     if (keys.space) {
+        tryPlaceBomb(player)
+        keys.space = false  // Prevent holding spacebar to spam bombs
     }
 }
