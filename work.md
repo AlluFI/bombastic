@@ -114,4 +114,7 @@ These functions are currently only implemented on client side need to be connect
 20.12 - Hasitha
   - bomb explosion added to the game, 
   - Explosion expands to two tiles verticaly and horizontaly. 
-  - Explosion does not expands on solid tiles. Actual breaking stragey to be implemented
+  - Explosion does not expands on solid tiles.
+  - Breakable bocks are destroyed
+  - Block destruction is emitted to remote players
+  - Need to fix - Player is not moving block by block, single key press moves the player several blocks
