@@ -67,6 +67,7 @@ These functions are currently only implemented on client side need to be connect
 19.12- Hasitha
 - Bomb placement implemented across local and remote player
 - Prevention implemented to avoid placing another bomb when a bomb is already placed.
+- extra security layer added to validate tiles before placing bombs
 
 18.12. - Aleksi
 - HTML (client/index.html):
