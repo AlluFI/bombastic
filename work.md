@@ -64,10 +64,7 @@ These functions are currently only implemented on client side need to be connect
   - Calls NPC decision-making and action processing
   - Broadcasts game state to rooms
 
-19.12- Hasitha
-- Bomb placement implemented across local and remote player
-- Prevention implemented to avoid placing another bomb when a bomb is already placed.
-- extra security layer added to validate tiles before placing bombs
+
 
 18.12. - Aleksi
 - HTML (client/index.html):
@@ -100,6 +97,11 @@ These functions are currently only implemented on client side need to be connect
   - Added restart button functionality to return to menu
   - Support for both multiplayer and single-player modes
   - Handles draw scenario (all players eliminated)
+
+19.12- Hasitha
+- Bomb placement implemented across local and remote player
+- Prevention implemented to avoid placing another bomb when a bomb is already placed.
+- extra security layer added to validate tiles before placing bombs
 
 20.12. - Aleksi
 - Files changed:
