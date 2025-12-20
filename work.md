@@ -99,3 +99,10 @@ These functions are currently only implemented on client side need to be connect
   - Added restart button functionality to return to menu
   - Support for both multiplayer and single-player modes
   - Handles draw scenario (all players eliminated)
+
+20.12. - Aleksi
+- Files changed:
+  - client/public/js/main.js - Added game:end handler
+  - client/public/js/ui/menu.js - Added restart button functionality
+  - server/server.js - Integrated winner detection in game loop
+  - server/utils.js - Added checkGameEnd function
