@@ -3,7 +3,7 @@ const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const { ENABLE_NPC, ENABLE_SINGLE_PLAYER_MODE, PORT, WS_PATH } = require('./config')
-const {generateRoomCode, syncRoomGameState, handleNPCAction, colors, startPos} = require('./utils.js')
+const {generateRoomCode, syncRoomGameState, handleNPCAction, checkGameEnd, colors, startPos} = require('./utils.js')
 
 // NPC module (feature-flagged)
 const { NPC } = require('./npc')
@@ -404,8 +404,24 @@ setInterval(() => {
     
     // TODO: Update bomb timers, explosions (when implemented by Joel)
     
-    // Broadcast updated game state to room
-    io.to(roomId).emit('game-state', room.gameState);
+    // Check for game end (winner detection)
+    const gameEndResult = checkGameEnd(room.gameState);
+    if (gameEndResult) {
+      // Game has ended - stop the game and notify all players
+      room.gameState.isRunning = false;
+      
+      // Emit game end event to all players in the room
+      io.to(roomId).emit('game:end', {
+        winner: gameEndResult.winner,
+        isDraw: gameEndResult.isDraw,
+        players: gameEndResult.allPlayers, // All players with final scores
+      });
+      
+      console.log(`Game ended in room ${roomId}: ${gameEndResult.isDraw ? 'Draw' : `Winner: ${gameEndResult.winner.name}`}`);
+    } else {
+      // Broadcast updated game state to room
+      io.to(roomId).emit('game-state', room.gameState);
+    }
   });
 }, 1000 / 60); // 60 FPS
 

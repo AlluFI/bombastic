@@ -64,6 +64,38 @@ These functions are currently only implemented on client side need to be connect
   - Calls NPC decision-making and action processing
   - Broadcasts game state to rooms
 
-  19.12- Hasitha
-  - Bomb placement implemented across local and remote player
-  - Prevention implemented to avoid placing another bomb when a bomb is already placed.
+19.12- Hasitha
+- Bomb placement implemented across local and remote player
+- Prevention implemented to avoid placing another bomb when a bomb is already placed.
+
+18.12. - Aleksi
+- HTML (client/index.html):
+  - Added single-player-section container for NPC count and difficulty
+  - Added NPC count selector (1–3 bots)
+  - Updated button text to "Start Single-Player Game"
+- Menu logic (client/public/js/ui/menu.js):
+  - Added NPC count selector handling
+  - Updated handleStartGame() to emit room:host for single-player
+  - Updated handleModeChange() to show/hide single-player UI
+  - Added handleNPCCountChange() handler
+  - Updated playerData to include npcCount
+- Main game logic (client/public/js/main.js):
+  - Updated room:created handler to configure NPCs after room creation
+  - Emits set-game-mode and configure-npcs events
+  - Updated room:updated handler to handle NPCs
+  - Added handlers for npcs-configured and game-mode-changed events
+- Scoreboard (client/public/js/ui/scoreboard.js):
+  - Added "(Bot)" label for NPCs in the scoreboard
+  - Added npc-player CSS class for styling
+- Server (server/server.js):
+  - Updated configure-npcs handler to emit room:updated after NPC configuration
+
+19.12. - Aleksi
+- Endgame screens implementation:
+  - Added checkGameEnd function in server/utils.js to detect winner
+  - Integrated winner detection in game loop (server/server.js)
+  - Added game:end event emission when winner detected
+  - Implemented client-side game:end handler to display winner screen
+  - Added restart button functionality to return to menu
+  - Support for both multiplayer and single-player modes
+  - Handles draw scenario (all players eliminated)

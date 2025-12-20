@@ -1,5 +1,6 @@
 
 import { socket } from '../main.js'
+import { clearAllPlayers } from '../player.js'
 
 //ui screen sections
 const menuScreen = document.getElementById('menue-screen')
@@ -23,6 +24,7 @@ const startButton = document.getElementById('start-button')
 const joinButton = document.getElementById('join-button')
 const hostButton = document.getElementById('host-button')
 const joinInput = document.getElementById('join-input')
+const restartButton = document.getElementById('restart-button')
 
 
 // const startGameBtn = document.getElementById('start-game-button')
@@ -129,6 +131,37 @@ function handleJoinGame() {
 }
 }
 
+function handleRestartGame() {
+    console.log('Restart button clicked - returning to menu')
+    
+    // Clear all players from the game
+    clearAllPlayers()
+    
+    // Reset player data
+    playerData.name = ''
+    playerData.mode = 'multi'
+    playerData.difficulty = 'medium'
+    playerData.npcCount = 2
+    
+    // Reset UI inputs
+    playerNameInput.value = ''
+    playerNameJoinInput.value = ''
+    playerNameSingleInput.value = ''
+    joinInput.value = ''
+    modeSelect.value = 'multi'
+    difficultySelect.value = 'medium'
+    npcCountSelect.value = '2'
+    
+    // Reset mode UI
+    handleModeChange()
+    
+    // Show menu screen
+    showMenuScreen()
+    
+    // Reset game state (will be handled by main.js resetPlayer)
+    // The socket connection remains, but game state is reset
+}
+
 export function intializeMenu() {
     console.log('menue intialized')
 
@@ -171,6 +204,7 @@ export function intializeMenu() {
     startButton.addEventListener('click', handleStartGame)
     hostButton.addEventListener('click', handleHostGame)
     joinButton.addEventListener('click', handleJoinGame)
+    restartButton.addEventListener('click', handleRestartGame)
     
     // Initialize mode change handler to set initial UI state
     handleModeChange()

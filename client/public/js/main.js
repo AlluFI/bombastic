@@ -1,12 +1,12 @@
 
 
 import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
-import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, remotePlayers } from "./player.js";
+import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, remotePlayers, clearAllPlayers } from "./player.js";
 import { updatePlayerMovement } from "./player.js";
 import { updatePlayerRender } from "./renderPlayer.js";
 import { intializeMenu, playerData } from "./ui/menu.js";
 import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
-import { showGameScreen } from "./ui/menu.js";
+import { showGameScreen, showEndScreen, showMenuScreen } from "./ui/menu.js";
 import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
 import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard } from "./ui/scoreboard.js";
 import { placeRemoteBomb, clearPlayerBombs } from "./game/bombController.js";
@@ -121,6 +121,39 @@ socket.on('npcs-configured', (data) => {
 // Handle game mode change confirmation
 socket.on('game-mode-changed', (data) => {
     console.log(`Game mode changed to: ${data.mode}`)
+})
+
+// Handle game end (winner detection)
+socket.on('game:end', (data) => {
+    console.log('Game ended:', data)
+    
+    // Stop the timer
+    stopTimer()
+    
+    // Display end screen with winner information
+    const winnerText = document.getElementById('winner-text')
+    if (winnerText) {
+        if (data.isDraw) {
+            winnerText.textContent = 'Draw! All players eliminated.'
+        } else if (data.winner) {
+            const winnerName = data.winner.isNPC ? `${data.winner.name} (Bot)` : data.winner.name
+            winnerText.textContent = `Winner: ${winnerName}!`
+        } else {
+            winnerText.textContent = 'Game Over'
+        }
+    }
+    
+    // Show final scoreboard
+    if (data.players) {
+        renderScoreboard(data.players, socket.id)
+    }
+    
+    // Show end screen
+    showEndScreen()
+    
+    // Reset player state for next game
+    resetPlayer()
+    clearAllPlayers()
 })
 
 socket.on('error', (data) => {

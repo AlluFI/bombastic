@@ -57,6 +57,37 @@
 }
 
 /**
+ * Checks if the game has ended and returns winner information
+ * @param {Object} gameState - Current game state
+ * @returns {Object|null} Winner info { winner: player object, isDraw: boolean } or null if game continues
+ */
+function checkGameEnd(gameState) {
+  if (!gameState || !gameState.players) return null;
+  
+  const alivePlayers = gameState.players.filter(p => p.alive !== false);
+  
+  // Game ends when only one player is alive (or no players)
+  if (alivePlayers.length <= 1) {
+    if (alivePlayers.length === 1) {
+      return {
+        winner: alivePlayers[0],
+        isDraw: false,
+        allPlayers: gameState.players // Include all players for scoreboard
+      };
+    } else {
+      // All players dead - draw
+      return {
+        winner: null,
+        isDraw: true,
+        allPlayers: gameState.players
+      };
+    }
+  }
+  
+  return null; // Game continues
+}
+
+/**
  * Processes an NPC action and updates room state
  * @param {Object} io - Socket.io server instance
  * @param {Object} room - Room object
@@ -112,5 +143,6 @@ module.exports = {
   startPos,
   colors,
   syncRoomGameState,
-  handleNPCAction
- }
+  handleNPCAction,
+  checkGameEnd
+}
