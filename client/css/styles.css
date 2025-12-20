@@ -475,3 +475,198 @@ button:active:not(:disabled) {
     width: auto;
 }
 
+/* Responsive Design for Smaller Screens */
+@media screen and (max-height: 900px) {
+    #menue-screen h1 {
+        font-size: 60px;
+        margin: 0 0 30px 0;
+        padding: 15px 30px;
+        letter-spacing: 8px;
+    }
+    
+    .mode-toggle {
+        margin: 0 0 30px 0;
+        gap: 10px;
+    }
+    
+    .mode-btn {
+        padding: 10px 30px;
+        font-size: 16px;
+    }
+    
+    .menue-section {
+        margin: 12px 0;
+    }
+    
+    #menue-screen > h2,
+    #multi-player-section > h2,
+    #single-player-section > h2 {
+        font-size: 24px;
+        margin: 30px 0 15px 0;
+    }
+    
+    #sections-container {
+        min-height: 450px;
+    }
+}
+
+@media screen and (max-height: 800px) {
+    #menue-screen {
+        padding: 15px 20px;
+        justify-content: flex-start;
+        padding-top: 30px;
+    }
+    
+    #menue-screen h1 {
+        font-size: 50px;
+        margin: 0 0 20px 0;
+        padding: 10px 20px;
+        letter-spacing: 6px;
+    }
+    
+    .mode-toggle {
+        margin: 0 0 20px 0;
+    }
+    
+    .mode-btn {
+        padding: 8px 25px;
+        font-size: 14px;
+        letter-spacing: 2px;
+    }
+    
+    .menue-section {
+        margin: 10px 0;
+    }
+    
+    .menue-section label {
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+    
+    .menue-section input[type="text"],
+    .menue-section select {
+        padding: 12px;
+        font-size: 16px;
+    }
+    
+    button {
+        padding: 14px 30px;
+        font-size: 18px;
+        letter-spacing: 2px;
+    }
+    
+    #menue-screen > h2,
+    #multi-player-section > h2,
+    #single-player-section > h2 {
+        font-size: 22px;
+        margin: 25px 0 12px 0;
+    }
+    
+    #sections-container {
+        min-height: 400px;
+    }
+}
+
+@media screen and (max-height: 700px) {
+    #menue-screen {
+        padding: 10px 20px;
+        padding-top: 20px;
+        overflow-y: auto;
+    }
+    
+    #menue-screen h1 {
+        font-size: 40px;
+        margin: 0 0 15px 0;
+        padding: 8px 15px;
+        letter-spacing: 4px;
+    }
+    
+    .mode-toggle {
+        margin: 0 0 15px 0;
+    }
+    
+    .mode-btn {
+        padding: 6px 20px;
+        font-size: 13px;
+        letter-spacing: 1px;
+    }
+    
+    .menue-section {
+        margin: 8px 0;
+    }
+    
+    .menue-section input[type="text"],
+    .menue-section select {
+        padding: 10px;
+        font-size: 15px;
+    }
+    
+    button {
+        padding: 12px 25px;
+        font-size: 16px;
+        letter-spacing: 1px;
+    }
+    
+    #menue-screen > h2,
+    #multi-player-section > h2,
+    #single-player-section > h2 {
+        font-size: 20px;
+        margin: 20px 0 10px 0;
+    }
+    
+    #sections-container {
+        min-height: 350px;
+    }
+}
+
+/* Responsive for smaller width screens */
+@media screen and (max-width: 768px) {
+    #menue-screen {
+        padding: 15px;
+    }
+    
+    #menue-screen h1 {
+        font-size: 50px;
+        letter-spacing: 5px;
+    }
+    
+    .menue-section,
+    #multi-player-section,
+    #single-player-section,
+    #sections-container {
+        max-width: 100%;
+    }
+    
+    button {
+        max-width: 100%;
+    }
+    
+    #game-wrapper {
+        flex-direction: column;
+        align-items: center;
+        margin-top: 20px;
+        padding: 10px;
+    }
+    
+    #chat-container {
+        min-width: 100%;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    #menue-screen h1 {
+        font-size: 36px;
+        letter-spacing: 3px;
+    }
+    
+    .mode-btn {
+        padding: 8px 15px;
+        font-size: 12px;
+    }
+    
+    .menue-section input[type="text"],
+    .menue-section select {
+        font-size: 14px;
+    }
+}
+
