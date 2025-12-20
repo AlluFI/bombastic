@@ -109,3 +109,9 @@ These functions are currently only implemented on client side need to be connect
   - client/public/js/ui/menu.js - Added restart button functionality
   - server/server.js - Integrated winner detection in game loop
   - server/utils.js - Added checkGameEnd function
+
+
+20.12 - Hasitha
+  - bomb explosion added to the game, 
+  - Explosion expands to two tiles verticaly and horizontaly. 
+  - Explosion does not expands on solid tiles. Actual breaking stragey to be implemented
