@@ -17,3 +17,52 @@
 .tile.breakable {
     background-color: #b5651d;
 }
+
+/*Tile destroying*/
+.tile.breakable.destroying {
+    animation: block-destroy 0.3s ease-out forwards;
+}
+
+@keyframes block-destroy {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2) rotate(5deg);
+        opacity: 0.8;
+        background-color: #ff6600;
+    }
+    100% {
+        transform: scale(0.5) rotate(15deg);
+        opacity: 0;
+    }
+}
+
+/* Crumble effect */
+.tile.breakable.crumbling {
+    animation: block-crumble 0.4s ease-out forwards;
+}
+
+@keyframes block-crumble {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    25% {
+        transform: scale(1.05) translateY(-3px);
+    }
+    50% {
+        transform: scale(0.95) translateY(0);
+        opacity: 0.7;
+    }
+    75% {
+        transform: scale(0.8) translateY(5px);
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(0.3) translateY(10px);
+        opacity: 0;
+        background-color: #8B4513;
+    }
+}

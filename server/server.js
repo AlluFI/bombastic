@@ -373,6 +373,29 @@ io.on('connection', socket => {
       })
     })
 
+    // Handle single block destruction
+    socket.on('block:destroy', (data) => {
+        console.log(`Block destroyed at (${data.x}, ${data.y})`)
+        
+        // Broadcast to ALL other players
+        socket.broadcast.emit('block:destroyed', {
+            x: data.x,
+            y: data.y,
+            timestamp: data.timestamp
+        })
+    })
+
+    // Handle multiple blocks destruction
+    socket.on('blocks:destroy', (data) => {
+        console.log(`${data.blocks.length} blocks destroyed`)
+        
+        // Broadcast to ALL other players
+        socket.broadcast.emit('blocks:destroyed', {
+            blocks: data.blocks,
+            timestamp: data.timestamp
+        })
+    })
+
 
 })
 

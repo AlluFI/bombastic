@@ -1,14 +1,8 @@
 import { map } from '../grid.js'
+import { filterBreakableBlocks } from '../game/blockController.js'
 
 const EXPLOSION_DURATION = 500
-const DEFAULT_EXPLOTION_RANGE = 2
-
-const DIRECTIONS = {
-    up : {dx: -1, dy: 0},
-    down: {dx: 1, dy: 0},
-    left: {dx: 0, dy: -1},
-    right: {dx: 0, dy: -1}
-}
+const DEFAULT_EXPLOSION_RANGE = 2
 
 function getTilePosition(x, y) {
     const tile = document.getElementById(`tile-${x}-${y}`)
@@ -112,6 +106,9 @@ export function renderExplosion(centerX, centerY, range = DEFAULT_EXPLOSION_RANG
     const explosionTiles = calculateExplosionTiles(centerX, centerY, range)
     
     console.log(`Explosion affects ${explosionTiles.length} tiles`)
+
+    const breakableBlocks = filterBreakableBlocks(explosionTiles)
+    console.log(`Explosion hits ${breakableBlocks.length} breakable blocks`)
     
     // Create explosion elements
     const explosionElements = []
@@ -134,6 +131,10 @@ export function renderExplosion(centerX, centerY, range = DEFAULT_EXPLOSION_RANG
         })
         
         console.log(`Explosion at (${centerX}, ${centerY}) cleared`)
+
+        if (onComplete) {
+            onComplete(centerX, centerY, explosionTiles, breakableBlocks)
+        }
         
         // Call completion callback
         if (onComplete) {
@@ -147,6 +148,7 @@ export function renderExplosion(centerX, centerY, range = DEFAULT_EXPLOSION_RANG
         centerY,
         range,
         tiles: explosionTiles,
+        breakableBlocks: breakableBlocks,  // NEW
         elements: explosionElements
     }
 }

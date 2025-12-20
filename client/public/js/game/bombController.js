@@ -2,6 +2,7 @@ import { renderBomb, removeBomb } from "../render/bombRender.js";
 import { socket } from "../main.js";
 import { map } from "../grid.js";
 import { renderExplosion } from "../render/explosionRender.js";
+import { destroyBlocksInTiles } from './blockController.js'
 
 const MAX_BOMBS_PER_PLAYER = 1
 const BOMB_DURATION = 3000
@@ -139,12 +140,18 @@ export function tryPlaceBomb(player) {
         // Untrack the bomb
         untrackBomb(player.id, explodedBombId, bombX, bombY)
         
-        // render explosion
-        renderExplosion(bombX, bombY, 2, (centerX, centerY, affectedTiles) => {
+        // Render explosion
+        renderExplosion(bombX, bombY, 2, (centerX, centerY, affectedTiles, breakableBlocks) => {
             console.log(`Explosion complete at (${centerX}, ${centerY})`)
             console.log(`Affected ${affectedTiles.length} tiles`)
             
-            // TODO: Check for player damage & Destroy breakable blocks
+            // NEW: Destroy breakable blocks
+            if (breakableBlocks && breakableBlocks.length > 0) {
+                const destroyed = destroyBlocksInTiles(breakableBlocks)
+                console.log(`Destroyed ${destroyed.length} blocks`)
+            }
+            
+            // TODO: Check for player damage
         })
     })
 
@@ -176,10 +183,10 @@ export function placeRemoteBomb(bombData) {
     trackBomb(playerId, bombId)
     
     // Render bomb
-    renderBomb(bombId, x, y, duration, (explodedBombId) => {
-        // When bomb explodes
-        untrackBomb(playerId, explodedBombId)
+    renderBomb(bombId, x, y, duration, (explodedBombId, bombX, bombY) => {
+        untrackBomb(playerId, explodedBombId, bombX, bombY)
         
+        // Render explosion (remote bombs don't destroy blocks - server handles it)
         renderExplosion(bombX, bombY, 2)
     })
 }

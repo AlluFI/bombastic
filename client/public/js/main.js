@@ -1,5 +1,3 @@
-
-
 import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
 import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, remotePlayers, clearAllPlayers } from "./player.js";
 import { updatePlayerMovement } from "./player.js";
@@ -11,6 +9,8 @@ import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
 import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard } from "./ui/scoreboard.js";
 import { placeRemoteBomb, clearPlayerBombs } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
+import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
+
 
 const socket = io()
 export { socket };
@@ -198,6 +198,17 @@ socket.on('game:pause', (payload) => {
 socket.on('bomb:placed', (bombData) => {
     console.log('Bomb placed by another player:', bombData)
     placeRemoteBomb(bombData)
+})
+
+socket.on('block:destroyed', (data) => {
+    console.log('Block destroyed by server:', data)
+    destroyBlockRemote(data.x, data.y)
+})
+
+
+socket.on('blocks:destroyed', (data) => {
+    console.log(`${data.blocks.length} blocks destroyed by server`)
+    destroyBlocksRemote(data.blocks)
 })
 
 let lastFrameTime = performance.now();
