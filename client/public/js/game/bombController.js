@@ -1,6 +1,7 @@
 import { renderBomb, removeBomb } from "../render/bombRender.js";
 import { socket } from "../main.js";
 import { map } from "../grid.js";
+import { renderExplosion } from "../render/explosionRender.js";
 
 const MAX_BOMBS_PER_PLAYER = 1
 const BOMB_DURATION = 3000
@@ -133,13 +134,18 @@ export function tryPlaceBomb(player) {
     
     // Render bomb locally
     renderBomb(bombId, x, y, BOMB_DURATION, (explodedBombId, bombX, bombY) => {
-        // When bomb explodes
         console.log(`Bomb ${explodedBombId} exploded at (${bombX}, ${bombY})`)
         
         // Untrack the bomb
-        untrackBomb(player.id, explodedBombId)
+        untrackBomb(player.id, explodedBombId, bombX, bombY)
         
-        // TODO: Trigger explosion rendering && Check for damage to players/blocks
+        // render explosion
+        renderExplosion(bombX, bombY, 2, (centerX, centerY, affectedTiles) => {
+            console.log(`Explosion complete at (${centerX}, ${centerY})`)
+            console.log(`Affected ${affectedTiles.length} tiles`)
+            
+            // TODO: Check for player damage & Destroy breakable blocks
+        })
     })
 
     if (socket) {
@@ -174,7 +180,7 @@ export function placeRemoteBomb(bombData) {
         // When bomb explodes
         untrackBomb(playerId, explodedBombId)
         
-        // TODO: Trigger explosion rendering
+        renderExplosion(bombX, bombY, 2)
     })
 }
 
