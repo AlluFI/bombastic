@@ -55,8 +55,9 @@ class NPC {
     this.decisionInterval = this.profile.decisionInterval;
     
     // Grid dimensions (will be set from game state)
-    this.maxRows = 11; // Default Bomberman grid
-    this.maxCols = 13;
+    // Default to match client grid: 13 rows × 15 cols
+    this.maxRows = 13; // Match client GRID_ROWS
+    this.maxCols = 15; // Match client GRID_COLS
   }
 
   /**
@@ -123,7 +124,12 @@ class NPC {
     // Update grid dimensions if available
     if (gameState.board) {
       this.maxRows = gameState.board.length;
-      this.maxCols = gameState.board[0] ? gameState.board[0].length : 13;
+      this.maxCols = gameState.board[0] ? gameState.board[0].length : 15;
+    } else {
+      // If no board, use default dimensions matching client grid
+      // Client grid is 13 rows × 15 cols
+      this.maxRows = 13;
+      this.maxCols = 15;
     }
 
     // Update navigation grid (for pathfinding)
@@ -173,8 +179,9 @@ class NPC {
     // Also mark positions with active explosions as blocked
     if (gameState.explosions) {
       gameState.explosions.forEach(explosion => {
-        if (this.navigationGrid[explosion.y] && this.navigationGrid[explosion.y][explosion.x] !== undefined) {
-          this.navigationGrid[explosion.y][explosion.x] = 1; // Blocked by explosion
+        // Grid is structured as grid[row][col], and x=row, y=col
+        if (this.navigationGrid[explosion.x] && this.navigationGrid[explosion.x][explosion.y] !== undefined) {
+          this.navigationGrid[explosion.x][explosion.y] = 1; // Blocked by explosion
         }
       });
     }
@@ -398,11 +405,14 @@ class NPC {
    * @returns {Object} Next position { x, y }
    */
   _getNextPosition(pos, direction) {
+    // Coordinate system: x = row (vertical), y = col (horizontal)
+    // UP = decrease x (move up in rows), DOWN = increase x (move down in rows)
+    // LEFT = decrease y (move left in cols), RIGHT = increase y (move right in cols)
     const moves = {
-      'UP': { x: 0, y: -1 },
-      'DOWN': { x: 0, y: 1 },
-      'LEFT': { x: -1, y: 0 },
-      'RIGHT': { x: 1, y: 0 },
+      'UP': { x: -1, y: 0 },    // Move up = decrease row
+      'DOWN': { x: 1, y: 0 },   // Move down = increase row
+      'LEFT': { x: 0, y: -1 },  // Move left = decrease col
+      'RIGHT': { x: 0, y: 1 },  // Move right = increase col
     };
 
     const move = moves[direction] || { x: 0, y: 0 };
@@ -418,7 +428,9 @@ class NPC {
    * @returns {boolean}
    */
   _isValidPosition(pos) {
-    return pos.x >= 0 && pos.x < this.maxCols && pos.y >= 0 && pos.y < this.maxRows;
+    // Coordinate system: x = row (0 to maxRows-1), y = col (0 to maxCols-1)
+    // Grid is 13 rows (0-12) × 15 cols (0-14)
+    return pos.x >= 0 && pos.x < this.maxRows && pos.y >= 0 && pos.y < this.maxCols;
   }
 
   /**
@@ -427,10 +439,31 @@ class NPC {
    * @returns {boolean}
    */
   _isWalkable(pos) {
-    if (!this.navigationGrid || !this._isValidPosition(pos)) {
+    if (!this._isValidPosition(pos)) {
       return false;
     }
-    return this.navigationGrid[pos.y] && this.navigationGrid[pos.y][pos.x] === 0;
+    
+    // Prefer navigation grid if available (more efficient, already processed)
+    if (this.navigationGrid) {
+      // Grid is structured as grid[row][col], and x=row, y=col
+      return this.navigationGrid[pos.x] && this.navigationGrid[pos.x][pos.y] === 0;
+    }
+    
+    // Fallback: check board directly if navigation grid doesn't exist
+    // This handles cases where navigation grid wasn't created but board exists
+    if (this.gameState && this.gameState.board) {
+      // Grid is structured as grid[row][col], and x=row, y=col
+      // 0 = walkable, 1 = destructible block, 2 = indestructible wall
+      const row = this.gameState.board[pos.x];
+      if (!row) return false;
+      const cell = row[pos.y];
+      // Only walkable if cell is 0 (explicitly walkable), block any blocks or walls
+      return cell === 0;
+    }
+    
+    // If no board information at all, allow movement as fallback
+    // Note: Board is now generated on server, so this should rarely happen
+    return true;
   }
 
   /**
@@ -582,8 +615,9 @@ class NPC {
           const x = this.position.x + dx;
           const y = this.position.y + dy;
           if (!this._isValidPosition({ x, y })) continue;
-          if (!board[y]) continue;
-          if (board[y][x] === 1) { // 1 = destructible block
+          // Grid is structured as grid[row][col], and x=row, y=col
+          if (!board[x]) continue;
+          if (board[x][y] === 1) { // 1 = destructible block
             hasBlockTarget = true;
             break;
           }
@@ -629,6 +663,7 @@ class NPC {
     const target = this._selectTarget();
     
     if (target && this.navigationGrid) {
+      // Use pathfinding when navigation grid is available
       const direction = Pathfinder.getNextDirection(
         this.position,
         target,
@@ -640,6 +675,34 @@ class NPC {
       if (direction) {
         const nextPos = this._getNextPosition(this.position, direction);
         // Verify the move is safe
+        if (this._isValidPosition(nextPos) && 
+            this._isWalkable(nextPos) &&
+            !DangerDetector.isInDanger(nextPos, this.dangerZones)) {
+          this.state = 'moving';
+          return {
+            type: 'MOVE',
+            direction: direction,
+          };
+        }
+      }
+    } else if (target && !this.navigationGrid) {
+      // No navigation grid - use simple direction toward target
+      // Coordinate system: x = row (vertical), y = col (horizontal)
+      const dx = target.x - this.position.x;
+      const dy = target.y - this.position.y;
+      
+      // Choose direction based on largest distance component
+      let direction = null;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        // Row difference is larger - move vertically
+        direction = dx > 0 ? 'DOWN' : 'UP';  // Increase row = DOWN, decrease row = UP
+      } else if (dy !== 0) {
+        // Col difference is larger - move horizontally
+        direction = dy > 0 ? 'RIGHT' : 'LEFT';  // Increase col = RIGHT, decrease col = LEFT
+      }
+      
+      if (direction) {
+        const nextPos = this._getNextPosition(this.position, direction);
         if (this._isValidPosition(nextPos) && 
             this._isWalkable(nextPos) &&
             !DangerDetector.isInDanger(nextPos, this.dangerZones)) {
@@ -830,9 +893,11 @@ class NPC {
     // Find block targets (for strategic bomb placement)
     if (this.strategy.targetPriority.blocks > 0.3 && this.gameState.board) {
       // Find nearby destructible blocks
-      for (let y = Math.max(0, this.position.y - 3); y <= Math.min(this.maxRows - 1, this.position.y + 3); y++) {
-        for (let x = Math.max(0, this.position.x - 3); x <= Math.min(this.maxCols - 1, this.position.x + 3); x++) {
-          if (this.gameState.board[y] && this.gameState.board[y][x] === 1) { // Destructible block
+      // Coordinate system: x = row, y = col
+      for (let x = Math.max(0, this.position.x - 3); x <= Math.min(this.maxRows - 1, this.position.x + 3); x++) {
+        for (let y = Math.max(0, this.position.y - 3); y <= Math.min(this.maxCols - 1, this.position.y + 3); y++) {
+          // Grid is structured as grid[row][col], and x=row, y=col
+          if (this.gameState.board[x] && this.gameState.board[x][y] === 1) { // Destructible block
             const distance = Pathfinder.manhattanDistance(this.position, { x, y });
             if (distance <= 4) {
               candidates.push({
@@ -890,8 +955,9 @@ class NPC {
                this.gameState.powerups.some(p => p.x === target.x && p.y === target.y);
       case 'block':
         return this.gameState.board && 
-               this.gameState.board[target.y] && 
-               this.gameState.board[target.y][target.x] === 1;
+               this.gameState.board[target.x] && 
+               // Grid is structured as grid[row][col], and x=row, y=col
+               this.gameState.board[target.x][target.y] === 1;
       default:
         return false;
     }

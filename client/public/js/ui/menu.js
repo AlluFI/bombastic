@@ -60,14 +60,15 @@ export function showEndScreen() {
 }
 
 function handleStartGame() {
-    console.log('start button clicked - starting single-player game')
+    console.log('🎮 Start button clicked - starting single-player game')
 
     playerData.name = playerNameSingleInput.value.trim()
     playerData.mode = modeSelect.value
     playerData.difficulty = difficultySelect.value
     playerData.npcCount = parseInt(npcCountSelect.value, 10)
 
-    console.log('player data recorded', playerData)    
+    console.log('📝 Player data recorded:', playerData)    
+    console.log('📡 Emitting room:host event with name:', playerData.name)
 
     // For single-player mode:
     // 1. First create a room (host)
@@ -75,6 +76,7 @@ function handleStartGame() {
         name: playerData.name
     })
     
+    console.log('✅ room:host event emitted, waiting for room:created...')
     // The rest will be handled in the 'room:created' event handler in main.js
 }
 

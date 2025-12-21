@@ -3,7 +3,7 @@ const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const { ENABLE_NPC, ENABLE_SINGLE_PLAYER_MODE, PORT, WS_PATH } = require('./config')
-const {generateRoomCode, syncRoomGameState, handleNPCAction, checkGameEnd, colors, startPos} = require('./utils.js')
+const {generateRoomCode, generateBoard, syncRoomGameState, handleNPCAction, checkGameEnd, colors, startPos} = require('./utils.js')
 
 // NPC module (feature-flagged)
 const { NPC } = require('./npc')
@@ -25,7 +25,9 @@ io.on('connection', socket => {
  
   //Host new room
   socket.on('room:host', (data) => {
+  console.log(`📥 Received room:host from ${socket.id}, name: ${data.name}`)
   const roomId = generateRoomCode() 
+  console.log(`🏠 Creating room ${roomId} for host ${socket.id}`)
   
   // Create room data structure with a NEW Map for players
   rooms.set(roomId, {
@@ -39,7 +41,7 @@ io.on('connection', socket => {
       players: [],      // Array format (synced from players Map)
       bombs: [],
       powerups: [],
-      board: null,      // Will be initialized when game starts
+      board: generateBoard(), // Generate board once when room is created
       gameMode: 'multiplayer', // 'multiplayer' | 'single-player'
       isRunning: false,
     },
@@ -50,16 +52,19 @@ io.on('connection', socket => {
   const room = rooms.get(roomId)
   
   // Add host as first player
-  room.players.set(socket.id, {
+  const playerData = {
     id: socket.id,
     name: data.name || `Player${room.players.size + 1}`,
     x: startPos[0].x,
     y: startPos[0].y,
     color: colors[0]
-  })
+  }
+  room.players.set(socket.id, playerData)
+  console.log(`👤 Added host as player:`, playerData)
   
   // Sync game state after room creation
   syncRoomGameState(room)
+  console.log(`🔄 Synced game state. Players in gameState:`, room.gameState.players.map(p => ({ id: p.id, name: p.name })))
   
   //  JOIN THE SOCKET.IO ROOM
   socket.join(roomId)
@@ -68,11 +73,14 @@ io.on('connection', socket => {
   socket.roomCode = roomId
   
   // Send room info back to client
-  socket.emit('room:created', {
+  const responseData = {
     roomCode: roomId,
     players: Array.from(room.players.values()),
     chats: room.chats
-  })
+  }
+  console.log(`📤 Emitting room:created to ${socket.id} with players:`, responseData.players.map(p => ({ id: p.id, name: p.name })))
+  socket.emit('room:created', responseData)
+  console.log(`✅ room:created event sent`)
 })
 
   //Join to room
@@ -272,15 +280,20 @@ io.on('connection', socket => {
       
       const npc = new NPC(npcId, npcName, difficulty);
       
+      // Set NPC initial position (before adding to room)
+      const startIndex = room.players.size;
+      npc.position.x = startPos[startIndex].x;
+      npc.position.y = startPos[startIndex].y;
+      
       room.npcs.set(npcId, npc);
       
       // Add NPC to room.players Map (for consistency)
       room.players.set(npcId, {
         id: npcId,
         name: npc.name,
-        x: startPos[room.players.size].x,
-        y: startPos[room.players.size].y,
-        color: colors[room.players.size],
+        x: npc.position.x,
+        y: npc.position.y,
+        color: colors[startIndex],
         alive: true,
         score: 0,
         isNPC: true,
@@ -289,6 +302,12 @@ io.on('connection', socket => {
     
     // Sync game state
     syncRoomGameState(room);
+    
+    // For single-player mode, automatically start the game after NPCs are configured
+    if (room.gameState.gameMode === 'single-player' && !room.gameState.isRunning) {
+      room.gameState.isRunning = true;
+      console.log(`Single-player game started in room ${socket.roomCode} with ${room.npcs.size} NPC(s)`);
+    }
     
     // Notify room (include updated players list with NPCs)
     io.to(socket.roomCode).emit('npcs-configured', {
@@ -417,7 +436,16 @@ setInterval(() => {
         // Get next action
         const action = npc.getNextCommand(Date.now());
         if (action) {
+          // Debug: log bomb actions to help diagnose
+          if (action.type === 'BOMB') {
+            console.log(`💣 NPC ${npcId} (${npc.name}) decided to place bomb at (${npc.position.x}, ${npc.position.y})`);
+          }
           handleNPCAction(io, room, roomId, npcId, action);
+        } else {
+          // Debug: log if NPCs are not getting actions (only occasionally to avoid spam)
+          if (Math.random() < 0.01) { // 1% chance
+            console.log(`NPC ${npcId} (${npc.name}) returned no action. Position: (${npc.position.x}, ${npc.position.y}), State: ${npc.state}`);
+          }
         }
       });
       
@@ -443,7 +471,7 @@ setInterval(() => {
       console.log(`Game ended in room ${roomId}: ${gameEndResult.isDraw ? 'Draw' : `Winner: ${gameEndResult.winner.name}`}`);
     } else {
       // Broadcast updated game state to room
-      io.to(roomId).emit('game-state', room.gameState);
+      io.to(roomId).emit('game:state', room.gameState);
     }
   });
 }, 1000 / 60); // 60 FPS

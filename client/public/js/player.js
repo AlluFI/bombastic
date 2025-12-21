@@ -25,7 +25,8 @@ class Player {
         el.dataset.id = this.id
 
         this.element = el
-        this.updatePosition()
+        // Don't call updatePosition here - it will be called after element is added to DOM
+        // This prevents errors when tiles don't exist yet
     }
 
     updatePosition() {
@@ -33,6 +34,13 @@ class Player {
 
         //get player current position on the dom by referancing to the tile position
         const tile = document.getElementById(`tile-${this.x}-${this.y}`)
+        if (!tile) {
+            // Tile doesn't exist yet - grid might not be rendered
+            // Try again on next frame
+            console.warn(`Tile tile-${this.x}-${this.y} not found for player ${this.id}. Grid might not be ready.`)
+            return
+        }
+        
         const tilePosition = tile.getBoundingClientRect()
 
         //Align the player to the tile
@@ -57,6 +65,13 @@ export function createLocalPlayer(id, name, x, y, color) {
 
     localPlayer.createDomElement()
     gridElement.appendChild(localPlayer.element)
+    // Update position after element is added to DOM
+    // Use requestAnimationFrame to ensure grid is rendered
+    requestAnimationFrame(() => {
+        if (localPlayer && localPlayer.element) {
+            localPlayer.updatePosition()
+        }
+    })
     return localPlayer
 }
 
@@ -72,6 +87,14 @@ export function createRemotePlayer(playerData) {
 
     player.createDomElement()
     gridElement.appendChild(player.element)
+    // Update position after element is added to DOM
+    // Use requestAnimationFrame to ensure grid is rendered
+    requestAnimationFrame(() => {
+        const remotePlayer = remotePlayers.get(playerData.id)
+        if (remotePlayer && remotePlayer.element) {
+            remotePlayer.updatePosition()
+        }
+    })
     remotePlayers.set(playerData.id, player)
     return player
 }
@@ -109,7 +132,10 @@ export function updateRemotePlayer(playerId, x, y) {
     if (player) {
         player.x = x
         player.y = y
-        player.updatePosition()
+        // Only update position if element exists and tile exists
+        if (player.element) {
+            player.updatePosition()
+        }
     }
 }
 
@@ -131,6 +157,15 @@ export function updatePlayerMovement(player) {
         player.x = newX
         player.y = newY
         player.updatePosition()
+    } else if (newX !== player.x || newY !== player.y) {
+        // Debug: log blocked movement
+        const blockedReason = !map[newX] ? 'out of bounds' : 
+                              map[newX][newY] === 'breakable' ? 'block' : 
+                              map[newX][newY] === 'solid' ? 'wall' : 'unknown';
+        // Only log occasionally to avoid spam
+        if (Math.random() < 0.01) {
+            console.log(`Movement blocked at (${newX}, ${newY}): ${blockedReason}. Current pos: (${player.x}, ${player.y})`);
+        }
     }
 
      if (keys.space) {

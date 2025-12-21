@@ -10,10 +10,13 @@ import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlay
 import { placeRemoteBomb, clearPlayerBombs } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
+import { initializeMap } from "./grid.js"
 
 
 const socket = io()
 export { socket };
+
+console.log('main.js loaded, initializing...')
 
 intializeMenu()
 initializePauseMenu()
@@ -31,33 +34,83 @@ export function resetPlayer() {
 
 // Socket event handlers
 socket.on('connect', () => {
-    console.log('Connected with ID:', socket.id) 
+    console.log('✅ Socket connected with ID:', socket.id) 
+})
+
+socket.on('disconnect', () => {
+    console.log('❌ Socket disconnected')
+})
+
+socket.on('connect_error', (error) => {
+    console.error('❌ Socket connection error:', error)
 })
 
 // Receive current game state (existing players)
 socket.on('game:state', (state) => {
-
-    const myPlayer = state.allPlayers.find(p => p.id === socket.id)
-
-    player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
-
-    showGameScreen()
-    startTimer()
-    renderScoreboard(state.allPlayers, socket.id)
+    // Initialize board from server if provided (authoritative source)
+    // Only update map data, don't re-render (would clear player elements)
+    if (state.board) {
+        initializeMap(state.board, false) // false = don't force re-render
+    }
     
-    state.allPlayers.forEach(p => {
-        if (p.id !== socket.id) {
-            createRemotePlayer(p)
+    // Start timer if not already running (for single-player mode)
+    startTimer()
+    
+    // Handle both old format (allPlayers) and new format (players)
+    const players = state.allPlayers || state.players || []
+    
+    if (players.length > 0) {
+        const myPlayer = players.find(p => p.id === socket.id)
+        
+        // Only create local player if it doesn't exist yet
+        if (myPlayer && !player) {
+            console.log('Creating player from game:state event:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
+            player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+            showGameScreen()
+        } else if (!myPlayer) {
+            console.warn('My player not found in game:state. Socket ID:', socket.id, 'Players:', players.map(p => p.id))
         }
-    })
+        
+        // Update/create remote players (including NPCs)
+        // Don't update local player position from server - client controls it
+        players.forEach(p => {
+            if (p.id !== socket.id) {
+                if (!remotePlayers.has(p.id)) {
+                    createRemotePlayer(p)
+                } else {
+                    updateRemotePlayer(p.id, p.x, p.y)
+                }
+            }
+        })
+        
+        // Update scoreboard
+        renderScoreboard(players, socket.id)
+    } else {
+        console.warn('game:state received with no players')
+    }
 })
 
 socket.on('room:created', (state) => {
-    const myPlayer = state.players.find(p => p.id === socket.id)
+    console.log('room:created received. Socket ID:', socket.id, 'Players in state:', state.players?.map(p => ({ id: p.id, name: p.name })))
+    
+    // Initialize board from server if provided (authoritative source)
+    // Only update map data once at the start, don't re-render (grid is already rendered)
+    // Note: board comes in game:state, but we handle it there to avoid double-rendering
+    // if (state.board) {
+    //     initializeMap(state.board, false)
+    // }
+    
+    const myPlayer = state.players?.find(p => p.id === socket.id)
 
-    player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+    if (myPlayer) {
+        console.log('Creating player from room:created:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
+        player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+        console.log('Local player created:', player.id, player.name, `(${player.x}, ${player.y})`)
+    } else {
+        console.error('Could not find my player in room:created state. Available players:', state.players?.map(p => p.id))
+    }
 
-    state.players.forEach(p => {
+    state.players?.forEach(p => {
         if (p.id !== socket.id) {
             createRemotePlayer(p)
         }
@@ -114,6 +167,10 @@ socket.on('room:updated', (state) => {
 // Handle NPC configuration confirmation
 socket.on('npcs-configured', (data) => {
     console.log(`NPCs configured: ${data.count} NPC(s)`, data.npcs)
+    // Start timer when game starts (single-player mode)
+    if (playerData.mode === 'single') {
+        startTimer()
+    }
     // Request room update to get NPCs in the players list
     // The server will emit room:updated with NPCs included
 })
@@ -230,6 +287,10 @@ function updateFPS() {
 function gameLoop() {
     updateFPS()
     if (!player) {
+        // Debug: log occasionally if player is missing
+        if (Math.random() < 0.01) { // 1% chance
+            console.warn('Game loop running but player is null. Socket ID:', socket.id)
+        }
         requestAnimationFrame(gameLoop)
         return
     }
@@ -238,6 +299,12 @@ function gameLoop() {
         updatePlayerRender(player)
         
         // Also update all remote players' rendering
+        remotePlayers.forEach(remotePlayer => {
+            updatePlayerRender(remotePlayer)
+        })
+    } else {
+        // Game is paused - still render players but don't update movement
+        updatePlayerRender(player)
         remotePlayers.forEach(remotePlayer => {
             updatePlayerRender(remotePlayer)
         })

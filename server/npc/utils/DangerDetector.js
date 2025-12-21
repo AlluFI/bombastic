@@ -29,11 +29,12 @@ class DangerDetector {
       dangerZones.add(bombKey);
 
       // Calculate explosion range in all 4 directions
+      // Coordinate system: x = row (vertical), y = col (horizontal)
       const directions = [
-        { x: 0, y: -1 }, // UP
-        { x: 0, y: 1 },  // DOWN
-        { x: -1, y: 0 }, // LEFT
-        { x: 1, y: 0 },  // RIGHT
+        { x: -1, y: 0 }, // UP (decrease row)
+        { x: 1, y: 0 },  // DOWN (increase row)
+        { x: 0, y: -1 }, // LEFT (decrease col)
+        { x: 0, y: 1 },  // RIGHT (increase col)
       ];
 
       const range = bomb.range || 1;
@@ -44,7 +45,8 @@ class DangerDetector {
           const checkY = bomb.y + dir.y * i;
 
           // Stop if out of bounds
-          if (checkX < 0 || checkX >= maxCols || checkY < 0 || checkY >= maxRows) {
+          // Coordinate system: x = row (0 to maxRows-1), y = col (0 to maxCols-1)
+          if (checkX < 0 || checkX >= maxRows || checkY < 0 || checkY >= maxCols) {
             break;
           }
 
@@ -53,12 +55,14 @@ class DangerDetector {
           dangerZones.add(key);
 
           // Stop if hit an indestructible wall (explosion doesn't pass through)
-          if (grid[checkY] && grid[checkY][checkX] === 2) { // 2 = indestructible wall
+          // Grid is structured as grid[row][col], and x=row, y=col
+          if (grid[checkX] && grid[checkX][checkY] === 2) { // 2 = indestructible wall
             break;
           }
 
           // Stop if hit a destructible block (explosion stops at block)
-          if (grid[checkY] && grid[checkY][checkX] === 1) { // 1 = destructible block
+          // Grid is structured as grid[row][col], and x=row, y=col
+          if (grid[checkX] && grid[checkX][checkY] === 1) { // 1 = destructible block
             break;
           }
         }

@@ -35,11 +35,12 @@ class Pathfinder {
     visited.add(`${start.x},${start.y}`);
 
     // Directions: UP, DOWN, LEFT, RIGHT
+    // Coordinate system: x = row (vertical), y = col (horizontal)
     const directions = [
-      { x: 0, y: -1 }, // UP
-      { x: 0, y: 1 },  // DOWN
-      { x: -1, y: 0 }, // LEFT
-      { x: 1, y: 0 },  // RIGHT
+      { x: -1, y: 0 }, // UP (decrease row)
+      { x: 1, y: 0 },  // DOWN (increase row)
+      { x: 0, y: -1 }, // LEFT (decrease col)
+      { x: 0, y: 1 },  // RIGHT (increase col)
     ];
 
     while (queue.length > 0) {
@@ -67,7 +68,8 @@ class Pathfinder {
         }
 
         // Skip if not walkable (wall or block)
-        if (grid[nextY] && grid[nextY][nextX] === 1) {
+        // Grid is structured as grid[row][col], and x=row, y=col
+        if (grid[nextX] && grid[nextX][nextY] === 1) {
           continue;
         }
 
@@ -105,10 +107,11 @@ class Pathfinder {
     const dx = nextStep.x - start.x;
     const dy = nextStep.y - start.y;
 
-    if (dx === 0 && dy === -1) return 'UP';
-    if (dx === 0 && dy === 1) return 'DOWN';
-    if (dx === -1 && dy === 0) return 'LEFT';
-    if (dx === 1 && dy === 0) return 'RIGHT';
+    // Coordinate system: x = row (vertical), y = col (horizontal)
+    if (dx === -1 && dy === 0) return 'UP';    // Decrease row
+    if (dx === 1 && dy === 0) return 'DOWN';   // Increase row
+    if (dx === 0 && dy === -1) return 'LEFT';  // Decrease col
+    if (dx === 0 && dy === 1) return 'RIGHT';  // Increase col
 
     return null;
   }
@@ -121,7 +124,8 @@ class Pathfinder {
    * @returns {boolean}
    */
   static _isValidPosition(pos, maxRows, maxCols) {
-    return pos.x >= 0 && pos.x < maxCols && pos.y >= 0 && pos.y < maxRows;
+    // Coordinate system: x = row (0 to maxRows-1), y = col (0 to maxCols-1)
+    return pos.x >= 0 && pos.x < maxRows && pos.y >= 0 && pos.y < maxCols;
   }
 
   /**
