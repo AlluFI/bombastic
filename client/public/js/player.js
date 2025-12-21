@@ -143,21 +143,57 @@ export function getLocalPlayer() {
     return localPlayer
 }
 
+// Movement cooldown to prevent continuous movement (Bomberman-style grid movement)
+let lastMovementTime = 0
+const MOVEMENT_COOLDOWN = 150 // milliseconds between moves (allows ~6-7 moves per second)
+
 export function updatePlayerMovement(player) {
+    // Check bomb placement first (not affected by movement cooldown)
+    if (keys.space) {
+        tryPlaceBomb(player)
+        keys.space = false  // Prevent holding spacebar to spam bombs
+    }
+    
+    const now = Date.now()
+    const timeSinceLastMove = now - lastMovementTime
+    
+    // Only allow movement if enough time has passed since last move
+    if (timeSinceLastMove < MOVEMENT_COOLDOWN) {
+        return
+    }
+    
     let newX = player.x
     let newY = player.y
+    let moved = false
 
-    if (keys.up) newX--
-    if (keys.down) newX++
-    if (keys.left) newY--
-    if (keys.right) newY++
+    if (keys.up) {
+        newX--
+        moved = true
+    } else if (keys.down) {
+        newX++
+        moved = true
+    } else if (keys.left) {
+        newY--
+        moved = true
+    } else if (keys.right) {
+        newY++
+        moved = true
+    }
+    
+    // Only process movement if a key is pressed
+    if (!moved) {
+        return
+    }
 
     //check if player can move 
     if(map[newX] && map[newX][newY] === 'empty') {
         player.x = newX
         player.y = newY
         player.updatePosition()
+        lastMovementTime = now // Update cooldown only on successful move
     } else if (newX !== player.x || newY !== player.y) {
+        // Movement blocked - still apply cooldown to prevent spam when blocked
+        lastMovementTime = now
         // Debug: log blocked movement
         const blockedReason = !map[newX] ? 'out of bounds' : 
                               map[newX][newY] === 'breakable' ? 'block' : 
@@ -166,10 +202,5 @@ export function updatePlayerMovement(player) {
         if (Math.random() < 0.01) {
             console.log(`Movement blocked at (${newX}, ${newY}): ${blockedReason}. Current pos: (${player.x}, ${player.y})`);
         }
-    }
-
-     if (keys.space) {
-        tryPlaceBomb(player)
-        keys.space = false  // Prevent holding spacebar to spam bombs
     }
 }

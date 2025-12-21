@@ -377,13 +377,16 @@ io.on('connection', socket => {
 
     // Handle bomb placement
     socket.on('bomb:place', (bombData) => {
-      const player = allPlayers.get(socket.id)
+      const room = rooms.get(socket.roomCode)
+      if (!room) return
+      
+      const player = room.players.get(socket.id)
       if (!player) return
       
-      console.log(`${player.name} placed bomb at (${bombData.x}, ${bombData.y})`)
+      console.log(`${player.name} placed bomb at (${bombData.x}, ${bombData.y}) in room ${socket.roomCode}`)
       
-      // Broadcast to ALL other players (not including sender)
-      socket.broadcast.emit('bomb:placed', {
+      // Broadcast to all OTHER players in the same room (sender already rendered it locally)
+      socket.to(socket.roomCode).emit('bomb:placed', {
           bombId: bombData.bombId,
           playerId: bombData.playerId,
           x: bombData.x,
