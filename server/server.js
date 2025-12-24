@@ -397,10 +397,16 @@ io.on('connection', socket => {
 
     // Handle single block destruction
     socket.on('block:destroy', (data) => {
-        console.log(`Block destroyed at (${data.x}, ${data.y})`)
+      console.log(`Block destroyed at (${data.x}, ${data.y})`)
+      
+      // const room = rooms.get(socket.roomCode)
+      // if (!room) return
+      
+      // const player = room.players.get(socket.id)
+      // if (!player) return
         
         // Broadcast to ALL other players
-        socket.broadcast.emit('block:destroyed', {
+        socket.to(socket.roomCode).emit('block:destroyed', {
             x: data.x,
             y: data.y,
             timestamp: data.timestamp
@@ -412,7 +418,7 @@ io.on('connection', socket => {
         console.log(`${data.blocks.length} blocks destroyed`)
         
         // Broadcast to ALL other players
-        socket.broadcast.emit('blocks:destroyed', {
+        socket.to(socket.roomCode).emit('blocks:destroyed', {
             blocks: data.blocks,
             timestamp: data.timestamp
         })
@@ -483,35 +489,4 @@ setInterval(() => {
 
 server.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`))
 
- // socket.on('player:join', (data) => {
-      
-  //   if (allPlayers.size === 4) {
-  //     socket.emit('error', {message: "Lobby is full"})
-  //     return
-  //   }
  
-  //     // Get the next available spawn position & colo
-  //     const spawnIndex = allPlayers.size % startPos.length
-  //     const colorIndex = allPlayers.size % colors.length
-  //     const color = colors[colorIndex]
-  //     const spawn = startPos[spawnIndex]
-      
-  //   allPlayers.set(socket.id, {
-  //     id: socket.id,
-  //     name: data.name || `Player${allPlayers.size + 1}`,
-  //     x: spawn.x,
-  //     y: spawn.y,
-  //     color: color
-      
-  //   })
-
-  //       // Send current allPlayers to new player
-  //       socket.emit('game:state', {        
-  //     allPlayers: Array.from(allPlayers.values())
-  //   })
-
-  //   // Broadcast new player to others
-  //   socket.broadcast.emit('player:joined', allPlayers.get(socket.id))
-    
-  //   console.log(`${allPlayers.get(socket.id).name} joined at (${allPlayers.get(socket.id).x}, ${allPlayers.get(socket.id).y})`)
-  // })
