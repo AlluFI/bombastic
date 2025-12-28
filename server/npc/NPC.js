@@ -44,12 +44,19 @@ class NPC {
     // Behavior state
     this.state = 'idle'; // 'idle' | 'moving' | 'escaping' | 'attacking' | 'collecting'
     this.strategy = null; // Current behavior strategy (set when gameState is available)
+    this.lastEscapeDirection = null; // Last direction NPC moved while escaping (to prevent oscillation)
     
     // Infinite loop prevention
     this.lastPositions = []; // Track recent positions to detect loops
     this.positionHistorySize = 10; // How many positions to track
     this.stuckCounter = 0; // Counter for how long NPC has been stuck
     this.lastTargetSwitch = 0; // Time when target was last switched
+    this.lastBombTime = 0; // Time when NPC last placed a bomb (cooldown tracking)
+    this._pathfindingRecursionDepth = 0; // Prevent infinite recursion in pathfinding
+    this.escapeTarget = null; // Target safe position NPC is escaping toward (persists until safe)
+    this.lastExplosionTime = 0; // Time when a nearby bomb last exploded (for post-explosion wait)
+    this.committedDirection = null; // Direction NPC is committed to moving in (prevents oscillation)
+    this.committedDirectionUntil = 0; // Timestamp until which NPC is committed to this direction
     
     // Decision-making interval (ms) - varies by difficulty
     this.decisionInterval = this.profile.decisionInterval;
@@ -97,9 +104,14 @@ class NPC {
 
     const base = baseProfiles[this.difficulty] || baseProfiles.medium;
     
+    // Calculate bombPlacementSuccess from mistakeRate (1 - mistakeRate)
+    // This represents how often NPCs successfully execute bomb placement decisions
+    const bombPlacementSuccess = 1 - base.mistakeRate;
+    
     // Apply custom config overrides if provided
     return {
       ...base,
+      bombPlacementSuccess,  // Add bombPlacementSuccess to profile
       ...this.config,
     };
   }
@@ -135,6 +147,15 @@ class NPC {
     // Update navigation grid (for pathfinding)
     this._updateNavigationGrid(gameState);
 
+    // Track if bombs exploded (bombs removed from gameState)
+    const previousBombCount = this.gameState?.bombs?.length || 0;
+    const currentBombCount = gameState.bombs?.length || 0;
+    if (previousBombCount > currentBombCount) {
+      // Bombs exploded - update explosion time for cooldown
+      this.lastExplosionTime = Date.now();
+      console.log(`💥 NPC ${this.id} detected bomb explosion - starting cooldown`);
+    }
+    
     // Update danger zones from active bombs using DangerDetector
     if (gameState.bombs && gameState.bombs.length > 0 && gameState.board) {
       this.dangerZones = DangerDetector.calculateDangerZones(
@@ -218,6 +239,11 @@ class NPC {
     // ACT: validate and return the chosen action
     const action = this._act(decision);
     
+    // Debug: log when NPC makes a decision (occasionally to avoid spam)
+    if (this.currentTarget?.type === 'block' && Math.random() < 0.3) {
+      console.log(`🧠 NPC ${this.id} (${this.name}) getNextCommand: pos=(${this.position.x},${this.position.y}), decision=${decision?.type || 'null'}, action=${action?.type || 'null'}`);
+    }
+    
     if (action) {
       this.lastActionTime = currentTime;
     }
@@ -259,34 +285,169 @@ class NPC {
   _think(currentTime, perception) {
     const { inDanger, hasNearbyPowerups, isStuck, strategy } = perception;
 
-    // Check for infinite loops and get unstuck if needed
-    if (isStuck) {
+    // Debug: log when _think is called for block-targeting NPCs
+    if (this.currentTarget?.type === 'block') {
+      const distance = Pathfinder.manhattanDistance(this.position, this.currentTarget);
+      console.log(`🧠 NPC ${this.id} (${this.name}) _think called: pos=(${this.position.x},${this.position.y}), target block at (${this.currentTarget.x},${this.currentTarget.y}), distance=${distance}`);
+    }
+
+    // SPECIAL CASE: If we're adjacent to a block target (distance <= 1), we're not "stuck" - we should bomb it!
+    // Skip stuck check when adjacent to block targets to allow bomb placement
+    const isAdjacentToBlockTarget = this.currentTarget?.type === 'block' && 
+                                    Pathfinder.manhattanDistance(this.position, this.currentTarget) <= 1;
+    
+    // Priority 1: Escape danger if in danger zone (ALWAYS highest priority, even over stuck check)
+    // SPECIAL CASE: If we recently placed a bomb (within cooldown), prioritize escaping over everything else
+    const BOMB_COOLDOWN = 2500; // 2.5 seconds (bombs explode after 3 seconds)
+    const timeSinceLastBomb = Date.now() - this.lastBombTime;
+    const recentlyPlacedBomb = timeSinceLastBomb < BOMB_COOLDOWN;
+    
+    // IMPORTANT: Skip stuck check entirely when in danger - NPCs must escape first
+    // This prevents oscillation and ensures NPCs continue escaping until safe
+    if (inDanger) {
+      if (this.currentTarget?.type === 'block') {
+        console.log(`⚠️ NPC ${this.id} (${this.name}) is IN DANGER, attempting escape - pos=(${this.position.x},${this.position.y}), recentlyPlacedBomb=${recentlyPlacedBomb}`);
+      }
+      const escapeAction = this._decideEscape(this.lastEscapeDirection);
+      if (escapeAction) {
+        // Track escape direction to prevent oscillation
+        if (escapeAction.direction) {
+          this.lastEscapeDirection = escapeAction.direction;
+        }
+        return escapeAction;
+      }
+      // Escape failed
+      if (recentlyPlacedBomb) {
+        // If we just placed a bomb, we MUST escape - try again with more lenient checks
+        console.log(`⚠️ NPC ${this.id} (${this.name}) escape failed but recently placed bomb - MUST escape, trying harder with less-safe positions allowed`);
+        const urgentEscapeAction = this._decideEscape(this.lastEscapeDirection, true); // allowLessSafe = true
+        if (urgentEscapeAction) {
+          // Track escape direction
+          if (urgentEscapeAction.direction) {
+            this.lastEscapeDirection = urgentEscapeAction.direction;
+          }
+          return urgentEscapeAction;
+        }
+        // Still failed - but don't continue to other actions, escape is critical
+        console.log(`⚠️ NPC ${this.id} (${this.name}) urgent escape also failed - truly trapped`);
+        return null; // Will try again next cycle
+      }
+      // Escape failed - if we're adjacent to a block target (but didn't just place a bomb), continue with other actions
+      if (isAdjacentToBlockTarget) {
+        console.log(`⚠️ NPC ${this.id} (${this.name}) escape failed but adjacent to block - continuing with other actions`);
+        // Continue to bomb placement/movement logic below
+      } else {
+        // Not adjacent to block target and escape failed - NPC is truly trapped
+        if (this.currentTarget?.type === 'block') {
+          console.log(`⚠️ NPC ${this.id} (${this.name}) escape failed and not adjacent to block - NPC trapped`);
+        }
+        return null;
+      }
+    } else {
+      // Clear escape direction and target when no longer in danger
+      this.lastEscapeDirection = null;
+      this.escapeTarget = null;
+      
+      // After escaping, re-evaluate target to prevent oscillation
+      // Clear current target so NPC can choose a new, better target
+      // This prevents NPCs from immediately going back to where they came from
+      if (this.currentTarget) {
+        console.log(`🔄 NPC ${this.id} (${this.name}) cleared target after escaping - will re-evaluate next cycle`);
+        this.currentTarget = null;
+        this.lastTargetSwitch = Date.now();
+      }
+    }
+    
+    // Check for infinite loops and get unstuck if needed (ONLY if not in danger)
+    // Skip stuck check when adjacent to block targets to allow bomb placement
+    if (isStuck && !isAdjacentToBlockTarget) {
+      if (this.currentTarget?.type === 'block') {
+        console.log(`⚠️ NPC ${this.id} (${this.name}) is STUCK, returning _getUnstuck() - pos=(${this.position.x},${this.position.y})`);
+      }
       return this._getUnstuck();
     }
 
-    // Priority 1: Escape danger if in danger zone (always highest priority)
-    if (inDanger) {
-      return this._decideEscape();
-    }
-
     // Priority 2: Collect powerups (based on strategy priority)
-    if (strategy.targetPriority.powerups > 0.5 && hasNearbyPowerups) {
+    if (strategy && strategy.targetPriority.powerups > 0.5 && hasNearbyPowerups) {
       const powerupAction = this._decideCollectPowerup();
-      if (powerupAction) return powerupAction;
+      if (powerupAction) {
+        if (this.currentTarget?.type === 'block') {
+          console.log(`⚠️ NPC ${this.id} (${this.name}) returning powerup action instead of bomb - pos=(${this.position.x},${this.position.y})`);
+        }
+        return powerupAction;
+      }
     }
 
     // Priority 3: Attack/place bomb (based on strategy and difficulty)
-    const bombChance = strategy.bombPlacementChance * this.profile.bombPlacementRate;
+    // Bomb placement strategy:
+    // - If adjacent to a block (obstacle), bomb it to clear the path toward our goal
+    // - If player is in range, bomb to attack
+    // - Otherwise, use normal bomb placement chance
+    if (!strategy) {
+      console.log(`⚠️ NPC ${this.id} (${this.name}) has no strategy!`);
+      return null;
+    }
+    
+    // Debug: log before calling _evaluateBombTargets
+    if (this.currentTarget?.type === 'block') {
+      console.log(`🔍 NPC ${this.id} (${this.name}) ABOUT TO CALL _evaluateBombTargets: pos=(${this.position.x},${this.position.y}), target block at (${this.currentTarget.x},${this.currentTarget.y})`);
+    }
+    
+    const { hasPlayerTarget, hasBlockTarget } = this._evaluateBombTargets();
+    
+    // Debug: log bomb target evaluation when targeting blocks (ALWAYS log, no randomness)
+    if (this.currentTarget?.type === 'block') {
+      const distance = Pathfinder.manhattanDistance(this.position, this.currentTarget);
+      console.log(`🔍 NPC ${this.id} (${this.name}) _think bomb check: pos=(${this.position.x},${this.position.y}), target block at (${this.currentTarget.x},${this.currentTarget.y}), distance=${distance}, hasBlockTarget=${hasBlockTarget}, hasPlayerTarget=${hasPlayerTarget}`);
+    } else {
+      // Debug: log when NOT targeting a block but _think is called
+      console.log(`🔍 NPC ${this.id} (${this.name}) _think bomb check: pos=(${this.position.x},${this.position.y}), currentTarget=${this.currentTarget ? `${this.currentTarget.type} at (${this.currentTarget.x},${this.currentTarget.y})` : 'null'}, hasBlockTarget=${hasBlockTarget}, hasPlayerTarget=${hasPlayerTarget}`);
+    }
+    
+    // If we're adjacent to a block (either blocking our path or a target block), bomb it
+    if (hasBlockTarget) {
+      console.log(`🎯 NPC ${this.id} (${this.name}) detected adjacent block - attempting to place bomb at (${this.position.x}, ${this.position.y})`);
+      const bombAction = this._decidePlaceBomb(hasBlockTarget, hasPlayerTarget);
+      if (bombAction) {
+        console.log(`✅ NPC ${this.id} (${this.name}) SUCCESSFULLY decided to place bomb!`);
+        return bombAction; // Always try to bomb when adjacent to blocks
+      } else {
+        console.log(`❌ NPC ${this.id} (${this.name}) FAILED to place bomb - _decidePlaceBomb returned null`);
+      }
+    }
+    
+    // Otherwise, check normal bomb placement chance for attacking players
+    let bombChance = strategy.bombPlacementChance * this.profile.bombPlacementRate;
+    if (hasPlayerTarget) {
+      bombChance = Math.min(1.0, bombChance * 1.5); // Boost chance when players nearby
+    }
+    
     if (Math.random() < bombChance) {
-      const bombAction = this._decidePlaceBomb();
+      const bombAction = this._decidePlaceBomb(hasBlockTarget, hasPlayerTarget);
       if (bombAction) return bombAction;
     }
 
     // Priority 4: Move toward target (based on strategy)
+    // BUT: Check post-explosion cooldown first to prevent stepping into blast zones
+    const EXPLOSION_COOLDOWN = 2500; // Wait 2.5 seconds after explosions
+    const timeSinceLastExplosion = Date.now() - this.lastExplosionTime;
+    if (timeSinceLastExplosion < EXPLOSION_COOLDOWN) {
+      // Still in post-explosion cooldown - don't move, stay put
+      console.log(`⏳ NPC ${this.id} (${this.name}) waiting ${Math.round(EXPLOSION_COOLDOWN - timeSinceLastExplosion)}ms after explosion before moving`);
+      return null;
+    }
+    
     const movementAction = this._decideMovement();
     if (movementAction) return movementAction;
 
-    // Priority 5: Wander (if strategy allows)
+    // Priority 5: Opportunistic bombing (10% chance to bomb even without clear targets)
+    // This helps NPCs be more active, especially in early game when paths are blocked
+    if (Math.random() < 0.1) {
+      const bombAction = this._decidePlaceBomb(hasBlockTarget, hasPlayerTarget);
+      if (bombAction) return bombAction;
+    }
+
+    // Priority 6: Wander (if strategy allows)
     if (Math.random() < strategy.wanderChance) {
       return this._decideWander();
     }
@@ -323,68 +484,216 @@ class NPC {
   /**
    * Decides escape action when in danger
    * Uses pathfinding to find nearest safe position
+   * @param {string|null} preferredDirection - Preferred direction to continue escaping (prevents oscillation)
+   * @param {boolean} allowLessSafe - If true, allow moving to less-safe positions (when we MUST escape)
    * @returns {Object|null} Action object or null if no safe path
    */
-  _decideEscape() {
+  _decideEscape(preferredDirection = null, allowLessSafe = false) {
     if (!this.navigationGrid || !this.gameState) {
       // Fallback to random direction if no grid available
-      return this._getRandomSafeDirection();
+      return this._getRandomSafeDirection(preferredDirection, allowLessSafe);
     }
 
-    // Find nearest safe position using DangerDetector
-    const safePosition = DangerDetector.findNearestSafePosition(
-      this.position,
-      this.dangerZones,
-      this.navigationGrid,
-      this.maxRows,
-      this.maxCols
-    );
+    // IMPORTANT: If we're already at a safe position, clear the escape target and return null
+    // This prevents oscillation when NPCs reach safety
+    // BUT: Also check if there are bombs that will explode soon - NPCs should wait until bombs fully explode
+    const currentPosKey = `${this.position.x},${this.position.y}`;
+    const currentlyInDanger = this.dangerZones.has(currentPosKey);
+    
+    // Check if there are any bombs nearby that haven't exploded yet
+    // NPCs should wait until all nearby bombs have fully exploded (removed from gameState.bombs) before moving
+    // We check if bombs exist in gameState.bombs - if they're still there, they haven't exploded yet
+    let hasNearbyActiveBombs = false;
+    if (this.gameState && this.gameState.bombs && this.gameState.bombs.length > 0) {
+      const now = Date.now();
+      hasNearbyActiveBombs = this.gameState.bombs.some(bomb => {
+        // Check if bomb is nearby (within explosion range + safety margin)
+        const distance = Pathfinder.manhattanDistance(this.position, { x: bomb.x, y: bomb.y });
+        const range = bomb.range || 2;
+        const safetyMargin = 2; // Extra tiles to wait before considering it safe
+        if (distance > range + safetyMargin) {
+          // Bomb is far away, not a concern
+          return false;
+        }
+        
+        // If bomb is still in gameState.bombs, it hasn't exploded yet - wait!
+        // Bombs are removed from gameState.bombs when they explode
+        return true;
+      });
+    }
+    
+    if (!currentlyInDanger && !hasNearbyActiveBombs) {
+      // We're safe and no nearby bombs are active - but wait a bit after explosions before moving
+      const EXPLOSION_COOLDOWN = 2500; // Wait 2.5 seconds after explosions before moving again (increased to prevent stepping into blast zones)
+      const timeSinceLastExplosion = Date.now() - this.lastExplosionTime;
+      if (timeSinceLastExplosion < EXPLOSION_COOLDOWN) {
+        // Still in post-explosion cooldown - stay put
+        console.log(`⏳ NPC ${this.id} waiting ${Math.round(EXPLOSION_COOLDOWN - timeSinceLastExplosion)}ms after explosion before moving`);
+        return null;
+      }
+      
+      // We're safe and no nearby bombs are active - clear escape target and allow normal behavior
+      this.escapeTarget = null;
+      console.log(`✅ NPC ${this.id} already at safe position (${this.position.x}, ${this.position.y}) - clearing escape target, no nearby bombs`);
+      return null;
+    }
 
+    // If we already have an escape target and we're still in danger, keep moving toward it
+    // This prevents oscillation by committing to one escape route
+    let safePosition = this.escapeTarget;
+    
+    // Verify the escape target is still valid (safe and reachable)
+    if (safePosition) {
+      // Check if we've already reached the escape target (within 1 tile)
+      const distanceToTarget = Pathfinder.manhattanDistance(this.position, safePosition);
+      if (distanceToTarget <= 1) {
+        // We're very close to or at the escape target - check if it's safe
+        const targetKey = `${safePosition.x},${safePosition.y}`;
+        if (!this.dangerZones.has(targetKey)) {
+          // Target is safe and we're close - clear it so we don't oscillate
+          this.escapeTarget = null;
+          safePosition = null;
+          console.log(`✅ NPC ${this.id} reached escape target - clearing it`);
+        }
+      } else {
+        // Still moving toward target - verify it's still valid
+        const targetKey = `${safePosition.x},${safePosition.y}`;
+        const targetStillSafe = !this.dangerZones.has(targetKey);
+        const targetStillReachable = this._isValidPosition(safePosition) && 
+                                      this.navigationGrid[safePosition.x] && 
+                                      this.navigationGrid[safePosition.x][safePosition.y] === 0;
+        
+        if (!targetStillSafe || !targetStillReachable) {
+          // Escape target is no longer valid, find a new one
+          this.escapeTarget = null;
+          safePosition = null;
+        } else {
+          console.log(`🧭 NPC ${this.id} using existing escape target (${safePosition.x}, ${safePosition.y}) from pos (${this.position.x}, ${this.position.y}), distance=${distanceToTarget}`);
+        }
+      }
+    }
+    
+    // If no valid escape target, find a new one
     if (!safePosition) {
-      // No safe position found, try random safe direction
-      return this._getRandomSafeDirection();
-    }
-
-    // Use pathfinding to get direction toward safe position
-    const direction = Pathfinder.getNextDirection(
-      this.position,
-      safePosition,
-      this.navigationGrid,
-      this.maxRows,
-      this.maxCols
-    );
-
-    if (direction) {
-      // Verify the direction is actually safe
-      const nextPos = this._getNextPosition(this.position, direction);
-      if (!DangerDetector.isInDanger(nextPos, this.dangerZones)) {
-        this.state = 'escaping';
-        return {
-          type: 'MOVE',
-          direction: direction,
-        };
+      safePosition = DangerDetector.findNearestSafePosition(
+        this.position,
+        this.dangerZones,
+        this.navigationGrid,
+        this.maxRows,
+        this.maxCols
+      );
+      
+      if (safePosition) {
+        // Store the escape target so we commit to this route
+        this.escapeTarget = safePosition;
+        console.log(`🎯 NPC ${this.id} found new escape target (${safePosition.x}, ${safePosition.y}) from pos (${this.position.x}, ${this.position.y}), allowLessSafe=${allowLessSafe}`);
+      } else {
+        console.log(`❌ NPC ${this.id} NO SAFE POSITION FOUND from pos (${this.position.x}, ${this.position.y})`);
       }
     }
 
-    // Fallback to random safe direction
-    return this._getRandomSafeDirection();
+    if (!safePosition) {
+      // No safe position found, try random safe direction
+      console.log(`⚠️ NPC ${this.id} falling back to _getRandomSafeDirection`);
+      return this._getRandomSafeDirection(preferredDirection, allowLessSafe);
+    }
+
+    // Use pathfinding to get direction toward safe position
+    // IMPORTANT: If we have a preferred direction (from last step), prefer it to prevent oscillation
+    // This ensures NPCs continue moving in the same direction toward the escape target
+    let direction = null;
+    
+    if (preferredDirection) {
+      // We have a preferred direction - check if it's still valid and moves us closer to safety
+      const preferredNextPos = this._getNextPosition(this.position, preferredDirection);
+      if (this._isValidPosition(preferredNextPos) && this._isWalkable(preferredNextPos)) {
+        const preferredDist = Pathfinder.manhattanDistance(preferredNextPos, safePosition);
+        const currentDist = Pathfinder.manhattanDistance(this.position, safePosition);
+        if (preferredDist < currentDist) {
+          // Preferred direction is valid and moves us closer to safety - use it!
+          direction = preferredDirection;
+        }
+      }
+    }
+    
+    // If no preferred direction or it's not valid, use pathfinding
+    if (!direction) {
+      direction = Pathfinder.getNextDirection(
+        this.position,
+        safePosition,
+        this.navigationGrid,
+        this.maxRows,
+        this.maxCols
+      );
+    }
+
+    if (direction) {
+      // Always move toward the safe position if we found one using pathfinding
+      // Even if the next step is still in danger, it's moving us closer to safety
+      // (this prevents oscillation - we commit to moving toward the safe position)
+      const nextPos = this._getNextPosition(this.position, direction);
+      
+      // Check if position is walkable (we'll move even if still in danger if allowLessSafe is true)
+      if (this._isValidPosition(nextPos) && this._isWalkable(nextPos)) {
+        const nextPosInDanger = DangerDetector.isInDanger(nextPos, this.dangerZones);
+        
+        // Only move if: (1) next position is safe, OR (2) allowLessSafe is true AND we have a safe target
+        if (!nextPosInDanger || (allowLessSafe && safePosition)) {
+          this.state = 'escaping';
+          console.log(`✅ NPC ${this.id} escaping: moving ${direction} from (${this.position.x}, ${this.position.y}) to (${nextPos.x}, ${nextPos.y}), nextPosInDanger=${nextPosInDanger}, allowLessSafe=${allowLessSafe}`);
+          
+          // If we're moving to a safe position (not in danger), and it's our escape target, clear the target
+          // This prevents oscillation when NPCs reach safety
+          if (!nextPosInDanger && safePosition && Pathfinder.manhattanDistance(nextPos, safePosition) <= 1) {
+            this.escapeTarget = null;
+            console.log(`✅ NPC ${this.id} reached safe position (${nextPos.x}, ${nextPos.y}) - clearing escape target`);
+          }
+          
+          return {
+            type: 'MOVE',
+            direction: direction,
+          };
+        } else {
+          console.log(`⚠️ NPC ${this.id} cannot move ${direction} to (${nextPos.x}, ${nextPos.y}): nextPosInDanger=${nextPosInDanger}, allowLessSafe=${allowLessSafe}, hasSafeTarget=${!!safePosition}`);
+        }
+      } else {
+        console.log(`⚠️ NPC ${this.id} cannot move ${direction} to (${nextPos.x}, ${nextPos.y}): position not valid or not walkable`);
+      }
+    } else {
+      console.log(`⚠️ NPC ${this.id} pathfinding returned no direction toward safe position (${safePosition.x}, ${safePosition.y})`);
+    }
+
+    // Fallback to random safe direction (pass preferredDirection to prevent oscillation)
+    console.log(`⚠️ NPC ${this.id} falling back to _getRandomSafeDirection (direction was ${direction})`);
+    return this._getRandomSafeDirection(preferredDirection, allowLessSafe);
   }
 
   /**
    * Gets a random safe direction (fallback when pathfinding fails)
+   * Tries to find a safe direction, but if none exists, tries the "best available" direction
+   * @param {string|null} preferredDirection - Preferred direction to continue escaping (prevents oscillation)
+   * @param {boolean} allowLessSafe - If true, allow moving to less-safe positions (when we MUST escape)
    * @returns {Object|null} Action object or null
    */
-  _getRandomSafeDirection() {
+  _getRandomSafeDirection(preferredDirection = null, allowLessSafe = false) {
     const directions = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-    const shuffled = directions.sort(() => Math.random() - 0.5);
+    
+    // If we have a preferred direction, try it first to prevent oscillation
+    let shuffled;
+    if (preferredDirection && directions.includes(preferredDirection)) {
+      shuffled = [preferredDirection, ...directions.filter(d => d !== preferredDirection)];
+    } else {
+      shuffled = directions.sort(() => Math.random() - 0.5);
+    }
 
+    // First, try to find a perfectly safe direction
     for (const dir of shuffled) {
       const nextPos = this._getNextPosition(this.position, dir);
       
-      // Check if position is valid and safe
+      // Check if position is valid, walkable, and safe
       if (this._isValidPosition(nextPos) && 
-          !DangerDetector.isInDanger(nextPos, this.dangerZones) &&
-          this._isWalkable(nextPos)) {
+          this._isWalkable(nextPos) &&
+          !DangerDetector.isInDanger(nextPos, this.dangerZones)) {
         this.state = 'escaping';
         return {
           type: 'MOVE',
@@ -393,8 +702,45 @@ class NPC {
       }
     }
 
-    // No safe direction found - NPC might be trapped
-    // Return null to avoid moving into danger
+    // No perfectly safe direction found
+    // If allowLessSafe is true, we MUST escape (e.g., after placing a bomb)
+    // In this case, use pathfinding to find the nearest safe position (even if it's multiple steps away)
+    if (allowLessSafe && this.navigationGrid && this.gameState) {
+      const safePosition = DangerDetector.findNearestSafePosition(
+        this.position,
+        this.dangerZones,
+        this.navigationGrid,
+        this.maxRows,
+        this.maxCols
+      );
+      
+      if (safePosition) {
+        // Use pathfinding to get direction toward safe position
+        const direction = Pathfinder.getNextDirection(
+          this.position,
+          safePosition,
+          this.navigationGrid,
+          this.maxRows,
+          this.maxCols
+        );
+        
+        if (direction) {
+          const nextPos = this._getNextPosition(this.position, direction);
+          // Even if next position is in danger, move toward the safe position
+          // (this helps NPCs escape corners where all adjacent positions are in danger)
+          if (this._isValidPosition(nextPos) && this._isWalkable(nextPos)) {
+            this.state = 'escaping';
+            return {
+              type: 'MOVE',
+              direction: direction,
+            };
+          }
+        }
+      }
+    }
+    
+    // No safe position found - return null and wait
+    // NPCs will try again in the next cycle (danger zones might have changed)
     return null;
   }
 
@@ -534,15 +880,32 @@ class NPC {
   /**
    * Decides if NPC should place a bomb
    * Includes safety checks to prevent suicide and basic target evaluation
+   * @param {boolean} hasBlockTarget - Whether NPC is adjacent to a block (passed from _think to avoid recalculation)
+   * @param {boolean} hasPlayerTarget - Whether NPC has a player target in range (passed from _think to avoid recalculation)
    * @returns {Object|null} Action object or null
    */
-  _decidePlaceBomb() {
+  _decidePlaceBomb(hasBlockTarget = false, hasPlayerTarget = false) {
     if (!this.gameState || !this.gameState.board) {
+      console.log(`⚠️ NPC ${this.id} _decidePlaceBomb: no gameState or board`);
+      return null;
+    }
+
+    // If we weren't passed the target info, evaluate it now
+    if (hasBlockTarget === false && hasPlayerTarget === false) {
+      const targets = this._evaluateBombTargets();
+      hasBlockTarget = targets.hasBlockTarget;
+      hasPlayerTarget = targets.hasPlayerTarget;
+    }
+
+    if (!hasPlayerTarget && !hasBlockTarget) {
+      // No reason to bomb here
       return null;
     }
 
     // Safety check: Never place bomb if currently in danger
-    if (this._isInDanger()) {
+    // EXCEPTION: If we're adjacent to a block, allow bombing even in danger (NPCs need to clear paths)
+    if (this._isInDanger() && !hasBlockTarget) {
+      console.log(`⚠️ NPC ${this.id} _decidePlaceBomb: in danger and not adjacent to block, skipping`);
       return null;
     }
 
@@ -552,30 +915,65 @@ class NPC {
       return null;
     }
 
-    // Evaluate whether there is any worthwhile target for bombing
-    const { hasPlayerTarget, hasBlockTarget } = this._evaluateBombTargets();
-    if (!hasPlayerTarget && !hasBlockTarget) {
-      // No reason to bomb here
+    // Bomb cooldown: Don't place another bomb too soon after placing one
+    // This gives NPCs time to escape after placing a bomb
+    const BOMB_COOLDOWN = 2500; // 2.5 seconds (bombs explode after 3 seconds)
+    const timeSinceLastBomb = Date.now() - this.lastBombTime;
+    if (timeSinceLastBomb < BOMB_COOLDOWN) {
+      // Still in cooldown - prioritize escaping instead of placing another bomb
       return null;
     }
 
+    // If we're adjacent to ANY block (detected by hasBlockTarget), be very aggressive
+    // This ensures NPCs place bombs to clear paths, even if they're currently targeting a player
+    if (hasBlockTarget) {
+      // Only check for immediate danger - skip everything else and just bomb!
+      // This ensures NPCs place bombs when adjacent to blocks, regardless of current target
+      console.log(`💣 NPC ${this.id} (${this.name}) adjacent to block - PLACING BOMB at (${this.position.x}, ${this.position.y})`);
+      this.state = 'attacking';
+      this.lastBombTime = Date.now(); // Track when bomb was placed
+      return {
+        type: 'BOMB',
+      };
+    }
+
+    // For other situations, apply normal safety checks
     // Simulate \"mistakes\" for easier difficulties: sometimes skip good bomb opportunities
+    // But be more lenient when bombing blocks (NPCs need to clear paths to move)
+    let successThreshold = this.profile.bombPlacementSuccess || (1 - (this.profile.mistakeRate || 0.15));
+    if (!hasPlayerTarget && hasBlockTarget) {
+      // Increase success rate when bombing blocks (reduce mistakes)
+      successThreshold = Math.min(1.0, successThreshold + 0.2);
+    }
     const successRoll = Math.random();
-    if (successRoll > this.profile.bombPlacementSuccess) {
+    if (successRoll > successThreshold) {
       return null;
     }
 
     // Safety check: Verify there's an escape route after placing bomb
     // This prevents NPC from trapping itself
+    // But be more lenient for medium difficulty when bombing blocks
     if (!this._hasEscapeRoute()) {
-      // Hard difficulty might take calculated risks
-      if (this.difficulty !== 'hard' || Math.random() > 0.3) {
-        return null;
+      // When bombing blocks (not players), be more willing to take risks
+      if (!hasPlayerTarget && hasBlockTarget) {
+        if (this.difficulty === 'hard' && Math.random() < 0.5) {
+          // Hard NPCs take risks to clear blocks
+        } else if (this.difficulty === 'medium' && Math.random() < 0.3) {
+          // Medium NPCs sometimes take risks
+        } else {
+          return null;
+        }
+      } else {
+        // For player targets, be more cautious
+        if (this.difficulty !== 'hard' || Math.random() > 0.3) {
+          return null;
+        }
       }
     }
 
     // At this point we have a valid reason to bomb and an escape route
     this.state = 'attacking';
+    this.lastBombTime = Date.now(); // Track when bomb was placed
     return {
       type: 'BOMB',
     };
@@ -590,9 +988,13 @@ class NPC {
     let hasPlayerTarget = false;
     let hasBlockTarget = false;
 
+    if (!this.gameState || !this.gameState.board) {
+      console.log(`⚠️ NPC ${this.id} _evaluateBombTargets: no gameState or board`);
+      return { hasPlayerTarget: false, hasBlockTarget: false };
+    }
+
     const board = this.gameState.board;
     const attackRange = this.profile.attackRange || 2;
-    const blockDestructionRate = this.profile.blockDestructionRate || 0.3;
 
     // Check for player targets within attack range (Manhattan distance)
     if (this.gameState.players && this.gameState.players.length > 1) {
@@ -606,23 +1008,39 @@ class NPC {
       }
     }
 
-    // Check for nearby destructible blocks (for opening paths / finding powerups)
-    // Only sometimes considered, depending on blockDestructionRate
-    if (Math.random() < blockDestructionRate) {
-      const maxRadius = attackRange + 1;
-      for (let dy = -maxRadius; dy <= maxRadius; dy++) {
-        for (let dx = -maxRadius; dx <= maxRadius; dx++) {
-          const x = this.position.x + dx;
-          const y = this.position.y + dy;
-          if (!this._isValidPosition({ x, y })) continue;
-          // Grid is structured as grid[row][col], and x=row, y=col
-          if (!board[x]) continue;
-          if (board[x][y] === 1) { // 1 = destructible block
-            hasBlockTarget = true;
-            break;
-          }
+    // Check for adjacent destructible blocks (distance 1) - NPCs must be next to blocks to bomb them
+    // This ensures NPCs move close to blocks before placing bombs
+    const directions = [
+      { x: -1, y: 0 },  // UP (one tile above)
+      { x: 1, y: 0 },   // DOWN (one tile below)
+      { x: 0, y: -1 },  // LEFT (one tile left)
+      { x: 0, y: 1 },   // RIGHT (one tile right)
+    ];
+    
+    for (const dir of directions) {
+      const x = this.position.x + dir.x;
+      const y = this.position.y + dir.y;
+      if (!this._isValidPosition({ x, y })) {
+        // Debug: log invalid positions
+        if (this.currentTarget?.type === 'block' && Math.random() < 0.2) {
+          console.log(`🔍 NPC ${this.id} invalid adjacent pos: (${x}, ${y}) from (${this.position.x}, ${this.position.y})`);
         }
-        if (hasBlockTarget) break;
+        continue;
+      }
+      // Grid is structured as grid[row][col], and x=row, y=col
+      if (!board[x]) {
+        if (this.currentTarget?.type === 'block' && Math.random() < 0.2) {
+          console.log(`🔍 NPC ${this.id} board[${x}] is undefined`);
+        }
+        continue;
+      }
+      const cellValue = board[x][y];
+      // Debug: log ALL cell checks (unconditional, so we can see what's happening)
+      console.log(`🔍 NPC ${this.id} _evaluateBombTargets checking cell (${x}, ${y}): value=${cellValue}, isBlock=${cellValue === 1}, pos=(${this.position.x},${this.position.y}), currentTarget=${this.currentTarget ? `${this.currentTarget.type} at (${this.currentTarget.x},${this.currentTarget.y})` : 'null'}`);
+      if (cellValue === 1) { // 1 = destructible block (adjacent to NPC)
+        hasBlockTarget = true;
+        console.log(`✅ NPC ${this.id} (${this.name}) FOUND ADJACENT BLOCK at (${x}, ${y}) from position (${this.position.x}, ${this.position.y})`);
+        break;
       }
     }
 
@@ -659,14 +1077,91 @@ class NPC {
    * @returns {Object|null} Action object or null
    */
   _decideMovement() {
+    // CRITICAL: Check committed direction FIRST - before any other logic
+    // This prevents oscillation by making NPCs stick to a direction until blocked or target reached
+    const now = Date.now();
+    if (this.committedDirection && now < this.committedDirectionUntil) {
+      const committedNextPos = this._getNextPosition(this.position, this.committedDirection);
+      // Only check if valid and walkable - allow moving even if in danger if we're committed
+      // (NPCs should continue in their committed direction unless truly blocked)
+      if (this._isValidPosition(committedNextPos) && this._isWalkable(committedNextPos)) {
+        // Continue in committed direction (prevents oscillation)
+        // Check danger only as a secondary concern - commitment is primary
+        const nextPosInDanger = DangerDetector.isInDanger(committedNextPos, this.dangerZones);
+        if (!nextPosInDanger) {
+          console.log(`🧭 NPC ${this.id} continuing in committed direction: ${this.committedDirection}`);
+          return {
+            type: 'MOVE',
+            direction: this.committedDirection,
+          };
+        } else {
+          // Committed direction leads to danger - wait until safe or clear commitment
+          console.log(`⚠️ NPC ${this.id} committed direction ${this.committedDirection} leads to danger - waiting`);
+          return null; // Wait instead of moving into danger
+        }
+      } else {
+        // Committed direction is blocked - clear it and recalculate
+        console.log(`🚫 NPC ${this.id} committed direction ${this.committedDirection} blocked - clearing commitment`);
+        this.committedDirection = null;
+        this.committedDirectionUntil = 0;
+      }
+    }
+    
     // Select or update target based on strategy
     const target = this._selectTarget();
     
+    // Debug: log block target selection
+    if (target?.type === 'block') {
+      const distance = Pathfinder.manhattanDistance(this.position, target);
+      console.log(`🎯 NPC ${this.id} (${this.name}) targeting block at (${target.x}, ${target.y}), distance=${distance}, pos=(${this.position.x}, ${this.position.y})`);
+      
+      // If we're already adjacent to a block target, don't move - we should bomb it instead
+      // (This prevents oscillation when adjacent to blocks)
+      if (distance <= 1) {
+        console.log(`📍 NPC ${this.id} (${this.name}) is ADJACENT to block target - should bomb instead of moving`);
+        // Already adjacent - don't move, wait for bomb placement decision
+        return null;
+      }
+    }
+    
     if (target && this.navigationGrid) {
+      // If target is a block, find nearest walkable position adjacent to it
+      // (since blocks are not walkable, we can't pathfind directly to them)
+      let pathfindingTarget = target;
+      if (target.type === 'block') {
+        // Find nearest walkable position adjacent to the block
+        const adjacentPositions = [
+          { x: target.x - 1, y: target.y }, // UP
+          { x: target.x + 1, y: target.y }, // DOWN
+          { x: target.x, y: target.y - 1 }, // LEFT
+          { x: target.x, y: target.y + 1 }, // RIGHT
+        ];
+        
+        // Find the closest walkable adjacent position
+        let closestAdjacent = null;
+        let closestDistance = Infinity;
+        for (const adj of adjacentPositions) {
+          if (this._isValidPosition(adj) && this._isWalkable(adj)) {
+            const dist = Pathfinder.manhattanDistance(this.position, adj);
+            if (dist < closestDistance) {
+              closestDistance = dist;
+              closestAdjacent = adj;
+            }
+          }
+        }
+        
+        if (closestAdjacent) {
+          pathfindingTarget = closestAdjacent;
+        } else {
+          // No walkable adjacent position found, skip this target
+          return this._decideSafeExploration();
+        }
+      }
+      
       // Use pathfinding when navigation grid is available
       const direction = Pathfinder.getNextDirection(
         this.position,
-        target,
+        pathfindingTarget,
         this.navigationGrid,
         this.maxRows,
         this.maxCols
@@ -679,17 +1174,76 @@ class NPC {
             this._isWalkable(nextPos) &&
             !DangerDetector.isInDanger(nextPos, this.dangerZones)) {
           this.state = 'moving';
+          
+          // Commit to this direction for 4 seconds to prevent oscillation
+          // This makes NPCs move like humans: commit to a direction and continue until target reached or blocked
+          this.committedDirection = direction;
+          this.committedDirectionUntil = Date.now() + 4000; // 4 second commitment (increased to prevent oscillation)
+          
+          if (target.type === 'block') {
+            const newDistance = Pathfinder.manhattanDistance(nextPos, target);
+            console.log(`🚶 NPC ${this.id} (${this.name}) moving ${direction} toward block at (${target.x}, ${target.y}), will be at distance ${newDistance}, committed for 2s`);
+          }
           return {
             type: 'MOVE',
             direction: direction,
           };
+        } else {
+          if (target.type === 'block') {
+            console.log(`⚠️ NPC ${this.id} (${this.name}) cannot move ${direction} toward block: valid=${this._isValidPosition(nextPos)}, walkable=${this._isWalkable(nextPos)}, safe=${!DangerDetector.isInDanger(nextPos, this.dangerZones)}`);
+          }
+        }
+      } else {
+        // Pathfinding failed - target might be unreachable due to blocks
+        // If target is a player and we can't reach them, find a blocking block
+        if (target.type === 'player' && !this._pathfindingRecursionDepth) {
+          const blockingBlock = this._findBlockingBlock(target);
+          if (blockingBlock) {
+            // Switch to targeting the blocking block
+            this.currentTarget = blockingBlock;
+            this.lastTargetSwitch = Date.now();
+            // Try moving toward the block (limit recursion to prevent infinite loops)
+            this._pathfindingRecursionDepth = 1;
+            const result = this._decideMovement();
+            this._pathfindingRecursionDepth = 0;
+            if (result) return result;
+          }
         }
       }
     } else if (target && !this.navigationGrid) {
       // No navigation grid - use simple direction toward target
+      // If target is a block, find nearest walkable adjacent position
+      let moveTarget = target;
+      if (target.type === 'block') {
+        const adjacentPositions = [
+          { x: target.x - 1, y: target.y }, // UP
+          { x: target.x + 1, y: target.y }, // DOWN
+          { x: target.x, y: target.y - 1 }, // LEFT
+          { x: target.x, y: target.y + 1 }, // RIGHT
+        ];
+        
+        let closestAdjacent = null;
+        let closestDistance = Infinity;
+        for (const adj of adjacentPositions) {
+          if (this._isValidPosition(adj) && this._isWalkable(adj)) {
+            const dist = Pathfinder.manhattanDistance(this.position, adj);
+            if (dist < closestDistance) {
+              closestDistance = dist;
+              closestAdjacent = adj;
+            }
+          }
+        }
+        
+        if (closestAdjacent) {
+          moveTarget = closestAdjacent;
+        } else {
+          return this._decideSafeExploration();
+        }
+      }
+      
       // Coordinate system: x = row (vertical), y = col (horizontal)
-      const dx = target.x - this.position.x;
-      const dy = target.y - this.position.y;
+      const dx = moveTarget.x - this.position.x;
+      const dy = moveTarget.y - this.position.y;
       
       // Choose direction based on largest distance component
       let direction = null;
@@ -716,7 +1270,64 @@ class NPC {
     }
 
     // No target or pathfinding failed - explore safely
+    // But if we have a target and just can't reach it, try to find a path-clearing block
+    if (target && target.type === 'player' && !this._pathfindingRecursionDepth) {
+      // Can't reach player - find a blocking block to clear
+      const blockingBlock = this._findBlockingBlock(target);
+      if (blockingBlock) {
+        this.currentTarget = blockingBlock;
+        this.lastTargetSwitch = Date.now();
+        // Try moving toward the block (limit recursion to prevent infinite loops)
+        this._pathfindingRecursionDepth = 1;
+        const result = this._decideMovement();
+        this._pathfindingRecursionDepth = 0;
+        if (result) return result;
+      }
+    }
+    
     return this._decideSafeExploration();
+  }
+
+  /**
+   * Finds a block that's blocking the path to a target
+   * Returns the closest block that's between NPC and target
+   * @param {Object} target - Target object { x, y, type }
+   * @returns {Object|null} Blocking block position { x, y } or null
+   */
+  _findBlockingBlock(target) {
+    if (!this.gameState.board || !target) return null;
+    
+    // Find blocks that are in the direct path to the target
+    const dx = target.x - this.position.x;
+    const dy = target.y - this.position.y;
+    
+    // Check blocks in the direction toward target (within 2 tiles)
+    const checkDistance = Math.min(2, Math.max(Math.abs(dx), Math.abs(dy)));
+    const stepX = dx !== 0 ? dx / Math.abs(dx) : 0;
+    const stepY = dy !== 0 ? dy / Math.abs(dy) : 0;
+    
+    for (let i = 1; i <= checkDistance; i++) {
+      const checkX = this.position.x + stepX * i;
+      const checkY = this.position.y + stepY * i;
+      
+      if (this._isValidPosition({ x: checkX, y: checkY })) {
+        if (this.gameState.board[checkX] && this.gameState.board[checkX][checkY] === 1) {
+          // Found a blocking block
+          return { x: checkX, y: checkY, type: 'block' };
+        }
+      }
+    }
+    
+    // If no direct path block, find nearest block
+    for (let x = Math.max(0, this.position.x - 2); x <= Math.min(this.maxRows - 1, this.position.x + 2); x++) {
+      for (let y = Math.max(0, this.position.y - 2); y <= Math.min(this.maxCols - 1, this.position.y + 2); y++) {
+        if (this.gameState.board[x] && this.gameState.board[x][y] === 1) {
+          return { x: x, y: y, type: 'block' };
+        }
+      }
+    }
+    
+    return null;
   }
 
   /**
@@ -763,9 +1374,17 @@ class NPC {
 
   /**
    * Checks if NPC is stuck in a loop
+   * IMPORTANT: Does not check if NPC is in danger - that's handled separately
+   * NPCs in danger should escape first, not be marked as stuck
    * @returns {boolean}
    */
   _isStuck() {
+    // Don't mark as stuck if currently in danger - NPCs need to escape first
+    // This prevents oscillation when NPCs are trying to escape
+    if (this._isInDanger()) {
+      return false;
+    }
+    
     if (this.lastPositions.length < 5) {
       return false;
     }
@@ -779,7 +1398,7 @@ class NPC {
       return true;
     }
 
-    // Check for circular movement pattern
+    // Check for circular movement pattern (but only if not in danger)
     const uniquePositions = new Set(this.lastPositions);
     if (uniquePositions.size <= 3 && this.lastPositions.length >= 8) {
       this.stuckCounter++;
@@ -793,9 +1412,52 @@ class NPC {
 
   /**
    * Gets unstuck by switching target or using fallback routine
+   * IMPORTANT: Only moves to safe positions - never moves into danger zones
    * @returns {Object|null} Action object
    */
   _getUnstuck() {
+    // If we're at a safe position, don't move - stay put!
+    // NPCs often get "stuck" when they're safely waiting (e.g., after escaping a bomb)
+    if (!this._isInDanger()) {
+      // Also check if there are nearby active bombs - if so, stay put until they explode
+      let hasNearbyActiveBombs = false;
+      if (this.gameState && this.gameState.bombs && this.gameState.bombs.length > 0) {
+        hasNearbyActiveBombs = this.gameState.bombs.some(bomb => {
+          const distance = Pathfinder.manhattanDistance(this.position, { x: bomb.x, y: bomb.y });
+          const range = bomb.range || 2;
+          return distance <= range + 2; // Safety margin
+        });
+      }
+      
+      // Also check post-explosion cooldown
+      const EXPLOSION_COOLDOWN = 2500; // Wait 2.5 seconds after explosions (matching _decideEscape)
+      const timeSinceLastExplosion = Date.now() - this.lastExplosionTime;
+      const inExplosionCooldown = timeSinceLastExplosion < EXPLOSION_COOLDOWN;
+      
+      if (!hasNearbyActiveBombs && !inExplosionCooldown) {
+        console.log(`✅ NPC ${this.id} (${this.name}) is stuck but at safe position (${this.position.x}, ${this.position.y}) - staying put, no nearby bombs`);
+        // Clear position history, current target, and committed direction to allow re-evaluation
+        this.lastPositions = [];
+        this.committedDirection = null;
+        this.committedDirectionUntil = 0;
+        if (this.currentTarget) {
+          this.currentTarget = null;
+          this.lastTargetSwitch = Date.now();
+        }
+        return null; // Stay at safe position
+      } else {
+        if (inExplosionCooldown) {
+          console.log(`⏳ NPC ${this.id} (${this.name}) waiting ${EXPLOSION_COOLDOWN - timeSinceLastExplosion}ms after explosion`);
+        } else {
+          console.log(`⏳ NPC ${this.id} (${this.name}) is stuck but waiting for nearby bombs to explode`);
+        }
+        // Clear position history but stay put until bombs explode or cooldown passes
+        this.lastPositions = [];
+        return null;
+      }
+    }
+    
+    // Only try to get unstuck if we're actually in danger
     // Switch target to break the loop
     this.currentTarget = null;
     this.lastTargetSwitch = Date.now();
@@ -803,7 +1465,7 @@ class NPC {
     // Clear position history
     this.lastPositions = [];
     
-    // Try to move in a completely different direction
+    // Try to move in a completely different direction (but only to safe positions)
     const directions = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
     const shuffled = directions.sort(() => Math.random() - 0.5);
     
@@ -820,15 +1482,20 @@ class NPC {
       }
     }
 
-    // If still stuck, try any walkable direction (even if not ideal)
+    // If still stuck and in danger, try any walkable direction (even if not ideal)
+    // But prioritize safe positions if possible
     for (const dir of shuffled) {
       const nextPos = this._getNextPosition(this.position, dir);
       if (this._isValidPosition(nextPos) && this._isWalkable(nextPos)) {
-        this.state = 'moving';
-        return {
-          type: 'MOVE',
-          direction: dir,
-        };
+        const nextPosInDanger = DangerDetector.isInDanger(nextPos, this.dangerZones);
+        // Prefer safe positions, but if none available, take any walkable position
+        if (!nextPosInDanger || shuffled.indexOf(dir) === shuffled.length - 1) {
+          this.state = 'moving';
+          return {
+            type: 'MOVE',
+            direction: dir,
+          };
+        }
       }
     }
 
@@ -845,12 +1512,14 @@ class NPC {
     }
 
     const currentTime = Date.now();
-    // Switch targets occasionally to avoid predictability
+    // Commit to targets for a reasonable time, but switch if stuck
+    // Balance between goal commitment and adaptability
     const timeSinceSwitch = currentTime - this.lastTargetSwitch;
-    const shouldSwitchTarget = timeSinceSwitch > 5000 || this.currentTarget === null;
+    const minTimeToSwitch = 15000; // 15 seconds - commit to goals but allow switching if stuck (increased to prevent oscillation)
+    const shouldSwitchTarget = timeSinceSwitch > minTimeToSwitch || this.currentTarget === null;
 
     if (!shouldSwitchTarget && this.currentTarget) {
-      // Keep current target if it's still valid
+      // Keep current target if it's still valid - stay committed to the goal
       if (this._isTargetValid(this.currentTarget)) {
         return this.currentTarget;
       }
@@ -890,21 +1559,21 @@ class NPC {
       });
     }
 
-    // Find block targets (for strategic bomb placement)
+    // Find block targets - blocks are obstacles that need to be cleared to reach players
+    // Always look for nearby blocks, even if players exist (blocks block the path!)
     if (this.strategy.targetPriority.blocks > 0.3 && this.gameState.board) {
-      // Find nearby destructible blocks
-      // Coordinate system: x = row, y = col
+      // Find nearby blocks that might be blocking the path to players
       for (let x = Math.max(0, this.position.x - 3); x <= Math.min(this.maxRows - 1, this.position.x + 3); x++) {
         for (let y = Math.max(0, this.position.y - 3); y <= Math.min(this.maxCols - 1, this.position.y + 3); y++) {
           // Grid is structured as grid[row][col], and x=row, y=col
           if (this.gameState.board[x] && this.gameState.board[x][y] === 1) { // Destructible block
             const distance = Pathfinder.manhattanDistance(this.position, { x, y });
-            if (distance <= 4) {
+            if (distance <= 3) { // Only nearby blocks (within 3 tiles)
               candidates.push({
                 x: x,
                 y: y,
                 type: 'block',
-                priority: this.strategy.targetPriority.blocks,
+                priority: this.strategy.targetPriority.blocks * 0.5, // Lower priority than players/powerups
                 distance: distance,
               });
             }
@@ -918,17 +1587,38 @@ class NPC {
       return null;
     }
 
-    // Score candidates: priority * (1 / distance) - closer and higher priority is better
+    // Score candidates with strategic priorities:
+    // 1. Players are highest priority (attack enemies)
+    // 2. Powerups are medium priority (get upgrades)
+    // 3. Blocks are lowest priority (only clear if blocking path or no other targets)
     candidates.forEach(candidate => {
-      candidate.score = candidate.priority * (10 / (candidate.distance + 1));
+      let score = candidate.priority * (10 / (candidate.distance + 1));
+      
+      // STRATEGIC PRIORITY BOOSTS:
+      // Players are always highest priority - NPCs should hunt players
+      if (candidate.type === 'player') {
+        score *= 3.0; // Strongly prioritize players
+      }
+      // Powerups are medium priority
+      else if (candidate.type === 'powerup') {
+        score *= 1.5; // Moderate boost for powerups
+      }
+      // Blocks only if they're blocking path to players or no players available
+      // Don't boost blocks - they're just obstacles to clear
+      
+      candidate.score = score;
     });
 
     // Sort by score (highest first)
     candidates.sort((a, b) => b.score - a.score);
 
-    // Select top candidate (with some randomness for diversity)
-    const topCandidates = candidates.slice(0, Math.min(3, candidates.length));
-    const selected = topCandidates[Math.floor(Math.random() * topCandidates.length)];
+    // Always select the best target (no randomness) - NPCs should be strategic, not random
+    const selected = candidates[0];
+    
+    // Debug: log target selection for blocks
+    if (selected && selected.type === 'block') {
+      console.log(`🎯 NPC ${this.id} (${this.name}) SELECTED BLOCK TARGET at (${selected.x}, ${selected.y}), score=${selected.score?.toFixed(2)}, distance=${selected.distance}, pos=(${this.position.x}, ${this.position.y})`);
+    }
 
     this.currentTarget = selected;
     this.lastTargetSwitch = currentTime;

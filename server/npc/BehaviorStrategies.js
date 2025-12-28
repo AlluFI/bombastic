@@ -74,7 +74,7 @@ class BehaviorStrategies {
         powerups: 0.6,      // Moderate priority on powerups
         blocks: 0.5,        // Moderate priority on blocks
       },
-      bombPlacementChance: 0.5,  // Moderate chance to place bombs
+      bombPlacementChance: 0.8,  // Increased chance to place bombs (was 0.5)
       chaseDistance: 4,          // Moderate chase distance
       riskTolerance: 0.3,         // Moderate risk tolerance
       wanderChance: 0.15,         // Occasional wandering

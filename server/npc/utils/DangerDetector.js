@@ -24,6 +24,21 @@ class DangerDetector {
     }
 
     bombs.forEach(bomb => {
+      // Only include bombs that haven't exploded yet
+      // Check if bomb has a timer and if it's still active (timer > 0)
+      // Bombs are removed from gameState.bombs when they explode, but we also check timer for safety
+      const now = Date.now();
+      if (bomb.placedAt && bomb.duration) {
+        const elapsed = now - bomb.placedAt;
+        if (elapsed >= bomb.duration) {
+          // Bomb has already exploded - don't include in danger zones
+          return;
+        }
+      } else if (bomb.timer !== undefined && bomb.timer <= 0) {
+        // Bomb timer has reached 0 - don't include in danger zones
+        return;
+      }
+      
       // Add bomb position itself
       const bombKey = `${bomb.x},${bomb.y}`;
       dangerZones.add(bombKey);
@@ -109,10 +124,11 @@ class DangerDetector {
       const current = queue.shift();
 
       // Check if this position is safe and walkable
+      // Grid is structured as grid[row][col], and x=row, y=col
       const key = `${current.x},${current.y}`;
       if (!dangerZones.has(key) && 
           this._isValidPosition(current, maxRows, maxCols) &&
-          grid[current.y] && grid[current.y][current.x] === 0) {
+          grid[current.x] && grid[current.x][current.y] === 0) {
         return current;
       }
 
@@ -141,7 +157,8 @@ class DangerDetector {
    * @returns {boolean}
    */
   static _isValidPosition(pos, maxRows, maxCols) {
-    return pos.x >= 0 && pos.x < maxCols && pos.y >= 0 && pos.y < maxRows;
+    // Coordinate system: x = row (0 to maxRows-1), y = col (0 to maxCols-1)
+    return pos.x >= 0 && pos.x < maxRows && pos.y >= 0 && pos.y < maxCols;
   }
 
   /**

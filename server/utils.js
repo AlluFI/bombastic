@@ -254,6 +254,50 @@ function checkGameEnd(gameState) {
   }
  }
 
+/**
+ * Calculates which blocks are destroyed by a bomb explosion
+ * @param {Object} bomb - Bomb object { x, y, range }
+ * @param {Array<Array<number>>} board - Game board (0=walkable, 1=destructible, 2=indestructible)
+ * @returns {Array<Object>} Array of destroyed block positions { x, y }
+ */
+function calculateExplosionBlocks(bomb, board) {
+  const destroyedBlocks = [];
+  const range = bomb.range || 2;
+  
+  // Calculate explosion in 4 directions (matching DangerDetector logic)
+  const directions = [
+    { x: -1, y: 0 },  // UP (decrease row)
+    { x: 1, y: 0 },   // DOWN (increase row)
+    { x: 0, y: -1 },  // LEFT (decrease col)
+    { x: 0, y: 1 },   // RIGHT (increase col)
+  ];
+  
+  directions.forEach(dir => {
+    for (let i = 1; i <= range; i++) {
+      const checkX = bomb.x + dir.x * i;
+      const checkY = bomb.y + dir.y * i;
+      
+      // Stop if out of bounds
+      if (checkX < 0 || checkX >= 13 || checkY < 0 || checkY >= 15) {
+        break;
+      }
+      
+      // Check if position has a destructible block
+      if (board[checkX] && board[checkX][checkY] === 1) { // 1 = destructible block
+        destroyedBlocks.push({ x: checkX, y: checkY });
+        break; // Explosion stops at destructible blocks
+      }
+      
+      // Stop if hit an indestructible wall (explosion doesn't pass through)
+      if (board[checkX] && board[checkX][checkY] === 2) { // 2 = indestructible wall
+        break;
+      }
+    }
+  });
+  
+  return destroyedBlocks;
+}
+
 module.exports = {
   generateRoomCode,
   generateBoard,
@@ -261,5 +305,6 @@ module.exports = {
   colors,
   syncRoomGameState,
   handleNPCAction,
-  checkGameEnd
+  checkGameEnd,
+  calculateExplosionBlocks,
 }

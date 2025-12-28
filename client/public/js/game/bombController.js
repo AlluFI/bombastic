@@ -131,7 +131,7 @@ export function tryPlaceBomb(player) {
     
     console.log(`Placing bomb at (${x}, ${y})`)
 
-    trackBomb(player.id, bombId)
+    trackBomb(player.id, bombId, x, y)
     
     // Render bomb locally
     renderBomb(bombId, x, y, BOMB_DURATION, (explodedBombId, bombX, bombY) => {
@@ -179,8 +179,8 @@ export function placeRemoteBomb(bombData) {
         console.warn(`Remote bomb at invalid position: ${validation.reason}`)
     }*/
     
-    // Track this bomb
-    trackBomb(playerId, bombId)
+    // Track this bomb (with x, y for position tracking)
+    trackBomb(playerId, bombId, x, y)
     
     // Render bomb
     renderBomb(bombId, x, y, duration, (explodedBombId, bombX, bombY) => {
