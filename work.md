@@ -118,3 +118,7 @@ These functions are currently only implemented on client side need to be connect
   - Breakable bocks are destroyed
   - Block destruction is emitted to remote players
   - Need to fix - Player is not moving block by block, single key press moves the player several blocks
+
+28.12. - Aleksi
+- Players moving blob by block
+- Fixing NPC logic and bomb placement
