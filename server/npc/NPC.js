@@ -57,6 +57,15 @@ class NPC {
     this.lastExplosionTime = 0; // Time when a nearby bomb last exploded (for post-explosion wait)
     this.committedDirection = null; // Direction NPC is committed to moving in (prevents oscillation)
     this.committedDirectionUntil = 0; // Timestamp until which NPC is committed to this direction
+    this.hasClearedTargetAfterEscape = false; // Track if we've already cleared target after escaping (prevents oscillation)
+    this.wasInDangerLastCycle = false; // Track if NPC was in danger last cycle (to detect transition from danger to safe)
+    
+    // Human-like behavior: Planning and momentum
+    this.currentPlan = null; // Current multi-step plan { type: 'MOVE'|'BOMB'|'ESCAPE', direction: string, stepsRemaining: number, target: Object }
+    this.planCreatedAt = 0; // When the current plan was created
+    this.lastObservationTime = 0; // Last time NPC paused to observe (human-like pause)
+    this.movementMomentum = 0; // Number of consecutive moves in same direction (humans continue moving)
+    this.lastMovementDirection = null; // Last direction moved (for momentum)
     
     // Decision-making interval (ms) - varies by difficulty
     this.decisionInterval = this.profile.decisionInterval;
@@ -75,7 +84,7 @@ class NPC {
     const baseProfiles = {
       easy: {
         speed: 0.7,              // Slower movement
-        decisionInterval: 300,   // Slower decisions (300ms)
+        decisionInterval: 500,   // Slower decisions (500ms - humans think slower)
         aggression: 0.3,         // Low aggression
         bombPlacementRate: 0.2,  // Rarely places bombs
         mistakeRate: 0.3,        // 30% chance of mistakes
@@ -84,7 +93,7 @@ class NPC {
       },
       medium: {
         speed: 1.0,              // Normal speed
-        decisionInterval: 200,   // Normal decisions (200ms)
+        decisionInterval: 400,   // Normal decisions (400ms - more human-like)
         aggression: 0.6,         // Moderate aggression
         bombPlacementRate: 0.5,  // Moderate bomb placement
         mistakeRate: 0.15,       // 15% chance of mistakes
@@ -93,7 +102,7 @@ class NPC {
       },
       hard: {
         speed: 1.3,              // Faster movement
-        decisionInterval: 100,   // Fast decisions (100ms)
+        decisionInterval: 300,   // Fast decisions (300ms - still human-like, not superhuman)
         aggression: 0.9,         // High aggression
         bombPlacementRate: 0.8,  // Frequent bomb placement
         mistakeRate: 0.05,       // 5% chance of mistakes
@@ -230,25 +239,117 @@ class NPC {
       return null;
     }
 
+    // CRITICAL: Always check for danger FIRST - escape takes priority over plans/commitments
+    // NPCs should never move into danger zones unless they're already in danger and escaping
+    const currentlyInDanger = this._isInDanger();
+    
+    // HUMAN-LIKE BEHAVIOR: Execute existing plan if valid
+    // Humans make a plan and execute it, not constantly re-evaluate
+    // BUT: Only if not in immediate danger from other NPCs' bombs
+    if (this.currentPlan && this.currentPlan.stepsRemaining > 0 && !currentlyInDanger) {
+      const planAge = currentTime - this.planCreatedAt;
+      const maxPlanAge = 5000; // Plans expire after 5 seconds (humans adapt)
+      
+      // Check if plan is still valid
+      if (planAge < maxPlanAge && this._isPlanValid(this.currentPlan)) {
+        // Execute next step of the plan
+        const action = this._executePlanStep(this.currentPlan);
+        if (action) {
+          // Double-check that the action doesn't move into danger
+          if (action.type === 'MOVE') {
+            const nextPos = this._getNextPosition(this.position, action.direction);
+            const nextPosInDanger = DangerDetector.isInDanger(nextPos, this.dangerZones);
+            if (nextPosInDanger && !currentlyInDanger) {
+              // Plan would move into danger - cancel plan and escape instead
+              this.currentPlan = null;
+              // Fall through to normal decision-making (which will handle escape)
+            } else {
+              this.currentPlan.stepsRemaining--;
+              this.lastActionTime = currentTime;
+              
+              // Track momentum (humans continue in same direction)
+              if (action.direction === this.lastMovementDirection) {
+                this.movementMomentum++;
+              } else {
+                this.movementMomentum = 1;
+                this.lastMovementDirection = action.direction;
+              }
+              
+              return action;
+            }
+          } else {
+            // Non-movement action - execute it
+            this.currentPlan.stepsRemaining--;
+            this.lastActionTime = currentTime;
+            return action;
+          }
+        } else {
+          // Plan step failed - clear plan and re-plan
+          this.currentPlan = null;
+        }
+      } else {
+        // Plan expired or invalid - clear it
+        this.currentPlan = null;
+      }
+    }
+
+    // HUMAN-LIKE BEHAVIOR: Observation period
+    // Humans pause briefly to observe before making decisions
+    const OBSERVATION_TIME = 200; // 200ms observation period
+    if (currentTime - this.lastObservationTime < OBSERVATION_TIME && !this._isInDanger()) {
+      // Still observing - don't make new decisions yet (unless in danger)
+      return null;
+    }
+
     // SENSE: build a perception snapshot from current world state
     const perception = this._sense();
 
     // THINK: choose an action based on perception + behavior strategy
     const decision = this._think(currentTime, perception);
 
-    // ACT: validate and return the chosen action
-    const action = this._act(decision);
-    
-    // Debug: log when NPC makes a decision (occasionally to avoid spam)
-    if (this.currentTarget?.type === 'block' && Math.random() < 0.3) {
-      console.log(`🧠 NPC ${this.id} (${this.name}) getNextCommand: pos=(${this.position.x},${this.position.y}), decision=${decision?.type || 'null'}, action=${action?.type || 'null'}`);
-    }
-    
-    if (action) {
-      this.lastActionTime = currentTime;
+    // HUMAN-LIKE BEHAVIOR: Create a plan from the decision
+    // Instead of executing immediately, create a multi-step plan
+    if (decision && decision.type === 'MOVE') {
+      // Create a plan to move in this direction for several steps (humans commit to movement)
+      const planSteps = this._calculatePlanSteps(decision, perception);
+      if (planSteps > 0) {
+        this.currentPlan = {
+          type: 'MOVE',
+          direction: decision.direction,
+          stepsRemaining: planSteps,
+          target: this.currentTarget,
+          createdAt: currentTime,
+        };
+        this.planCreatedAt = currentTime;
+        this.lastObservationTime = currentTime;
+        
+        // Execute first step immediately
+        const action = this._act(decision);
+        if (action) {
+          this.currentPlan.stepsRemaining--;
+          this.lastActionTime = currentTime;
+          this.lastMovementDirection = action.direction;
+          this.movementMomentum = 1;
+          return action;
+        }
+      }
+    } else if (decision) {
+      // For non-movement actions (BOMB, etc.), execute immediately but don't create a plan
+      const action = this._act(decision);
+      if (action) {
+        this.lastActionTime = currentTime;
+        this.lastObservationTime = currentTime;
+        // Clear movement plan when taking other actions
+        if (action.type !== 'MOVE') {
+          this.currentPlan = null;
+        }
+        return action;
+      }
     }
 
-    return action;
+    // No action
+    this.lastObservationTime = currentTime;
+    return null;
   }
 
   /**
@@ -348,23 +449,38 @@ class NPC {
       this.lastEscapeDirection = null;
       this.escapeTarget = null;
       
-      // After escaping, re-evaluate target to prevent oscillation
-      // Clear current target so NPC can choose a new, better target
-      // This prevents NPCs from immediately going back to where they came from
-      if (this.currentTarget) {
-        console.log(`🔄 NPC ${this.id} (${this.name}) cleared target after escaping - will re-evaluate next cycle`);
+      // IMPORTANT: Keep targets after escaping - don't clear them!
+      // NPCs should stick to their targets (especially players) until they place a bomb
+      // Only re-evaluate if the current target is no longer valid
+      if (this.currentTarget && !this._isTargetValid(this.currentTarget)) {
+        // Target is no longer valid (player died, block destroyed, etc.) - clear it
+        console.log(`🔄 NPC ${this.id} (${this.name}) target no longer valid - clearing and re-evaluating`);
         this.currentTarget = null;
         this.lastTargetSwitch = Date.now();
       }
+      // Otherwise, keep the target - NPCs should commit to their goals!
+      
+      // Reset the flag tracking that we were in danger
+      this.wasInDangerLastCycle = false;
+    }
+    
+    // Track if we're currently in danger (for next cycle comparison)
+    if (inDanger) {
+      this.wasInDangerLastCycle = true;
+      // Reset the cleared flag when entering danger (so we can clear target again after next escape)
+      this.hasClearedTargetAfterEscape = false;
     }
     
     // Check for infinite loops and get unstuck if needed (ONLY if not in danger)
     // Skip stuck check when adjacent to block targets to allow bomb placement
     if (isStuck && !isAdjacentToBlockTarget) {
-      if (this.currentTarget?.type === 'block') {
-        console.log(`⚠️ NPC ${this.id} (${this.name}) is STUCK, returning _getUnstuck() - pos=(${this.position.x},${this.position.y})`);
+      const unstuckAction = this._getUnstuck();
+      // If _getUnstuck() returns null because NPC is safe and should resume normal behavior,
+      // continue with normal decision-making instead of returning early
+      if (unstuckAction !== null) {
+        return unstuckAction;
       }
-      return this._getUnstuck();
+      // Otherwise, continue with normal decision-making (don't return early)
     }
 
     // Priority 2: Collect powerups (based on strategy priority)
@@ -902,9 +1018,43 @@ class NPC {
       return null;
     }
 
+    // CRITICAL: If we're adjacent to ANY block, prioritize bombing it
+    // This ensures NPCs place bombs to clear paths, even if they're currently targeting a player
+    // Check this FIRST before other safety checks (except immediate explosion danger)
+    if (hasBlockTarget) {
+      // Safety check: Don't place a new bomb if another explosion is about to happen here
+      const timeUntilExplosion = DangerDetector.getTimeUntilExplosion(this.position, this.gameState.bombs || []);
+      if (timeUntilExplosion !== null && timeUntilExplosion < 1000) {
+        return null;
+      }
+      
+      // When adjacent to blocks, be very lenient with cooldown
+      // Allow bombing if cooldown is almost done (< 1000ms remaining) or if it's been a while
+      const BOMB_COOLDOWN = 2500; // 2.5 seconds
+      const timeSinceLastBomb = Date.now() - this.lastBombTime;
+      const cooldownRemaining = BOMB_COOLDOWN - timeSinceLastBomb;
+      
+      // If cooldown is almost done (< 1000ms remaining), allow bombing blocks
+      // This prevents NPCs from getting stuck waiting when they need to clear paths
+      if (timeSinceLastBomb < BOMB_COOLDOWN && cooldownRemaining > 1000) {
+        // Still in cooldown and more than 1000ms remaining - wait a bit longer
+        console.log(`⏳ NPC ${this.id} (${this.name}) adjacent to block but bomb cooldown active (${Math.round(cooldownRemaining)}ms remaining)`);
+        return null;
+      }
+      
+      // Place bomb when adjacent to blocks - bypass other safety checks
+      // This ensures NPCs place bombs when adjacent to blocks, regardless of current target or danger
+      console.log(`💣 NPC ${this.id} (${this.name}) adjacent to block - PLACING BOMB at (${this.position.x}, ${this.position.y})`);
+      this.state = 'attacking';
+      this.lastBombTime = Date.now(); // Track when bomb was placed
+      return {
+        type: 'BOMB',
+      };
+    }
+
+    // For non-block targets, apply normal safety checks
     // Safety check: Never place bomb if currently in danger
-    // EXCEPTION: If we're adjacent to a block, allow bombing even in danger (NPCs need to clear paths)
-    if (this._isInDanger() && !hasBlockTarget) {
+    if (this._isInDanger()) {
       console.log(`⚠️ NPC ${this.id} _decidePlaceBomb: in danger and not adjacent to block, skipping`);
       return null;
     }
@@ -922,19 +1072,6 @@ class NPC {
     if (timeSinceLastBomb < BOMB_COOLDOWN) {
       // Still in cooldown - prioritize escaping instead of placing another bomb
       return null;
-    }
-
-    // If we're adjacent to ANY block (detected by hasBlockTarget), be very aggressive
-    // This ensures NPCs place bombs to clear paths, even if they're currently targeting a player
-    if (hasBlockTarget) {
-      // Only check for immediate danger - skip everything else and just bomb!
-      // This ensures NPCs place bombs when adjacent to blocks, regardless of current target
-      console.log(`💣 NPC ${this.id} (${this.name}) adjacent to block - PLACING BOMB at (${this.position.x}, ${this.position.y})`);
-      this.state = 'attacking';
-      this.lastBombTime = Date.now(); // Track when bomb was placed
-      return {
-        type: 'BOMB',
-      };
     }
 
     // For other situations, apply normal safety checks
@@ -997,7 +1134,26 @@ class NPC {
     const attackRange = this.profile.attackRange || 2;
 
     // Check for player targets within attack range (Manhattan distance)
-    if (this.gameState.players && this.gameState.players.length > 1) {
+    // OR if we're currently targeting a player (even if beyond immediate attack range)
+    if (this.currentTarget?.type === 'player') {
+      // We have a player target - check if they're still valid and within reasonable range
+      const targetPlayer = this.gameState.players?.find(p => p.id === this.currentTarget.playerId);
+      if (targetPlayer && targetPlayer.alive) {
+        const dist = Pathfinder.manhattanDistance(this.position, { x: targetPlayer.x, y: targetPlayer.y });
+        // If player is within attack range, we can bomb them
+        // If player is further away, we're still targeting them (moving towards them)
+        if (dist <= attackRange) {
+          hasPlayerTarget = true;
+        } else {
+          // Player is beyond attack range but we're targeting them - still consider it a player target
+          // This helps NPCs know they're pursuing a player even if not in immediate bombing range
+          hasPlayerTarget = true;
+        }
+      }
+    }
+    
+    // Also check for any other players within attack range (for opportunistic bombing)
+    if (!hasPlayerTarget && this.gameState.players && this.gameState.players.length > 1) {
       for (const p of this.gameState.players) {
         if (p.id === this.id || p.alive === false) continue;
         const dist = Pathfinder.manhattanDistance(this.position, { x: p.x, y: p.y });
@@ -1385,6 +1541,26 @@ class NPC {
       return false;
     }
     
+    // Don't mark as stuck if intentionally waiting (post-explosion cooldown or nearby bombs)
+    // NPCs often stay in the same position when waiting for bombs to explode
+    const EXPLOSION_COOLDOWN = 2500;
+    const timeSinceLastExplosion = Date.now() - this.lastExplosionTime;
+    const inExplosionCooldown = timeSinceLastExplosion < EXPLOSION_COOLDOWN;
+    
+    let hasNearbyActiveBombs = false;
+    if (this.gameState && this.gameState.bombs && this.gameState.bombs.length > 0) {
+      hasNearbyActiveBombs = this.gameState.bombs.some(bomb => {
+        const distance = Pathfinder.manhattanDistance(this.position, { x: bomb.x, y: bomb.y });
+        const range = bomb.range || 2;
+        return distance <= range + 2; // Safety margin
+      });
+    }
+    
+    if (inExplosionCooldown || hasNearbyActiveBombs) {
+      // Intentionally waiting - not stuck
+      return false;
+    }
+    
     if (this.lastPositions.length < 5) {
       return false;
     }
@@ -1435,16 +1611,22 @@ class NPC {
       const inExplosionCooldown = timeSinceLastExplosion < EXPLOSION_COOLDOWN;
       
       if (!hasNearbyActiveBombs && !inExplosionCooldown) {
-        console.log(`✅ NPC ${this.id} (${this.name}) is stuck but at safe position (${this.position.x}, ${this.position.y}) - staying put, no nearby bombs`);
-        // Clear position history, current target, and committed direction to allow re-evaluation
+        // We're safe and not waiting - clear stuck state and resume normal behavior
+        // Clear position history to reset stuck detection
         this.lastPositions = [];
         this.committedDirection = null;
         this.committedDirectionUntil = 0;
-        if (this.currentTarget) {
-          this.currentTarget = null;
-          this.lastTargetSwitch = Date.now();
+        this.stuckCounter = 0; // Reset stuck counter
+        
+        // If we don't have a target, select one now
+        if (!this.currentTarget) {
+          // Force target selection by clearing lastTargetSwitch
+          this.lastTargetSwitch = 0;
         }
-        return null; // Stay at safe position
+        
+        // Return null to allow normal decision-making to proceed
+        // The NPC will select a target and continue in the next cycle
+        return null;
       } else {
         if (inExplosionCooldown) {
           console.log(`⏳ NPC ${this.id} (${this.name}) waiting ${EXPLOSION_COOLDOWN - timeSinceLastExplosion}ms after explosion`);
@@ -1458,9 +1640,14 @@ class NPC {
     }
     
     // Only try to get unstuck if we're actually in danger
-    // Switch target to break the loop
-    this.currentTarget = null;
-    this.lastTargetSwitch = Date.now();
+    // Clear position history to break the loop, but keep the target if it's still valid
+    // Only clear target if it's a block and we're truly stuck (can't reach it)
+    if (this.currentTarget && this.currentTarget.type === 'block') {
+      // If targeting a block and stuck, try switching to a different target
+      this.currentTarget = null;
+      this.lastTargetSwitch = Date.now();
+    }
+    // If targeting a player, keep the target - we'll find a way to reach them
     
     // Clear position history
     this.lastPositions = [];
@@ -1512,50 +1699,118 @@ class NPC {
     }
 
     const currentTime = Date.now();
-    // Commit to targets for a reasonable time, but switch if stuck
-    // Balance between goal commitment and adaptability
+    // Commit to targets for a LONG time to prevent oscillation
+    // NPCs should stick to their targets even when players move
     const timeSinceSwitch = currentTime - this.lastTargetSwitch;
-    const minTimeToSwitch = 15000; // 15 seconds - commit to goals but allow switching if stuck (increased to prevent oscillation)
+    const minTimeToSwitch = 30000; // 30 seconds - strong commitment to prevent oscillation
     const shouldSwitchTarget = timeSinceSwitch > minTimeToSwitch || this.currentTarget === null;
 
     if (!shouldSwitchTarget && this.currentTarget) {
       // Keep current target if it's still valid - stay committed to the goal
+      // IMPORTANT: For players, we check if the player still exists, not exact position
+      // This prevents targets from changing every time players move
       if (this._isTargetValid(this.currentTarget)) {
+        // Update target position if it's a player (they move, but we keep targeting them)
+        if (this.currentTarget.type === 'player' && this.gameState.players) {
+          const player = this.gameState.players.find(p => 
+            p.id !== this.id && 
+            p.alive !== false && 
+            // Match by player ID if available, or by approximate position
+            (p.id === this.currentTarget.playerId || 
+             (Math.abs(p.x - this.currentTarget.x) <= 1 && Math.abs(p.y - this.currentTarget.y) <= 1))
+          );
+          if (player) {
+            // Update target position to current player position, but keep the same target
+            this.currentTarget.x = player.x;
+            this.currentTarget.y = player.y;
+            if (player.id) this.currentTarget.playerId = player.id;
+            return this.currentTarget;
+          }
+        }
         return this.currentTarget;
       }
     }
 
     const candidates = [];
 
-    // Find player targets (based on strategy priority)
+    // PRIORITY 1: Find player targets - ALWAYS prioritize players if they exist
+    // NPCs should always have a target if players are visible (anywhere on the board)
+    // IMPORTANT: Prioritize human players over NPCs
     if (this.strategy.targetPriority.players > 0.3 && this.gameState.players) {
+      // First, collect human players (priority targets)
+      const humanPlayers = [];
+      const npcPlayers = [];
+      
       this.gameState.players.forEach(player => {
         if (player.id !== this.id && player.alive !== false) {
-          const distance = Pathfinder.manhattanDistance(this.position, { x: player.x, y: player.y });
-          if (distance <= this.strategy.chaseDistance) {
-            candidates.push({
-              x: player.x,
-              y: player.y,
-              type: 'player',
-              priority: this.strategy.targetPriority.players,
-              distance: distance,
-            });
+          if (player.isNPC === false || player.isNPC === undefined) {
+            // Human player - highest priority
+            humanPlayers.push(player);
+          } else {
+            // NPC player - lower priority
+            npcPlayers.push(player);
           }
         }
       });
+      
+      // Add human players first (with higher priority boost)
+      humanPlayers.forEach(player => {
+        const distance = Pathfinder.manhattanDistance(this.position, { x: player.x, y: player.y });
+        const hasRoute = this._hasRouteToTarget({ x: player.x, y: player.y, type: 'player' });
+        
+        candidates.push({
+          x: player.x,
+          y: player.y,
+          type: 'player',
+          priority: this.strategy.targetPriority.players * 2.0, // 2x boost for human players
+          distance: distance,
+          playerId: player.id,
+          hasRoute: hasRoute,
+          isHuman: true, // Mark as human player
+        });
+      });
+      
+      // Add NPC players only if no human players exist (or if very close)
+      if (humanPlayers.length === 0) {
+        npcPlayers.forEach(player => {
+          const distance = Pathfinder.manhattanDistance(this.position, { x: player.x, y: player.y });
+          const hasRoute = this._hasRouteToTarget({ x: player.x, y: player.y, type: 'player' });
+          
+          candidates.push({
+            x: player.x,
+            y: player.y,
+            type: 'player',
+            priority: this.strategy.targetPriority.players * 0.5, // Lower priority for NPCs
+            distance: distance,
+            playerId: player.id,
+            hasRoute: hasRoute,
+            isHuman: false, // Mark as NPC
+          });
+        });
+      }
     }
 
-    // Find powerup targets (based on strategy priority)
+    // PRIORITY 2: Find powerup targets (secondary to players)
+    // Only consider powerups if no players are available, or if very close
     if (this.strategy.targetPriority.powerups > 0.3 && this.gameState.powerups) {
+      const hasPlayerTargets = candidates.some(c => c.type === 'player');
+      
       this.gameState.powerups.forEach(powerup => {
         const distance = Pathfinder.manhattanDistance(this.position, { x: powerup.x, y: powerup.y });
-        candidates.push({
-          x: powerup.x,
-          y: powerup.y,
-          type: 'powerup',
-          priority: this.strategy.targetPriority.powerups,
-          distance: distance,
-        });
+        // Check if route exists to this powerup
+        const hasRoute = this._hasRouteToTarget({ x: powerup.x, y: powerup.y, type: 'powerup' });
+        
+        // Only include powerups if no players available, or if very close (within 3 tiles)
+        if (!hasPlayerTargets || distance <= 3) {
+          candidates.push({
+            x: powerup.x,
+            y: powerup.y,
+            type: 'powerup',
+            priority: this.strategy.targetPriority.powerups,
+            distance: distance,
+            hasRoute: hasRoute,
+          });
+        }
       });
     }
 
@@ -1588,23 +1843,36 @@ class NPC {
     }
 
     // Score candidates with strategic priorities:
-    // 1. Players are highest priority (attack enemies)
-    // 2. Powerups are medium priority (get upgrades)
+    // 1. Players are highest priority (attack enemies) - ALWAYS prioritize over everything
+    // 2. Powerups are secondary priority (get upgrades)
     // 3. Blocks are lowest priority (only clear if blocking path or no other targets)
+    // Also consider route availability - prefer targets we can actually reach
     candidates.forEach(candidate => {
       let score = candidate.priority * (10 / (candidate.distance + 1));
       
       // STRATEGIC PRIORITY BOOSTS:
-      // Players are always highest priority - NPCs should hunt players
+      // Players are ALWAYS highest priority - NPCs should hunt players
       if (candidate.type === 'player') {
-        score *= 3.0; // Strongly prioritize players
+        // Human players get even higher priority than NPCs
+        if (candidate.isHuman === true) {
+          score *= 5.0; // Very strongly prioritize human players
+        } else {
+          score *= 2.0; // Lower priority for NPC players (only if no humans available)
+        }
       }
-      // Powerups are medium priority
+      // Powerups are secondary priority
       else if (candidate.type === 'powerup') {
         score *= 1.5; // Moderate boost for powerups
       }
       // Blocks only if they're blocking path to players or no players available
       // Don't boost blocks - they're just obstacles to clear
+      
+      // Route availability bonus: prefer targets we can actually reach
+      if (candidate.hasRoute) {
+        score *= 1.2; // 20% bonus for reachable targets
+      } else {
+        score *= 0.5; // Penalty for unreachable targets (but don't exclude them completely)
+      }
       
       candidate.score = score;
     });
@@ -1615,13 +1883,21 @@ class NPC {
     // Always select the best target (no randomness) - NPCs should be strategic, not random
     const selected = candidates[0];
     
-    // Debug: log target selection for blocks
-    if (selected && selected.type === 'block') {
-      console.log(`🎯 NPC ${this.id} (${this.name}) SELECTED BLOCK TARGET at (${selected.x}, ${selected.y}), score=${selected.score?.toFixed(2)}, distance=${selected.distance}, pos=(${this.position.x}, ${this.position.y})`);
+    // Debug: log target selection
+    if (selected) {
+      if (selected.type === 'player') {
+        const targetType = selected.isHuman ? 'HUMAN PLAYER' : 'NPC';
+        console.log(`🎯 NPC ${this.id} (${this.name}) SELECTED ${targetType} TARGET at (${selected.x}, ${selected.y}), score=${selected.score?.toFixed(2)}, distance=${selected.distance}, pos=(${this.position.x}, ${this.position.y})`);
+      } else if (selected.type === 'block') {
+        console.log(`🎯 NPC ${this.id} (${this.name}) SELECTED BLOCK TARGET at (${selected.x}, ${selected.y}), score=${selected.score?.toFixed(2)}, distance=${selected.distance}, pos=(${this.position.x}, ${this.position.y})`);
+      } else if (selected.type === 'powerup') {
+        console.log(`🎯 NPC ${this.id} (${this.name}) SELECTED POWERUP TARGET at (${selected.x}, ${selected.y}), score=${selected.score?.toFixed(2)}, distance=${selected.distance}, pos=(${this.position.x}, ${this.position.y})`);
+      }
     }
 
     this.currentTarget = selected;
     this.lastTargetSwitch = currentTime;
+    this.hasClearedTargetAfterEscape = false; // Reset flag when selecting a new target
 
     return selected;
   }
@@ -1638,8 +1914,22 @@ class NPC {
 
     switch (target.type) {
       case 'player':
-        const player = this.gameState.players.find(p => p.id !== this.id && p.x === target.x && p.y === target.y);
-        return player && player.alive !== false;
+        // For players, check if the player still exists and is alive
+        // Don't check exact position - players move, but we keep targeting them
+        if (target.playerId) {
+          // If we have a player ID, match by ID
+          const player = this.gameState.players.find(p => p.id === target.playerId);
+          return player && player.alive !== false;
+        } else {
+          // Fallback: check if any player is near the target position (within 2 tiles)
+          // This handles cases where player ID wasn't stored
+          return this.gameState.players.some(p => 
+            p.id !== this.id && 
+            p.alive !== false &&
+            Math.abs(p.x - target.x) <= 2 && 
+            Math.abs(p.y - target.y) <= 2
+          );
+        }
       case 'powerup':
         return this.gameState.powerups && 
                this.gameState.powerups.some(p => p.x === target.x && p.y === target.y);
@@ -1651,6 +1941,133 @@ class NPC {
       default:
         return false;
     }
+  }
+
+  /**
+   * Checks if there's a route to a target (pathfinding check)
+   * @param {Object} target - Target object { x, y, type }
+   * @returns {boolean}
+   */
+  _hasRouteToTarget(target) {
+    if (!this.navigationGrid || !target) {
+      return true; // Assume reachable if no grid (fallback)
+    }
+
+    // Try to find a path to the target
+    const path = Pathfinder.findPath(
+      this.position,
+      { x: target.x, y: target.y },
+      this.navigationGrid,
+      this.maxRows,
+      this.maxCols
+    );
+
+    return path !== null && path.length > 0;
+  }
+
+  /**
+   * Checks if the current plan is still valid
+   * @param {Object} plan - Plan object
+   * @returns {boolean}
+   */
+  _isPlanValid(plan) {
+    if (!plan) return false;
+    
+    // If in danger, escape plans take priority
+    if (this._isInDanger() && plan.type !== 'ESCAPE') {
+      return false;
+    }
+    
+    // Check if the next step in the plan is still valid
+    if (plan.type === 'MOVE') {
+      const nextPos = this._getNextPosition(this.position, plan.direction);
+      if (!this._isValidPosition(nextPos) || !this._isWalkable(nextPos)) {
+        return false;
+      }
+      // Don't move into danger unless escaping
+      if (DangerDetector.isInDanger(nextPos, this.dangerZones) && !this._isInDanger()) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  /**
+   * Executes one step of the current plan
+   * @param {Object} plan - Plan object
+   * @returns {Object|null} Action object or null
+   */
+  _executePlanStep(plan) {
+    if (!plan || plan.stepsRemaining <= 0) {
+      return null;
+    }
+    
+    if (plan.type === 'MOVE') {
+      const nextPos = this._getNextPosition(this.position, plan.direction);
+      if (this._isValidPosition(nextPos) && this._isWalkable(nextPos)) {
+        // CRITICAL: Always check for danger before moving
+        // Only allow moving into danger if we're currently in danger and trying to escape
+        const nextPosInDanger = DangerDetector.isInDanger(nextPos, this.dangerZones);
+        const currentlyInDanger = this._isInDanger();
+        
+        // Never move into danger unless we're already in danger and escaping
+        if (!nextPosInDanger || (currentlyInDanger && this.state === 'escaping')) {
+          return {
+            type: 'MOVE',
+            direction: plan.direction,
+          };
+        } else {
+          // Plan step would move into danger - cancel plan and escape instead
+          this.currentPlan = null;
+          return null;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Calculates how many steps to plan ahead (human-like commitment)
+   * @param {Object} decision - Decision object
+   * @param {Object} perception - Perception object
+   * @returns {number} Number of steps to plan
+   */
+  _calculatePlanSteps(decision, perception) {
+    if (decision.type !== 'MOVE') {
+      return 0; // Only plan movement steps
+    }
+    
+    // Humans commit to movement for several steps
+    // More steps if:
+    // - Moving toward a clear target
+    // - Not in danger
+    // - Has momentum (already moving in this direction)
+    
+    let steps = 1; // Minimum 1 step
+    
+    if (this.currentTarget) {
+      // Moving toward a target - commit for more steps
+      const distance = Pathfinder.manhattanDistance(this.position, this.currentTarget);
+      if (distance > 3) {
+        steps = 3; // Far target - commit to 3 steps
+      } else if (distance > 1) {
+        steps = 2; // Medium distance - commit to 2 steps
+      }
+    }
+    
+    // Momentum bonus - if already moving in this direction, continue longer
+    if (this.movementMomentum > 0 && decision.direction === this.lastMovementDirection) {
+      steps += Math.min(2, this.movementMomentum); // Up to 2 extra steps for momentum
+    }
+    
+    // Reduce steps if in danger (humans are more cautious)
+    if (perception.inDanger) {
+      steps = Math.min(steps, 1); // Only 1 step when in danger
+    }
+    
+    return Math.min(steps, 5); // Cap at 5 steps (humans don't plan too far ahead)
   }
 
   /**
