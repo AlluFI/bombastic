@@ -143,8 +143,32 @@ io.on('connection', socket => {
     const player = room.players.get(socket.id)
     if (!player) return
 
-    player.x = moveData.x
-    player.y = moveData.y
+    // Validate movement: check if target position is walkable and not blocked by a bomb
+    const newX = moveData.x
+    const newY = moveData.y
+    
+    // Check bounds
+    if (!room.gameState.board || 
+        newX < 0 || newX >= room.gameState.board.length ||
+        newY < 0 || newY >= (room.gameState.board[0]?.length || 0)) {
+      return // Invalid position, ignore movement
+    }
+    
+    // Check if tile is walkable (0 = walkable, 1 = block, 2 = wall)
+    if (room.gameState.board[newX][newY] !== 0) {
+      return // Blocked by wall or block, ignore movement
+    }
+    
+    // Check if there's a bomb at the target position
+    if (room.gameState.bombs && room.gameState.bombs.length > 0) {
+      const hasBomb = room.gameState.bombs.some(bomb => bomb.x === newX && bomb.y === newY)
+      if (hasBomb) {
+        return // Blocked by bomb, ignore movement
+      }
+    }
+
+    player.x = newX
+    player.y = newY
 
     // Sync game state after player moves
     syncRoomGameState(room)

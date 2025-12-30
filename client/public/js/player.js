@@ -1,6 +1,6 @@
 import { keys } from "./controls.js"
 import { map } from "./grid.js"
-import { tryPlaceBomb } from "./game/bombController.js"
+import { tryPlaceBomb, getBombPositions } from "./game/bombController.js"
 
 
 const gridElement = document.getElementById('grid')
@@ -266,8 +266,12 @@ export function updatePlayerMovement(player) {
         return
     }
 
-    //check if player can move 
-    if(map[newX] && map[newX][newY] === 'empty') {
+    // Check if target position is walkable (not a block/wall and not a bomb)
+    const isWalkable = map[newX] && map[newX][newY] === 'empty'
+    const bombPositions = getBombPositions()
+    const hasBomb = bombPositions.some(bomb => bomb.x === newX && bomb.y === newY)
+    
+    if (isWalkable && !hasBomb) {
         player.x = newX
         player.y = newY
         player.updatePosition()
@@ -278,7 +282,8 @@ export function updatePlayerMovement(player) {
         // Debug: log blocked movement
         const blockedReason = !map[newX] ? 'out of bounds' : 
                               map[newX][newY] === 'breakable' ? 'block' : 
-                              map[newX][newY] === 'solid' ? 'wall' : 'unknown';
+                              map[newX][newY] === 'solid' ? 'wall' : 
+                              hasBomb ? 'bomb' : 'unknown';
         // Only log occasionally to avoid spam
         if (Math.random() < 0.01) {
             console.log(`Movement blocked at (${newX}, ${newY}): ${blockedReason}. Current pos: (${player.x}, ${player.y})`);

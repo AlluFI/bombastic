@@ -905,6 +905,14 @@ class NPC {
       return false;
     }
     
+    // Check if there's a bomb at this position (bombs block movement)
+    if (this.gameState && this.gameState.bombs && this.gameState.bombs.length > 0) {
+      const hasBomb = this.gameState.bombs.some(bomb => bomb.x === pos.x && bomb.y === pos.y);
+      if (hasBomb) {
+        return false; // Bomb blocks movement
+      }
+    }
+    
     // Prefer navigation grid if available (more efficient, already processed)
     if (this.navigationGrid) {
       // Grid is structured as grid[row][col], and x=row, y=col
