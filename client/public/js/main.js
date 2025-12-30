@@ -97,7 +97,7 @@ socket.on('room:created', (state) => {
     // Only update map data once at the start, don't re-render (grid is already rendered)
     // Note: board comes in game:state, but we handle it there to avoid double-rendering
     // if (state.board) {
-    //     initializeMap(state.board, false)
+    //     initializeMap(state.board, true)
     // }
     
     const myPlayer = state.players?.find(p => p.id === socket.id)

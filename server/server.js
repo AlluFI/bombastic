@@ -341,20 +341,15 @@ io.on('connection', socket => {
 
   // Handle disconnect
   socket.on('disconnect', () => {
-    const player = allPlayers.get(socket.id)
-    if (player) {
-      console.log(`${player.name} disconnected`)
-      allPlayers.delete(socket.id)
-      
-      // Notify others
-      socket.broadcast.emit('player:left', socket.id)
-    }
-    
+  
     // Clean up from room
     const room = rooms.get(socket.roomCode);
     if (room) {
       // Remove player from room
       room.players.delete(socket.id);
+      
+      socket.to(socket.roomCode).emit('player:left', socket.id)
+
       
       // If host disconnected, handle room cleanup
       if (room.host === socket.id) {

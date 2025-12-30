@@ -51,6 +51,8 @@ function quitGame() {
     clearAllPlayers()
     resetPlayer()
     showMenuScreen()
+    window.location.reload();
+
 }
 
 function handleEscapeKey(e) {
