@@ -16,20 +16,49 @@ class Player {
         this.lives = 3
         this.score = 0
         this.alive = true
+        this.invincible = false
+        this.invincibilityEnd = 0
         this.element = null 
     }
     
     takeDamage() {
         if (!this.alive) return false
         
+        // Check invincibility
+        if (this.invincible && Date.now() < this.invincibilityEnd) {
+            console.log(`${this.name} is invincible! Damage blocked.`)
+            return false
+        }
+        
         this.lives--
         console.log(`${this.name} took damage! Lives remaining: ${this.lives}`)
+        
+        // Start invincibility (2 seconds)
+        this.startInvincibility(2000)
         
         if (this.lives <= 0) {
             this.die()
             return true // Player died
         }
         return false // Player still alive
+    }
+    
+    startInvincibility(duration = 2000) {
+        this.invincible = true
+        this.invincibilityEnd = Date.now() + duration
+        
+        // Flash animation
+        if (this.element) {
+            this.element.style.animation = 'player-flash 0.2s infinite'
+        }
+        
+        // Remove invincibility after duration
+        setTimeout(() => {
+            this.invincible = false
+            if (this.element && this.alive) {
+                this.element.style.animation = ''
+            }
+        }, duration)
     }
     
     die() {

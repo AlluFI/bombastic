@@ -165,6 +165,11 @@ export function tryPlaceBomb(player) {
                             console.log(`Applying damage to local player ${player.name} at (${player.x}, ${player.y})`)
                             const died = player.takeDamage()
                             
+                            // Update scoreboard hearts
+                            import('../ui/scoreboard.js').then(({ updatePlayerStats }) => {
+                                updatePlayerStats(player.id, { lives: player.lives })
+                            })
+                            
                             // Notify server of damage
                             if (socket) {
                                 socket.emit('player:damage', {
@@ -226,6 +231,11 @@ export function placeRemoteBomb(bombData) {
                 
                 if (wasHit) {
                     const died = localPlayer.takeDamage()
+                    
+                    // Update scoreboard hearts
+                    import('../ui/scoreboard.js').then(({ updatePlayerStats }) => {
+                        updatePlayerStats(localPlayer.id, { lives: localPlayer.lives })
+                    })
                     
                     // Notify server
                     if (socket) {
