@@ -132,13 +132,9 @@ export function renderExplosion(centerX, centerY, range = DEFAULT_EXPLOSION_RANG
         
         console.log(`Explosion at (${centerX}, ${centerY}) cleared`)
 
+        // Call completion callback with all parameters
         if (onComplete) {
             onComplete(centerX, centerY, explosionTiles, breakableBlocks)
-        }
-        
-        // Call completion callback
-        if (onComplete) {
-            onComplete(centerX, centerY, explosionTiles)
         }
     }, EXPLOSION_DURATION)
     

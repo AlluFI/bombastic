@@ -15,7 +15,32 @@ class Player {
         this.color = color 
         this.lives = 3
         this.score = 0
+        this.alive = true
         this.element = null 
+    }
+    
+    takeDamage() {
+        if (!this.alive) return false
+        
+        this.lives--
+        console.log(`${this.name} took damage! Lives remaining: ${this.lives}`)
+        
+        if (this.lives <= 0) {
+            this.die()
+            return true // Player died
+        }
+        return false // Player still alive
+    }
+    
+    die() {
+        this.alive = false
+        console.log(`${this.name} has died!`)
+        
+        // Visual feedback - make player semi-transparent or hide
+        if (this.element) {
+            this.element.style.opacity = '0.3'
+            this.element.style.filter = 'grayscale(100%)'
+        }
     }
 
     createDomElement() {
@@ -125,6 +150,24 @@ export function clearAllPlayers() {
         }
     })
     remotePlayers.clear()
+}
+
+export function getPlayersAtPosition(x, y) {
+    const players = []
+    
+    // Check local player
+    if (localPlayer && localPlayer.alive && localPlayer.x === x && localPlayer.y === y) {
+        players.push(localPlayer)
+    }
+    
+    // Check remote players
+    remotePlayers.forEach(player => {
+        if (player.alive && player.x === x && player.y === y) {
+            players.push(player)
+        }
+    })
+    
+    return players
 }
 
 export function updateRemotePlayer(playerId, x, y) {

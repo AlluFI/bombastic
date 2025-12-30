@@ -268,6 +268,29 @@ socket.on('blocks:destroyed', (data) => {
     destroyBlocksRemote(data.blocks)
 })
 
+socket.on('player:damaged', (data) => {
+    console.log(`Player ${data.playerId} was damaged. Lives: ${data.lives}`)
+    
+    // Don't update local player from this event - they already updated themselves
+    if (data.playerId === socket.id) {
+        console.log('Ignoring damage event for local player (already applied)')
+        return
+    }
+    
+    // Update remote player if it exists
+    const remotePlayer = remotePlayers.get(data.playerId)
+    if (remotePlayer) {
+        remotePlayer.lives = data.lives
+        
+        if (data.died) {
+            remotePlayer.die()
+        }
+    }
+    
+    // Update scoreboard to reflect new lives
+    // The server will send updated player state via game:state
+})
+
 let lastFrameTime = performance.now();
 let frames = 0;
 let fps = 0;

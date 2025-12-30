@@ -57,7 +57,9 @@ io.on('connection', socket => {
     name: data.name || `Player${room.players.size + 1}`,
     x: startPos[0].x,
     y: startPos[0].y,
-    color: colors[0]
+    color: colors[0],
+    lives: 3,
+    alive: true
   }
   room.players.set(socket.id, playerData)
   console.log(`👤 Added host as player:`, playerData)
@@ -110,7 +112,9 @@ io.on('connection', socket => {
     name: data.name,
     x: startPos[room.players.size].x,
     y: startPos[room.players.size].y,
-    color: colors[room.players.size]
+    color: colors[room.players.size],
+    lives: 3,
+    alive: true
   })
   
   // Sync game state after player joins
@@ -347,7 +351,7 @@ io.on('connection', socket => {
     if (room) {
       // Remove player from room
       room.players.delete(socket.id);
-      
+
       socket.to(socket.roomCode).emit('player:left', socket.id)
 
       
@@ -427,6 +431,42 @@ io.on('connection', socket => {
             blocks: data.blocks,
             timestamp: data.timestamp
         })
+    })
+    
+    // Handle player damage
+    socket.on('player:damage', (data) => {
+        const room = rooms.get(socket.roomCode)
+        if (!room) return
+        
+        const player = room.players.get(data.playerId)
+        if (!player) return
+        
+        // Update player lives on server
+        player.lives = data.lives
+        player.alive = !data.died
+        
+        console.log(`${player.name} took damage. Lives: ${player.lives}, Alive: ${player.alive}`)
+        
+        // Sync game state
+        syncRoomGameState(room)
+        
+        // Broadcast damage to all players in room
+        io.to(socket.roomCode).emit('player:damaged', {
+            playerId: data.playerId,
+            lives: data.lives,
+            died: data.died
+        })
+        
+        // Check if game should end
+        const gameEndResult = checkGameEnd(room.gameState)
+        if (gameEndResult) {
+            room.gameState.isRunning = false
+            io.to(socket.roomCode).emit('game:end', {
+                winner: gameEndResult.winner,
+                isDraw: gameEndResult.isDraw,
+                players: gameEndResult.allPlayers
+            })
+        }
     })
 
 

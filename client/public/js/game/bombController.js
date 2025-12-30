@@ -3,6 +3,7 @@ import { socket } from "../main.js";
 import { map } from "../grid.js";
 import { renderExplosion } from "../render/explosionRender.js";
 import { destroyBlocksInTiles } from './blockController.js'
+import { getPlayersAtPosition, getLocalPlayer } from '../player.js'
 
 const MAX_BOMBS_PER_PLAYER = 1
 const BOMB_DURATION = 3000
@@ -145,13 +146,41 @@ export function tryPlaceBomb(player) {
             console.log(`Explosion complete at (${centerX}, ${centerY})`)
             console.log(`Affected ${affectedTiles.length} tiles`)
             
-            // NEW: Destroy breakable blocks
+            // Destroy breakable blocks
             if (breakableBlocks && breakableBlocks.length > 0) {
                 const destroyed = destroyBlocksInTiles(breakableBlocks)
                 console.log(`Destroyed ${destroyed.length} blocks`)
             }
             
-            // TODO: Check for player damage
+            // Check for player damage
+            const hitPlayers = new Set() // Use Set to ensure uniqueness
+            affectedTiles.forEach(tile => {
+                const playersAtTile = getPlayersAtPosition(tile.x, tile.y)
+                playersAtTile.forEach(player => {
+                    if (!hitPlayers.has(player.id)) {
+                        hitPlayers.add(player.id)
+                        
+                        // If it's the local player, apply damage and notify server
+                        if (player.id === getLocalPlayer()?.id) {
+                            console.log(`Applying damage to local player ${player.name} at (${player.x}, ${player.y})`)
+                            const died = player.takeDamage()
+                            
+                            // Notify server of damage
+                            if (socket) {
+                                socket.emit('player:damage', {
+                                    playerId: player.id,
+                                    lives: player.lives,
+                                    died: died
+                                })
+                            }
+                        }
+                    }
+                })
+            })
+            
+            if (hitPlayers.size > 0) {
+                console.log(`Explosion hit ${hitPlayers.size} player(s):`, Array.from(hitPlayers))
+            }
         })
     })
 
@@ -186,8 +215,29 @@ export function placeRemoteBomb(bombData) {
     renderBomb(bombId, x, y, duration, (explodedBombId, bombX, bombY) => {
         untrackBomb(playerId, explodedBombId, bombX, bombY)
         
-        // Render explosion (remote bombs don't destroy blocks - server handles it)
-        renderExplosion(bombX, bombY, 2)
+        // Render explosion and check for player damage
+        renderExplosion(bombX, bombY, 2, (centerX, centerY, affectedTiles) => {
+            // Check if local player was hit by remote bomb
+            const localPlayer = getLocalPlayer()
+            if (localPlayer && localPlayer.alive) {
+                const wasHit = affectedTiles.some(tile => 
+                    tile.x === localPlayer.x && tile.y === localPlayer.y
+                )
+                
+                if (wasHit) {
+                    const died = localPlayer.takeDamage()
+                    
+                    // Notify server
+                    if (socket) {
+                        socket.emit('player:damage', {
+                            playerId: localPlayer.id,
+                            lives: localPlayer.lives,
+                            died: died
+                        })
+                    }
+                }
+            }
+        })
     })
 }
 
