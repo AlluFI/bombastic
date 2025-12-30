@@ -5,4 +5,5 @@
     z-index: 3;
     position: absolute;
     transition: top 0.1s linear, left 0.1s linear;
+    transform: translate(15%, 15%);
 }
