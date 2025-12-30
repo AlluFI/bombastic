@@ -15,7 +15,65 @@ class Player {
         this.color = color 
         this.lives = 3
         this.score = 0
+        this.alive = true
+        this.invincible = false
+        this.invincibilityEnd = 0
         this.element = null 
+    }
+    
+    takeDamage() {
+        if (!this.alive) return false
+        
+        // Check invincibility
+        if (this.invincible && Date.now() < this.invincibilityEnd) {
+            console.log(`${this.name} is invincible! Damage blocked.`)
+            return false
+        }
+        
+        this.lives--
+        console.log(`${this.name} took damage! Lives remaining: ${this.lives}`)
+        
+        // Start invincibility (2 seconds)
+        this.startInvincibility(2000)
+        
+        if (this.lives <= 0) {
+            this.die()
+            return true // Player died
+        }
+        return false // Player still alive
+    }
+    
+    startInvincibility(duration = 2000) {
+        this.invincible = true
+        this.invincibilityEnd = Date.now() + duration
+        
+        // Flash animation
+        if (this.element) {
+            this.element.style.animation = 'player-flash 0.2s infinite'
+        }
+        
+        // Remove invincibility after duration
+        setTimeout(() => {
+            this.invincible = false
+            if (this.element && this.alive) {
+                this.element.style.animation = ''
+            }
+        }, duration)
+    }
+    
+    die() {
+        this.alive = false
+        console.log(`${this.name} has died!`)
+        
+        // Stop invincibility animation if active
+        this.invincible = false
+        
+        // Visual feedback - make player semi-transparent or hide
+        if (this.element) {
+            this.element.style.animation = '' // Remove flashing animation
+            this.element.style.opacity = '0.3'
+            this.element.style.filter = 'grayscale(100%)'
+        }
     }
 
     createDomElement() {
@@ -127,6 +185,24 @@ export function clearAllPlayers() {
     remotePlayers.clear()
 }
 
+export function getPlayersAtPosition(x, y) {
+    const players = []
+    
+    // Check local player
+    if (localPlayer && localPlayer.alive && localPlayer.x === x && localPlayer.y === y) {
+        players.push(localPlayer)
+    }
+    
+    // Check remote players
+    remotePlayers.forEach(player => {
+        if (player.alive && player.x === x && player.y === y) {
+            players.push(player)
+        }
+    })
+    
+    return players
+}
+
 export function updateRemotePlayer(playerId, x, y) {
     const player = remotePlayers.get(playerId)
     if (player) {
@@ -148,6 +224,11 @@ let lastMovementTime = 0
 const MOVEMENT_COOLDOWN = 150 // milliseconds between moves (allows ~6-7 moves per second)
 
 export function updatePlayerMovement(player) {
+    // Dead players can't move or place bombs
+    if (!player.alive) {
+        return
+    }
+    
     // Check bomb placement first (not affected by movement cooldown)
     if (keys.space) {
         tryPlaceBomb(player)

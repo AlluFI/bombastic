@@ -135,6 +135,8 @@ function handleJoinGame() {
 
 function handleRestartGame() {
     console.log('Restart button clicked - returning to menu')
+
+    window.location.reload()
     
     // Clear all players from the game
     clearAllPlayers()

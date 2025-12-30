@@ -6,7 +6,7 @@ import { intializeMenu, playerData } from "./ui/menu.js";
 import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen, showEndScreen, showMenuScreen } from "./ui/menu.js";
 import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
-import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard } from "./ui/scoreboard.js";
+import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard, updatePlayerStats } from "./ui/scoreboard.js";
 import { placeRemoteBomb, clearPlayerBombs } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
@@ -266,6 +266,32 @@ socket.on('block:destroyed', (data) => {
 socket.on('blocks:destroyed', (data) => {
     console.log(`${data.blocks.length} blocks destroyed by server`)
     destroyBlocksRemote(data.blocks)
+})
+
+socket.on('player:damaged', (data) => {
+    console.log(`Player ${data.playerId} was damaged. Lives: ${data.lives}`)
+    
+    // Update scoreboard for all players (local and remote)
+    updatePlayerStats(data.playerId, { lives: data.lives })
+    
+    // Don't update local player from this event - they already updated themselves
+    if (data.playerId === socket.id) {
+        console.log('Ignoring damage event for local player (already applied)')
+        return
+    }
+    
+    // Update remote player if it exists
+    const remotePlayer = remotePlayers.get(data.playerId)
+    if (remotePlayer) {
+        remotePlayer.lives = data.lives
+        
+        if (data.died) {
+            remotePlayer.die()
+        } else {
+            // Start invincibility animation for remote player
+            remotePlayer.startInvincibility(2000)
+        }
+    }
 })
 
 let lastFrameTime = performance.now();
