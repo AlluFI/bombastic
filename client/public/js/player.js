@@ -65,8 +65,12 @@ class Player {
         this.alive = false
         console.log(`${this.name} has died!`)
         
+        // Stop invincibility animation if active
+        this.invincible = false
+        
         // Visual feedback - make player semi-transparent or hide
         if (this.element) {
+            this.element.style.animation = '' // Remove flashing animation
             this.element.style.opacity = '0.3'
             this.element.style.filter = 'grayscale(100%)'
         }
@@ -220,6 +224,11 @@ let lastMovementTime = 0
 const MOVEMENT_COOLDOWN = 150 // milliseconds between moves (allows ~6-7 moves per second)
 
 export function updatePlayerMovement(player) {
+    // Dead players can't move or place bombs
+    if (!player.alive) {
+        return
+    }
+    
     // Check bomb placement first (not affected by movement cooldown)
     if (keys.space) {
         tryPlaceBomb(player)
