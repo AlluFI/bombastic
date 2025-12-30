@@ -122,3 +122,10 @@ These functions are currently only implemented on client side need to be connect
 28.12. - Aleksi
 - Players moving blob by block
 - Fixing NPC logic and bomb placement
+
+30.12. - Joel
+- Damage system implemented
+- Players take damage from bomb explosions
+- Players eliminated when health reaches 0
+- Score updated when a player hits another player
+- Endgame triggered when one player remains
