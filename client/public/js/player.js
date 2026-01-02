@@ -82,9 +82,33 @@ class Player {
         el.style.backgroundColor = this.color
         el.dataset.id = this.id
 
+        el.innerHTML = this.createCharacterSVG()
+
         this.element = el
-        // Don't call updatePosition here - it will be called after element is added to DOM
-        // This prevents errors when tiles don't exist yet
+    }
+
+    createCharacterSVG() {
+    // Bomberman-style character
+    return `
+        <svg width="30" height="35" viewBox="0 0 30 35" xmlns="http://www.w3.org/2000/svg">
+            <!-- Head -->
+            <circle cx="15" cy="12" r="9" fill="#ffd1a3" stroke="#333" stroke-width="2"/>
+            
+            <!-- Eyes -->
+            <circle cx="11" cy="11" r="2" fill="#000"/>
+            <circle cx="19" cy="11" r="2" fill="#000"/>
+            
+            <!-- Smile -->
+            <path d="M 10 15 Q 15 18 20 15" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            
+            <!-- Body -->
+            <rect x="6" y="20" width="18" height="13" rx="3" fill="${this.color}" stroke="#333" stroke-width="2"/>
+            
+            <!-- Arms (optional) -->
+            <rect x="2" y="22" width="5" height="8" rx="2" fill="${this.color}" stroke="#333" stroke-width="1.5"/>
+            <rect x="23" y="22" width="5" height="8" rx="2" fill="${this.color}" stroke="#333" stroke-width="1.5"/>
+        </svg>
+    `
     }
 
     updatePosition() {
@@ -250,15 +274,23 @@ export function updatePlayerMovement(player) {
     if (keys.up) {
         newX--
         moved = true
+        player.element?.classList.add('facing-up')
+        player.element?.classList.remove('facing-down', 'facing-left', 'facing-right')
     } else if (keys.down) {
         newX++
         moved = true
+        player.element?.classList.add('facing-down')
+        player.element?.classList.remove('facing-up', 'facing-left', 'facing-right')
     } else if (keys.left) {
         newY--
         moved = true
+        player.element?.classList.add('facing-left')
+        player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
     } else if (keys.right) {
         newY++
         moved = true
+        player.element?.classList.add('facing-right')
+        player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
     }
     
     // Only process movement if a key is pressed
