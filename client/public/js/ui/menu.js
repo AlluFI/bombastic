@@ -44,13 +44,29 @@ export function showMenuScreen() {
     menuScreen.classList.remove('hidden')
     gameScreen.classList.add('hidden')
     endScreen.classList.add('hidden')
+    
+    // Show chat when returning to menu (for multiplayer)
+    import('./chat.js').then(({ setChatVisibility }) => {
+        setChatVisibility(true)
+    })
 }
 
-export function showGameScreen(roomCode) {
+export function showGameScreen(roomCode, gameMode = null) {
     menuScreen.classList.add('hidden')
     gameScreen.classList.remove('hidden')
     endScreen.classList.add('hidden')
-    codeElement.textContent = `Room code: ${roomCode}`
+    
+    if (roomCode) {
+        codeElement.textContent = `Room code: ${roomCode}`
+    }
+    
+    // Hide chat in single-player mode, show in multiplayer
+    // Check both playerData.mode (client-side) and gameMode (server-side)
+    import('./chat.js').then(({ setChatVisibility }) => {
+        const isSinglePlayer = gameMode === 'single-player' || playerData.mode === 'single'
+        console.log('Setting chat visibility:', { gameMode, playerDataMode: playerData.mode, isSinglePlayer })
+        setChatVisibility(!isSinglePlayer)
+    })
 }
 
 export function showEndScreen() {

@@ -66,7 +66,8 @@ socket.on('game:state', (state) => {
         if (myPlayer && !player) {
             console.log('Creating player from game:state event:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
             player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
-            showGameScreen()
+            // Pass gameMode from server state if available
+            showGameScreen(null, state.gameMode)
         } else if (!myPlayer) {
             console.warn('My player not found in game:state. Socket ID:', socket.id, 'Players:', players.map(p => p.id))
         }
@@ -116,7 +117,7 @@ socket.on('room:created', (state) => {
         }
     })
 
-    showGameScreen(state.roomCode)
+    showGameScreen(state.roomCode, state.gameMode)
     renderScoreboard(state.players, socket.id)
     loadChatHistory(state.chats)
     
@@ -146,7 +147,7 @@ socket.on('room:updated', (state) => {
         const myPlayer = state.players.find(p => p.id === socket.id)
         if (myPlayer) {
             player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
-            showGameScreen(state.roomCode)
+            showGameScreen(state.roomCode, state.gameMode)
             renderScoreboard(state.players, socket.id)
             loadChatHistory(state.chats)
         }

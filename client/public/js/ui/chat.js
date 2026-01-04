@@ -1,8 +1,20 @@
 const chatForm = document.getElementById('chat-form')
 const chatMessages = document.getElementById('chat-messages')
 const chatInput = document.getElementById('chat-input')
+const chatContainer = document.getElementById('chat-container')
 
 let chats = []
+
+// Function to show/hide chat based on game mode
+export function setChatVisibility(isVisible) {
+    if (chatContainer) {
+        if (isVisible) {
+            chatContainer.classList.remove('hidden')
+        } else {
+            chatContainer.classList.add('hidden')
+        }
+    }
+}
 
 // Function to render a single chat message
 function renderChatMessage(data) {

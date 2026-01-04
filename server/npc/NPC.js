@@ -206,6 +206,16 @@ class NPC {
       })
     );
 
+    // Mark positions with active bombs as blocked (bombs block movement)
+    if (gameState.bombs && gameState.bombs.length > 0) {
+      gameState.bombs.forEach(bomb => {
+        // Grid is structured as grid[row][col], and x=row, y=col
+        if (this.navigationGrid[bomb.x] && this.navigationGrid[bomb.x][bomb.y] !== undefined) {
+          this.navigationGrid[bomb.x][bomb.y] = 1; // Blocked by bomb
+        }
+      });
+    }
+
     // Also mark positions with active explosions as blocked
     if (gameState.explosions) {
       gameState.explosions.forEach(explosion => {
@@ -909,6 +919,8 @@ class NPC {
     if (this.gameState && this.gameState.bombs && this.gameState.bombs.length > 0) {
       const hasBomb = this.gameState.bombs.some(bomb => bomb.x === pos.x && bomb.y === pos.y);
       if (hasBomb) {
+        // Debug: log when NPC tries to walk through a bomb
+        console.log(`🚫 NPC ${this.id} (${this.name}) _isWalkable blocked by bomb at (${pos.x}, ${pos.y})`);
         return false; // Bomb blocks movement
       }
     }
@@ -924,9 +936,23 @@ class NPC {
     }
     
     // Prefer navigation grid if available (more efficient, already processed)
+    // BUT: Double-check bombs here too (defensive check in case gameState.bombs was stale)
     if (this.navigationGrid) {
       // Grid is structured as grid[row][col], and x=row, y=col
-      return this.navigationGrid[pos.x] && this.navigationGrid[pos.x][pos.y] === 0;
+      // Navigation grid value: 0 = walkable, 1 = blocked (including bombs)
+      const gridValue = this.navigationGrid[pos.x] && this.navigationGrid[pos.x][pos.y];
+      
+      // Defensive check: if navigation grid says it's walkable (0), but there's a bomb in gameState, block it
+      if (gridValue === 0 && this.gameState && this.gameState.bombs && this.gameState.bombs.length > 0) {
+        const hasBomb = this.gameState.bombs.some(bomb => bomb.x === pos.x && bomb.y === pos.y);
+        if (hasBomb) {
+          // Navigation grid says walkable but there's a bomb - block it!
+          console.log(`🚫 NPC ${this.id} (${this.name}) _isWalkable: navigation grid says walkable but bomb exists at (${pos.x}, ${pos.y}) - blocking`);
+          return false;
+        }
+      }
+      
+      return gridValue === 0;
     }
     
     // Fallback: check board directly if navigation grid doesn't exist

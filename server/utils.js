@@ -193,7 +193,7 @@ function checkGameEnd(gameState) {
       return;
     }
     
-    // Sync game state before validation to ensure we have current player positions
+    // Sync game state before validation to ensure we have current player positions and bombs
     syncRoomGameState(room);
     
     // Validate that target position is walkable (server-side validation)
@@ -203,11 +203,14 @@ function checkGameEnd(gameState) {
       return;
     }
     
-    // Check if there's a bomb at the target position
+    // CRITICAL: Check if there's a bomb at the target position
+    // This must check room.gameState.bombs directly (not NPC's cached gameState)
+    // because bombs can be placed by other NPCs/players in the same cycle
     if (room.gameState.bombs && room.gameState.bombs.length > 0) {
-      const hasBomb = room.gameState.bombs.some(bomb => bomb.x === newX && bomb.y === newY);
-      if (hasBomb) {
-        // Blocked by bomb
+      const blockingBomb = room.gameState.bombs.find(bomb => bomb.x === newX && bomb.y === newY);
+      if (blockingBomb) {
+        // Blocked by bomb - log for debugging
+        console.log(`🚫 NPC ${npcId} (${npc.name}) movement blocked by bomb at (${newX}, ${newY}) placed by ${blockingBomb.playerId}`);
         return;
       }
     }
