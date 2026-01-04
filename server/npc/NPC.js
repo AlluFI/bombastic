@@ -29,7 +29,7 @@ class NPC {
     this.position = { x: 0, y: 0 }; // Grid position
     this.alive = true;
     this.score = 0;
-    this.lives = 1; // Default lives
+    this.lives = 3; // Default lives (matching players)
     
     // NPC attributes (scaled by difficulty)
     this.profile = this._loadDifficultyProfile();
@@ -138,7 +138,7 @@ class NPC {
         this.position = { x: npcPlayer.x, y: npcPlayer.y };
         this.alive = npcPlayer.alive !== false;
         this.score = npcPlayer.score || 0;
-        this.lives = npcPlayer.lives || 1;
+        this.lives = npcPlayer.lives || 3;
       }
     }
 
@@ -910,6 +910,16 @@ class NPC {
       const hasBomb = this.gameState.bombs.some(bomb => bomb.x === pos.x && bomb.y === pos.y);
       if (hasBomb) {
         return false; // Bomb blocks movement
+      }
+    }
+    
+    // Check if there's another player or NPC at this position (players/NPCs block movement)
+    if (this.gameState && this.gameState.players && this.gameState.players.length > 0) {
+      const hasPlayer = this.gameState.players.some(p => 
+        p.alive && p.id !== this.id && p.x === pos.x && p.y === pos.y
+      );
+      if (hasPlayer) {
+        return false; // Another player/NPC blocks movement
       }
     }
     
@@ -2128,7 +2138,7 @@ class NPC {
     this.position = { x: 0, y: 0 };
     this.alive = true;
     this.score = 0;
-    this.lives = 1;
+    this.lives = 3;
     this.lastActionTime = 0;
     this.currentTarget = null;
     this.path = [];

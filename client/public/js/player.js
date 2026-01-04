@@ -50,13 +50,22 @@ class Player {
         // Flash animation
         if (this.element) {
             this.element.style.animation = 'player-flash 0.2s infinite'
+            // Ensure element is visible (in case it was hidden)
+            this.element.style.opacity = '1'
+            this.element.style.filter = ''
         }
         
         // Remove invincibility after duration
         setTimeout(() => {
             this.invincible = false
-            if (this.element && this.alive) {
+            if (this.element) {
+                // Clear animation
                 this.element.style.animation = ''
+                // Ensure element is visible and normal after invincibility ends
+                if (this.alive) {
+                    this.element.style.opacity = '1'
+                    this.element.style.filter = ''
+                }
             }
         }, duration)
     }
@@ -298,12 +307,14 @@ export function updatePlayerMovement(player) {
         return
     }
 
-    // Check if target position is walkable (not a block/wall and not a bomb)
+    // Check if target position is walkable (not a block/wall, not a bomb, and not another player/NPC)
     const isWalkable = map[newX] && map[newX][newY] === 'empty'
     const bombPositions = getBombPositions()
     const hasBomb = bombPositions.some(bomb => bomb.x === newX && bomb.y === newY)
+    const playersAtTarget = getPlayersAtPosition(newX, newY)
+    const hasPlayer = playersAtTarget.length > 0 && !playersAtTarget.some(p => p.id === player.id)
     
-    if (isWalkable && !hasBomb) {
+    if (isWalkable && !hasBomb && !hasPlayer) {
         player.x = newX
         player.y = newY
         player.updatePosition()
@@ -315,7 +326,8 @@ export function updatePlayerMovement(player) {
         const blockedReason = !map[newX] ? 'out of bounds' : 
                               map[newX][newY] === 'breakable' ? 'block' : 
                               map[newX][newY] === 'solid' ? 'wall' : 
-                              hasBomb ? 'bomb' : 'unknown';
+                              hasBomb ? 'bomb' : 
+                              hasPlayer ? 'player/npc' : 'unknown';
         // Only log occasionally to avoid spam
         if (Math.random() < 0.01) {
             console.log(`Movement blocked at (${newX}, ${newY}): ${blockedReason}. Current pos: (${player.x}, ${player.y})`);

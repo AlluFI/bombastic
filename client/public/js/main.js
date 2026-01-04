@@ -334,7 +334,28 @@ function gameLoop() {
         remotePlayers.forEach(remotePlayer => {
             updatePlayerRender(remotePlayer)
         })
-    } 
+    }
+    
+    // Check and clear expired invincibility for all players
+    const now = Date.now()
+    if (player && player.invincible && now >= player.invincibilityEnd) {
+        player.invincible = false
+        if (player.element && player.alive) {
+            player.element.style.animation = ''
+            player.element.style.opacity = '1'
+            player.element.style.filter = ''
+        }
+    }
+    remotePlayers.forEach(remotePlayer => {
+        if (remotePlayer.invincible && now >= remotePlayer.invincibilityEnd) {
+            remotePlayer.invincible = false
+            if (remotePlayer.element && remotePlayer.alive) {
+                remotePlayer.element.style.animation = ''
+                remotePlayer.element.style.opacity = '1'
+                remotePlayer.element.style.filter = ''
+            }
+        }
+    })
     
     // Send position to server if changed
     if (player.x !== lastPosition.x || player.y !== lastPosition.y) {

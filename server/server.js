@@ -3,7 +3,7 @@ const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const { ENABLE_NPC, ENABLE_SINGLE_PLAYER_MODE, PORT, WS_PATH } = require('./config')
-const {generateRoomCode, generateBoard, syncRoomGameState, handleNPCAction, checkGameEnd, colors, startPos, calculateExplosionBlocks} = require('./utils.js')
+const {generateRoomCode, generateBoard, syncRoomGameState, handleNPCAction, checkGameEnd, colors, startPos, calculateExplosionBlocks, calculateExplosionTiles} = require('./utils.js')
 
 // NPC module (feature-flagged)
 const { NPC } = require('./npc')
@@ -44,6 +44,7 @@ io.on('connection', socket => {
       board: generateBoard(), // Generate board once when room is created
       gameMode: 'multiplayer', // 'multiplayer' | 'single-player'
       isRunning: false,
+      isPaused: false, // Pause state
     },
     // NPC instances (only for single-player mode)
     npcs: new Map(),    // npc.id -> NPC instance
@@ -166,11 +167,24 @@ io.on('connection', socket => {
         return // Blocked by bomb, ignore movement
       }
     }
+    
+    // Sync game state BEFORE validation to ensure we have current player positions
+    syncRoomGameState(room)
+    
+    // Check if there's another player or NPC at the target position
+    if (room.gameState.players && room.gameState.players.length > 0) {
+      const hasPlayer = room.gameState.players.some(p => 
+        p.alive && p.id !== socket.id && p.x === newX && p.y === newY
+      )
+      if (hasPlayer) {
+        return // Blocked by another player/NPC, ignore movement
+      }
+    }
 
     player.x = newX
     player.y = newY
 
-    // Sync game state after player moves
+    // Sync game state after player moves to update gameState.players
     syncRoomGameState(room)
 
     // Broadcast movement to players in the same room only
@@ -189,6 +203,9 @@ io.on('connection', socket => {
     
     const player = room.players.get(socket.id)
     if (!player) return
+
+    // Update pause state in game state
+    room.gameState.isPaused = !!payload.paused
 
     console.log(`${player.name} ${payload.paused ? 'paused' : 'resumed'} the game`)
 
@@ -502,6 +519,9 @@ setInterval(() => {
     // Only process running games
     if (!room.gameState.isRunning) return;
     
+    // Skip all game logic if paused
+    if (room.gameState.isPaused) return;
+    
     // Sync player state (Map → Array)
     syncRoomGameState(room);
     
@@ -546,7 +566,75 @@ setInterval(() => {
       
       // Process exploded bombs
       if (explodedBombs.length > 0) {
+        // Sync game state BEFORE checking for damage to ensure positions are current
+        syncRoomGameState(room);
+        
+        const hitPlayers = new Set(); // Track players already hit (to avoid double damage)
+        const hitNPCs = new Set(); // Track NPCs already hit (to avoid double damage)
+        
         explodedBombs.forEach(bomb => {
+          // Calculate all tiles affected by this explosion
+          const explosionTiles = calculateExplosionTiles(bomb, room.gameState.board);
+          
+          // Check for players and NPCs caught in explosion
+          // Also check NPCs directly from room.npcs to ensure we catch all NPCs
+          explosionTiles.forEach(tile => {
+            // First check NPCs directly (more reliable)
+            if (ENABLE_NPC && room.gameState.gameMode === 'single-player') {
+              room.npcs.forEach((npc, npcId) => {
+                if (!hitNPCs.has(npcId) && npc.alive && npc.position.x === tile.x && npc.position.y === tile.y) {
+                  hitNPCs.add(npcId);
+                  hitPlayers.add(npcId); // Also add to hitPlayers to prevent double-checking
+                  
+                  // Apply damage to NPC
+                  npc.lives = Math.max(0, npc.lives - 1);
+                  npc.alive = npc.lives > 0;
+                  
+                  console.log(`💥 NPC ${npcId} (${npc.name}) caught in explosion at (${tile.x}, ${tile.y}). Lives: ${npc.lives}, Alive: ${npc.alive}`);
+                  
+                  // Broadcast damage to all players in room
+                  io.to(roomId).emit('player:damaged', {
+                    playerId: npcId,
+                    lives: npc.lives,
+                    died: !npc.alive
+                  });
+                }
+              });
+            }
+            
+            // Then check human players (both from gameState.players and room.players)
+            room.gameState.players.forEach(player => {
+              // Skip if already hit or if it's an NPC (we checked NPCs above)
+              if (hitPlayers.has(player.id) || !player.alive || (ENABLE_NPC && room.npcs.has(player.id))) {
+                return;
+              }
+              
+              // Check if player is at this explosion tile
+              if (player.x === tile.x && player.y === tile.y) {
+                hitPlayers.add(player.id);
+                
+                // Handle human player damage
+                const playerObj = room.players.get(player.id);
+                if (playerObj) {
+                  playerObj.lives = Math.max(0, playerObj.lives - 1);
+                  playerObj.alive = playerObj.lives > 0;
+                  
+                  console.log(`💥 Player ${playerObj.name} (${playerObj.id}) caught in explosion at (${tile.x}, ${tile.y}). Lives: ${playerObj.lives}, Alive: ${playerObj.alive}`);
+                  
+                  // Broadcast damage to all players in room
+                  io.to(roomId).emit('player:damaged', {
+                    playerId: playerObj.id,
+                    lives: playerObj.lives,
+                    died: !playerObj.alive
+                  });
+                }
+              }
+            });
+          });
+          
+          // Sync game state after applying damage (to update positions in gameState.players)
+          syncRoomGameState(room);
+          
           // Broadcast explosion to clients
           io.to(roomId).emit('bomb:exploded', {
             bombId: bomb.bombId,
@@ -555,6 +643,9 @@ setInterval(() => {
             y: bomb.y
           });
         });
+        
+        // Sync game state after applying damage (to update player/NPC states)
+        syncRoomGameState(room);
         
         // Update server board state for destroyed blocks
         if (destroyedBlocks.length > 0) {

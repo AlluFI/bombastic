@@ -112,6 +112,7 @@ function generateBoard() {
         color: room.players.get(npcId)?.color || '#888888', // Get color from Map if available
         alive: npc.alive,
         score: npc.score,
+        lives: npc.lives || 1,
         isNPC: true,
       });
     } else {
@@ -120,6 +121,7 @@ function generateBoard() {
       npcPlayer.y = npc.position.y;
       npcPlayer.alive = npc.alive;
       npcPlayer.score = npc.score;
+      npcPlayer.lives = npc.lives || 1;
       npcPlayer.isNPC = true; // Ensure flag is set
     }
   });
@@ -191,6 +193,57 @@ function checkGameEnd(gameState) {
       return;
     }
     
+    // Sync game state before validation to ensure we have current player positions
+    syncRoomGameState(room);
+    
+    // Validate that target position is walkable (server-side validation)
+    // Check if tile is walkable (0 = walkable, 1 = block, 2 = wall)
+    if (!room.gameState.board || room.gameState.board[newX][newY] !== 0) {
+      // Blocked by wall or block
+      return;
+    }
+    
+    // Check if there's a bomb at the target position
+    if (room.gameState.bombs && room.gameState.bombs.length > 0) {
+      const hasBomb = room.gameState.bombs.some(bomb => bomb.x === newX && bomb.y === newY);
+      if (hasBomb) {
+        // Blocked by bomb
+        return;
+      }
+    }
+    
+    // Check if there's another player or NPC at the target position
+    // Check both gameState.players and room.npcs to ensure we catch all entities
+    if (room.gameState.players && room.gameState.players.length > 0) {
+      const hasPlayer = room.gameState.players.some(p => 
+        p.alive && p.id !== npcId && p.x === newX && p.y === newY
+      );
+      if (hasPlayer) {
+        // Blocked by another player/NPC in gameState
+        return;
+      }
+    }
+    
+    // Also check NPCs directly to catch any that might not be in gameState yet
+    if (room.npcs) {
+      for (const [otherNpcId, otherNpc] of room.npcs.entries()) {
+        if (otherNpcId !== npcId && otherNpc.alive && otherNpc.position.x === newX && otherNpc.position.y === newY) {
+          // Blocked by another NPC
+          return;
+        }
+      }
+    }
+    
+    // Also check human players directly
+    if (room.players) {
+      for (const [playerId, player] of room.players.entries()) {
+        if (player.alive && player.x === newX && player.y === newY) {
+          // Blocked by a human player
+          return;
+        }
+      }
+    }
+    
     npc.position.x = newX;
     npc.position.y = newY;
     
@@ -200,6 +253,9 @@ function checkGameEnd(gameState) {
       npcPlayer.x = newX;
       npcPlayer.y = newY;
     }
+    
+    // Sync game state immediately after NPC moves to ensure positions are current for collision detection
+    syncRoomGameState(room);
     
     // Broadcast to room
     io.to(roomId).emit('player:moved', {
@@ -298,6 +354,55 @@ function calculateExplosionBlocks(bomb, board) {
   return destroyedBlocks;
 }
 
+/**
+ * Calculates all tiles affected by a bomb explosion (for damage detection)
+ * @param {Object} bomb - Bomb object { x, y, range }
+ * @param {Array<Array<number>>} board - Game board (0=walkable, 1=destructible, 2=indestructible)
+ * @returns {Array<Object>} Array of explosion tile positions { x, y }
+ */
+function calculateExplosionTiles(bomb, board) {
+  const explosionTiles = [];
+  const range = bomb.range || 2;
+  
+  // Add bomb center position
+  explosionTiles.push({ x: bomb.x, y: bomb.y });
+  
+  // Calculate explosion in 4 directions (matching DangerDetector logic)
+  const directions = [
+    { x: -1, y: 0 },  // UP (decrease row)
+    { x: 1, y: 0 },   // DOWN (increase row)
+    { x: 0, y: -1 },  // LEFT (decrease col)
+    { x: 0, y: 1 },   // RIGHT (increase col)
+  ];
+  
+  directions.forEach(dir => {
+    for (let i = 1; i <= range; i++) {
+      const checkX = bomb.x + dir.x * i;
+      const checkY = bomb.y + dir.y * i;
+      
+      // Stop if out of bounds
+      if (checkX < 0 || checkX >= 13 || checkY < 0 || checkY >= 15) {
+        break;
+      }
+      
+      // Add this tile to explosion (even if it has a block - explosion reaches it)
+      explosionTiles.push({ x: checkX, y: checkY });
+      
+      // Stop if hit an indestructible wall (explosion doesn't pass through)
+      if (board[checkX] && board[checkX][checkY] === 2) { // 2 = indestructible wall
+        break;
+      }
+      
+      // Stop if hit a destructible block (explosion stops at block, but block is included)
+      if (board[checkX] && board[checkX][checkY] === 1) { // 1 = destructible block
+        break; // Explosion stops at destructible blocks
+      }
+    }
+  });
+  
+  return explosionTiles;
+}
+
 module.exports = {
   generateRoomCode,
   generateBoard,
@@ -307,4 +412,5 @@ module.exports = {
   handleNPCAction,
   checkGameEnd,
   calculateExplosionBlocks,
+  calculateExplosionTiles
 }
