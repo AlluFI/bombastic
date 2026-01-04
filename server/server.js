@@ -425,6 +425,30 @@ io.on('connection', socket => {
       
       console.log(`${player.name} placed bomb at (${bombData.x}, ${bombData.y}) in room ${socket.roomCode}`)
       
+      // CRITICAL: Add bomb to room.gameState.bombs so NPCs can see it and avoid it
+      // This matches NPC bomb placement logic
+      const BOMB_DURATION = bombData.duration || 3000; // Default 3 seconds
+      if (!room.gameState.bombs) {
+        room.gameState.bombs = [];
+      }
+      
+      // Check if player already has an active bomb (max 1 bomb per player/NPC)
+      const existingBombs = room.gameState.bombs.filter(b => b.playerId === socket.id);
+      if (existingBombs.length === 0) {
+        // Add bomb to game state
+        room.gameState.bombs.push({
+          id: bombData.bombId,
+          bombId: bombData.bombId,
+          playerId: socket.id,
+          x: bombData.x,
+          y: bombData.y,
+          range: 2, // Default explosion range (can be upgraded via powerups later)
+          timer: BOMB_DURATION,
+          placedAt: Date.now(),
+          duration: BOMB_DURATION
+        });
+      }
+      
       // Broadcast to all OTHER players in the same room (sender already rendered it locally)
       socket.to(socket.roomCode).emit('bomb:placed', {
           bombId: bombData.bombId,
