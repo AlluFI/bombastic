@@ -87,6 +87,9 @@ io.on('connection', socket => {
   console.log(`📤 Emitting room:created to ${socket.id} with players:`, responseData.players.map(p => ({ id: p.id, name: p.name })))
   socket.emit('room:created', responseData)
   console.log(`✅ room:created event sent`)
+  
+  // Broadcast lobby update to all clients
+  broadcastLobbyUpdate()
 })
 
   //Join to room
@@ -139,6 +142,9 @@ io.on('connection', socket => {
     isRunning: room.gameState.isRunning,
     gameMode: room.gameState.gameMode
   })
+  
+  // Broadcast lobby update to all clients (player count changed)
+  broadcastLobbyUpdate()
 })
   
 
@@ -424,6 +430,17 @@ io.on('connection', socket => {
         isRunning: room.gameState.isRunning,
         gameMode: room.gameState.gameMode
       });
+      
+      // Broadcast lobby update (player left)
+      broadcastLobbyUpdate()
+      
+      // If room is empty or host left, remove room
+      if (room.players.size === 0 || room.host === socket.id) {
+        rooms.delete(socket.roomCode)
+        console.log(`🗑️ Room ${socket.roomCode} deleted (empty or host left)`)
+        // Broadcast lobby update (room removed)
+        broadcastLobbyUpdate()
+      }
     }
   })
 
@@ -587,10 +604,49 @@ io.on('connection', socket => {
       gameMode: room.gameState.gameMode,
       chats: room.chats
     })
+    
+    // Broadcast lobby update to all clients (lobby is no longer available)
+    broadcastLobbyUpdate()
+  })
+
+  // Handle lobby list request
+  socket.on('lobby:list-request', () => {
+    const activeLobbies = getActiveLobbies()
+    socket.emit('lobby:list', activeLobbies)
   })
 
 
 })
+
+// Helper function to get active lobbies (multiplayer, not started, not full)
+function getActiveLobbies() {
+  const activeLobbies = []
+  
+  rooms.forEach((room, roomCode) => {
+    // Only include multiplayer lobbies that haven't started
+    if (room.gameState.gameMode === 'multiplayer' && !room.gameState.isRunning) {
+      const playerCount = room.players.size
+      const maxPlayers = 4 // Max players per room
+      
+      // Only show if not full
+      if (playerCount < maxPlayers) {
+        activeLobbies.push({
+          roomCode: roomCode,
+          playerCount: playerCount,
+          maxPlayers: maxPlayers
+        })
+      }
+    }
+  })
+  
+  return activeLobbies
+}
+
+// Broadcast lobby updates to all connected clients
+function broadcastLobbyUpdate() {
+  const activeLobbies = getActiveLobbies()
+  io.emit('lobby:updated', { lobbies: activeLobbies })
+}
 
 // Game loop (runs at 60 FPS)
 setInterval(() => {

@@ -1,6 +1,7 @@
 
 import { socket } from '../main.js'
 import { clearAllPlayers } from '../player.js'
+import { initializeLobbyBrowser } from './lobbyBrowser.js'
 
 //ui screen sections
 const menuScreen = document.getElementById('menue-screen')
@@ -184,6 +185,9 @@ function handleRestartGame() {
 
 export function intializeMenu() {
     console.log('menue intialized')
+    
+    // Initialize lobby browser
+    initializeLobbyBrowser()
 
     //Mode toggle buttons
     multiModeBtn.addEventListener('click', () => {

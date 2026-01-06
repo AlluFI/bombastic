@@ -83,7 +83,7 @@ button:active:not(:disabled) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     background: 
         linear-gradient(180deg, rgba(0, 26, 51, 0.9) 0%, rgba(27, 45, 78, 0.9) 50%, rgba(0, 26, 51, 0.9) 100%),
         repeating-linear-gradient(
@@ -95,7 +95,8 @@ button:active:not(:disabled) {
         );
     padding: 20px;
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Retro perspective grid effect */
@@ -282,7 +283,7 @@ button:active:not(:disabled) {
     position: relative;
     width: 100%;
     max-width: 400px;
-    min-height: 550px;
+    min-height: 600px;
 }
 
 #multi-player-section,
@@ -593,6 +594,63 @@ button:active:not(:disabled) {
     box-shadow: 
         0 0 18px rgba(139, 0, 139, 0.6),
         inset 0 0 20px rgba(255, 105, 180, 0.2);
+}
+
+/* Lobby Browser Styles */
+#lobby-browser {
+    background-color: rgba(0, 26, 51, 0.6);
+    border: 3px solid #0077b6;
+    border-radius: 8px;
+    padding: 15px;
+    min-height: 150px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+#lobby-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.lobby-browser-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background-color: rgba(0, 119, 182, 0.2);
+    border: 2px solid rgba(0, 191, 255, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #00bfff;
+}
+
+.lobby-browser-entry:hover {
+    background-color: rgba(0, 119, 182, 0.4);
+    border-color: rgba(0, 191, 255, 0.6);
+    transform: translateX(5px);
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.3);
+}
+
+.lobby-entry-code {
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
+}
+
+.lobby-entry-players {
+    font-size: 14px;
+    color: rgba(0, 191, 255, 0.8);
+    text-shadow: 0 0 6px rgba(0, 191, 255, 0.4);
+}
+
+#no-lobbies-message {
+    text-align: center;
+    padding: 20px;
+    color: rgba(0, 191, 255, 0.6);
+    font-style: italic;
 }
 
 /* Game Screen Styles */
