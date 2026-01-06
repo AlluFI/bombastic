@@ -11,6 +11,7 @@ import { placeRemoteBomb, clearPlayerBombs } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
 import { initializeMap } from "./grid.js"
+import { initializeLobby, showLobbyScreen, hideLobbyScreen, updateLobbyPlayers } from "./ui/lobby.js"
 
 
 const socket = io()
@@ -23,6 +24,7 @@ initializePauseMenu()
 intializeTimer()
 intializeScorboard()
 initializeChat(socket)
+initializeLobby()
 
 let player
 let lastPosition = { x: 1, y: 1 }
@@ -94,13 +96,6 @@ socket.on('game:state', (state) => {
 socket.on('room:created', (state) => {
     console.log('room:created received. Socket ID:', socket.id, 'Players in state:', state.players?.map(p => ({ id: p.id, name: p.name })))
     
-    // Initialize board from server if provided (authoritative source)
-    // Only update map data once at the start, don't re-render (grid is already rendered)
-    // Note: board comes in game:state, but we handle it there to avoid double-rendering
-    // if (state.board) {
-    //     initializeMap(state.board, true)
-    // }
-    
     const myPlayer = state.players?.find(p => p.id === socket.id)
 
     if (myPlayer) {
@@ -117,12 +112,13 @@ socket.on('room:created', (state) => {
         }
     })
 
-    showGameScreen(state.roomCode, state.gameMode)
-    renderScoreboard(state.players, socket.id)
-    loadChatHistory(state.chats)
-    
-    // If this is a single-player game, configure NPCs
+    // Check if this is single-player mode (starts immediately) or multiplayer (shows lobby)
     if (playerData.mode === 'single') {
+        // Single-player: start game immediately
+        showGameScreen(state.roomCode, state.gameMode)
+        renderScoreboard(state.players, socket.id)
+        loadChatHistory(state.chats)
+        
         // Set game mode to single-player
         socket.emit('set-game-mode', {
             mode: 'single-player'
@@ -136,12 +132,54 @@ socket.on('room:created', (state) => {
         })
         
         console.log(`Single-player game started with ${playerData.npcCount} NPC(s) at ${playerData.difficulty} difficulty`)
+    } else {
+        // Multiplayer: show lobby screen (game hasn't started yet)
+        const hostId = state.hostId || state.players?.[0]?.id
+        showLobbyScreen(state.roomCode, state.players, hostId)
+        renderScoreboard(state.players, socket.id)
+        loadChatHistory(state.chats || [])
     }
 })
 
 socket.on('room:updated', (state) => {
     console.log("Room updated:", state.players);
     
+    // Check if game is running or still in lobby
+    const isGameRunning = state.isRunning !== false // Default to true if not specified (for backward compatibility)
+    
+    if (!isGameRunning && state.gameMode !== 'single-player') {
+        // Still in lobby - show/update lobby screen
+        const hostId = state.hostId || state.players?.[0]?.id
+        
+        // Show lobby screen if not already shown (for players joining)
+        const lobbyScreen = document.getElementById('lobby-screen')
+        if (lobbyScreen && lobbyScreen.classList.contains('hidden')) {
+            showLobbyScreen(state.roomCode, state.players, hostId)
+        } else {
+            updateLobbyPlayers(state.players, hostId)
+        }
+        
+        renderScoreboard(state.players, socket.id)
+        
+        // Only create local player if it doesn't exist yet
+        if (!player) {
+            const myPlayer = state.players.find(p => p.id === socket.id)
+            if (myPlayer) {
+                player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+            }
+        }
+        
+        // Create/update remote players that don't already exist
+        state.players.forEach(p => {
+            if (p.id !== socket.id && !remotePlayers.has(p.id)) {
+                createRemotePlayer(p)
+            }
+        })
+        
+        return // Stay in lobby, don't show game screen
+    }
+    
+    // Game is running - show game screen
     // Only create local player if it doesn't exist yet
     if (!player) {
         const myPlayer = state.players.find(p => p.id === socket.id)
@@ -149,7 +187,7 @@ socket.on('room:updated', (state) => {
             player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
             showGameScreen(state.roomCode, state.gameMode)
             renderScoreboard(state.players, socket.id)
-            loadChatHistory(state.chats)
+            loadChatHistory(state.chats || [])
         }
     }
 
@@ -179,6 +217,35 @@ socket.on('npcs-configured', (data) => {
 // Handle game mode change confirmation
 socket.on('game-mode-changed', (data) => {
     console.log(`Game mode changed to: ${data.mode}`)
+})
+
+// Handle game started (transition from lobby to game)
+socket.on('game:started', (data) => {
+    console.log('Game started!', data)
+    
+    // Hide lobby screen
+    hideLobbyScreen()
+    
+    // Initialize board if provided
+    if (data.board) {
+        initializeMap(data.board, true)
+    }
+    
+    // Show game screen
+    showGameScreen(data.roomCode, data.gameMode)
+    
+    // Start timer
+    startTimer()
+    
+    // Update scoreboard
+    if (data.players) {
+        renderScoreboard(data.players, socket.id)
+    }
+    
+    // Load chat history
+    if (data.chats) {
+        loadChatHistory(data.chats)
+    }
 })
 
 // Handle game end (winner detection)

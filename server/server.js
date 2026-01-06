@@ -79,7 +79,10 @@ io.on('connection', socket => {
   const responseData = {
     roomCode: roomId,
     players: Array.from(room.players.values()),
-    chats: room.chats
+    chats: room.chats,
+    hostId: room.host,
+    isRunning: room.gameState.isRunning,
+    gameMode: room.gameState.gameMode
   }
   console.log(`📤 Emitting room:created to ${socket.id} with players:`, responseData.players.map(p => ({ id: p.id, name: p.name })))
   socket.emit('room:created', responseData)
@@ -131,7 +134,10 @@ io.on('connection', socket => {
   io.to(roomId).emit('room:updated', {
     players: Array.from(room.players.values()),
     roomCode : roomId,
-    chats: room.chats
+    chats: room.chats,
+    hostId: room.host,
+    isRunning: room.gameState.isRunning,
+    gameMode: room.gameState.gameMode
   })
 })
   
@@ -364,11 +370,14 @@ io.on('connection', socket => {
       })),
     });
     
-    // Also emit room:updated to sync NPCs to clients
+      // Also emit room:updated to sync NPCs to clients
     io.to(socket.roomCode).emit('room:updated', {
       players: Array.from(room.players.values()),
       roomCode: socket.roomCode,
       chats: room.chats,
+      hostId: room.host,
+      isRunning: room.gameState.isRunning,
+      gameMode: room.gameState.gameMode
     });
   });
 
@@ -411,6 +420,9 @@ io.on('connection', socket => {
         players: Array.from(room.players.values()),
         roomCode: socket.roomCode,
         chats: room.chats,
+        hostId: room.host,
+        isRunning: room.gameState.isRunning,
+        gameMode: room.gameState.gameMode
       });
     }
   })
@@ -533,6 +545,49 @@ io.on('connection', socket => {
             })
         }
     })
+
+  // Handle game start (host only, requires 2+ players)
+  socket.on('game:start', (data) => {
+    const room = rooms.get(socket.roomCode)
+    if (!room) {
+      socket.emit('error', { message: 'Room not found' })
+      return
+    }
+    
+    // Check if requester is the host
+    if (room.host !== socket.id) {
+      socket.emit('error', { message: 'Only the host can start the game' })
+      return
+    }
+    
+    // Check if game is already running
+    if (room.gameState.isRunning) {
+      socket.emit('error', { message: 'Game is already running' })
+      return
+    }
+    
+    // Check if there are at least 2 players
+    const playerCount = room.players.size
+    if (playerCount < 2) {
+      socket.emit('error', { message: 'Need at least 2 players to start the game' })
+      return
+    }
+    
+    // Start the game
+    room.gameState.isRunning = true
+    syncRoomGameState(room)
+    
+    console.log(`🎮 Game started in room ${socket.roomCode} by host ${socket.id} with ${playerCount} players`)
+    
+    // Broadcast game started event to all players in room
+    io.to(socket.roomCode).emit('game:started', {
+      roomCode: socket.roomCode,
+      players: Array.from(room.players.values()),
+      board: room.gameState.board,
+      gameMode: room.gameState.gameMode,
+      chats: room.chats
+    })
+  })
 
 
 })

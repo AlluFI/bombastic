@@ -79,6 +79,29 @@
             </div>
         </div>
 
+        <div id="lobby-screen" class="screen hidden">
+            <h1>Lobby</h1>
+            <div id="lobby-content">
+                <div id="lobby-room-code">
+                    <h2>Room Code</h2>
+                    <div id="lobby-code-display"></div>
+                    <p class="lobby-hint">Share this code with other players</p>
+                </div>
+                
+                <div id="lobby-players">
+                    <h2>Players</h2>
+                    <div id="lobby-players-list"></div>
+                    <p id="lobby-player-count" class="lobby-hint">Waiting for players...</p>
+                </div>
+                
+                <div id="lobby-actions">
+                    <button id="start-game-button" class="lobby-button" disabled>Start Game</button>
+                    <p id="start-game-hint" class="lobby-hint">Need at least 2 players to start</p>
+                    <button id="leave-lobby-button" class="lobby-button secondary">Leave Lobby</button>
+                </div>
+            </div>
+        </div>
+
         <div id="game-screen" class="screen hidden">
             <div id="fps-counter"
                 style="position:absolute;top:10px;left:10px;color:#fff;background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;font-family:monospace;z-index:2000;">
