@@ -681,25 +681,69 @@ setInterval(() => {
       syncRoomGameState(room);
     }
     
-    // Update bomb timers and handle explosions
+    // Update bomb timers and handle explosions (with chain reactions)
     if (room.gameState.bombs && room.gameState.bombs.length > 0) {
       const now = Date.now();
       const explodedBombs = [];
       const destroyedBlocks = [];
+      const processedBombIds = new Set(); // Track bombs we've already processed in this cycle
       
-      room.gameState.bombs = room.gameState.bombs.filter(bomb => {
-        const elapsed = now - bomb.placedAt;
-        if (elapsed >= bomb.duration) {
-          // Bomb has exploded - calculate explosion and destroy blocks
+      // Process chain reactions: keep processing until no more bombs explode
+      let hasMoreExplosions = true;
+      while (hasMoreExplosions) {
+        hasMoreExplosions = false;
+        
+        // Find bombs that should explode (timer expired or triggered by chain reaction)
+        const bombsToExplode = [];
+        room.gameState.bombs.forEach(bomb => {
+          if (processedBombIds.has(bomb.id)) {
+            return; // Already processed this bomb
+          }
+          
+          const elapsed = now - bomb.placedAt;
+          if (elapsed >= bomb.duration) {
+            bombsToExplode.push(bomb);
+          }
+        });
+        
+        if (bombsToExplode.length === 0) {
+          break; // No more bombs to explode
+        }
+        
+        // Process each bomb that should explode
+        bombsToExplode.forEach(bomb => {
+          processedBombIds.add(bomb.id);
           explodedBombs.push(bomb);
+          
+          // Calculate explosion tiles for this bomb
+          const explosionTiles = calculateExplosionTiles(bomb, room.gameState.board);
           const blocks = calculateExplosionBlocks(bomb, room.gameState.board);
           destroyedBlocks.push(...blocks);
-          return false; // Remove bomb from active bombs
-        }
-        return true; // Keep bomb (still active)
-      });
+          
+          // Check for chain reactions: find bombs in the explosion range
+          room.gameState.bombs.forEach(otherBomb => {
+            // Skip if this is the same bomb, already processed, or already exploded
+            if (otherBomb.id === bomb.id || processedBombIds.has(otherBomb.id)) {
+              return;
+            }
+            
+            // Check if this bomb is within the explosion tiles
+            const isInExplosion = explosionTiles.some(tile => tile.x === otherBomb.x && tile.y === otherBomb.y);
+            
+            if (isInExplosion) {
+              // Trigger chain reaction: set bomb's timer to 0 so it explodes immediately
+              otherBomb.placedAt = now - otherBomb.duration; // Set elapsed time to duration (triggers explosion)
+              hasMoreExplosions = true; // Continue processing chain reactions
+              console.log(`💣 Chain reaction: Bomb at (${otherBomb.x}, ${otherBomb.y}) triggered by explosion at (${bomb.x}, ${bomb.y})`);
+            }
+          });
+        });
+      }
       
-      // Process exploded bombs
+      // Remove exploded bombs from active bombs list (after processing all chain reactions)
+      room.gameState.bombs = room.gameState.bombs.filter(bomb => !processedBombIds.has(bomb.id));
+      
+      // Process exploded bombs (damage, block destruction, etc.)
       if (explodedBombs.length > 0) {
         // Sync game state BEFORE checking for damage to ensure positions are current
         syncRoomGameState(room);

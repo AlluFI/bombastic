@@ -392,17 +392,143 @@ button:active:not(:disabled) {
     margin: 0 auto;
 }
 
-/* Lobby Screen Styles */
-#lobby-screen {
+/* Toast Notification Styles */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 40px 20px;
-    position: relative;
+    gap: 12px;
+    pointer-events: none;
 }
 
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    max-width: 450px;
+    padding: 16px 20px;
+    background: rgba(0, 26, 51, 0.95);
+    border: 3px solid #0077b6;
+    border-radius: 4px;
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(0, 119, 182, 0.4);
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s ease;
+    pointer-events: all;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast.hide {
+    opacity: 0;
+    transform: translateX(400px);
+}
+
+.toast-error {
+    border-color: #ff4444;
+    background: rgba(51, 0, 0, 0.95);
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(255, 68, 68, 0.4);
+}
+
+.toast-success {
+    border-color: #44ff44;
+    background: rgba(0, 51, 0, 0.95);
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(68, 255, 68, 0.4);
+}
+
+.toast-info {
+    border-color: #00bfff;
+    background: rgba(0, 26, 51, 0.95);
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(0, 191, 255, 0.4);
+}
+
+.toast-warning {
+    border-color: #ffaa00;
+    background: rgba(51, 34, 0, 0.95);
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(255, 170, 0, 0.4);
+}
+
+.toast-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.toast-message {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    opacity: 1;
+}
+
+/* Button Loading State */
+button.loading {
+    position: relative;
+    color: transparent;
+    pointer-events: none;
+}
+
+button.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 191, 255, 0.3);
+    border-top-color: #00bfff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+/* Enhanced End Screen Styles */
+/* Lobby Screen Styles */
 #lobby-screen h1 {
     background: linear-gradient(180deg, #ff6900 0%, #ff8c00 20%, #ff4500 40%, #ff1493 70%, #ff69b4 100%);
     -webkit-background-clip: text;
@@ -651,6 +777,133 @@ button:active:not(:disabled) {
     padding: 20px;
     color: rgba(0, 191, 255, 0.6);
     font-style: italic;
+}
+
+/* Enhanced End Screen Styles */
+#end-screen h2 {
+    color: #00bfff;
+    font-size: 48px;
+    margin-bottom: 20px;
+    text-align: center;
+    text-shadow: 0 0 20px rgba(0, 191, 255, 0.8);
+    letter-spacing: 2px;
+    animation: fadeInDown 0.6s ease;
+}
+
+#end-screen .winner-name {
+    font-size: 64px;
+    background: linear-gradient(180deg, #ff6900 0%, #ff8c00 50%, #ff4500 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 30px rgba(255, 105, 0, 0.8);
+    margin-bottom: 40px;
+    animation: fadeInUp 0.8s ease 0.2s both;
+}
+
+#end-screen .end-screen-stats {
+    background: rgba(0, 26, 51, 0.8);
+    border: 3px solid #0077b6;
+    padding: 30px;
+    margin: 30px 0;
+    min-width: 400px;
+    max-width: 600px;
+    animation: fadeIn 0.8s ease 0.4s both;
+}
+
+#end-screen .final-scoreboard {
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+#end-screen .final-scoreboard-title {
+    color: #00bfff;
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+#end-screen .final-player-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    margin: 8px 0;
+    background: rgba(0, 191, 255, 0.1);
+    border: 2px solid rgba(0, 191, 255, 0.3);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+#end-screen .final-player-entry.winner {
+    background: rgba(255, 105, 0, 0.2);
+    border-color: rgba(255, 105, 0, 0.6);
+    box-shadow: 0 0 15px rgba(255, 105, 0, 0.4);
+}
+
+#end-screen .final-player-entry .player-name-end {
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#end-screen .final-player-entry .player-name-end .player-color-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+#end-screen .final-player-entry .player-score-end {
+    color: #00bfff;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#end-screen .final-player-entry.winner .player-score-end {
+    color: #ff6900;
+}
+
+#end-screen button {
+    margin: 0 auto;
+    animation: fadeIn 0.8s ease 0.6s both;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Game Screen Styles */

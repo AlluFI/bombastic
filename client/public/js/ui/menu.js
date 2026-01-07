@@ -76,6 +76,23 @@ export function showEndScreen() {
     endScreen.classList.remove('hidden')
 }
 
+function setButtonLoading(button, isLoading) {
+    if (isLoading) {
+        button.classList.add('loading')
+        button.disabled = true
+    } else {
+        button.classList.remove('loading')
+        button.disabled = false
+    }
+}
+
+export function clearButtonLoading() {
+    // Clear loading state from all menu buttons
+    setButtonLoading(startButton, false)
+    setButtonLoading(hostButton, false)
+    setButtonLoading(joinButton, false)
+}
+
 function handleStartGame() {
     console.log('🎮 Start button clicked - starting single-player game')
 
@@ -86,6 +103,9 @@ function handleStartGame() {
 
     console.log('📝 Player data recorded:', playerData)    
     console.log('📡 Emitting room:host event with name:', playerData.name)
+
+    // Set loading state
+    setButtonLoading(startButton, true)
 
     // For single-player mode:
     // 1. First create a room (host)
@@ -130,24 +150,29 @@ function handleNPCCountChange() {
 }
 
 function handleHostGame() {
-
     playerData.name = playerNameInput.value.trim()
+    
+    // Set loading state
+    setButtonLoading(hostButton, true)
+    
     socket.emit('room:host', {
         name: playerData.name
     })
 }
 
 function handleJoinGame() {
-
     playerData.name = playerNameJoinInput.value.trim()
     const roomId = joinInput.value.trim()
 
     if (roomId) {
-     socket.emit('room:join',{
-        roomId: roomId,
-        name: playerData.name,
- })
-}
+        // Set loading state
+        setButtonLoading(joinButton, true)
+        
+        socket.emit('room:join', {
+            roomId: roomId,
+            name: playerData.name,
+        })
+    }
 }
 
 function handleRestartGame() {

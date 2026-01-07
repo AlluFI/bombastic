@@ -7,7 +7,7 @@ import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen, showEndScreen, showMenuScreen } from "./ui/menu.js";
 import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
 import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard, updatePlayerStats } from "./ui/scoreboard.js";
-import { placeRemoteBomb, clearPlayerBombs } from "./game/bombController.js";
+import { placeRemoteBomb, clearPlayerBombs, handleServerBombExplosion } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
 import { initializeMap } from "./grid.js"
@@ -45,6 +45,16 @@ socket.on('disconnect', () => {
 
 socket.on('connect_error', (error) => {
     console.error('❌ Socket connection error:', error)
+    // Show error toast
+    import('./ui/notifications.js').then(({ showError }) => {
+        showError('Failed to connect to server. Please check your connection.')
+    })
+    // Clear loading states
+    import('./ui/menu.js').then(({ clearButtonLoading }) => {
+        if (clearButtonLoading) {
+            clearButtonLoading()
+        }
+    })
 })
 
 // Receive current game state (existing players)
@@ -96,6 +106,20 @@ socket.on('game:state', (state) => {
 socket.on('room:created', (state) => {
     console.log('room:created received. Socket ID:', socket.id, 'Players in state:', state.players?.map(p => ({ id: p.id, name: p.name })))
     
+    // Clear loading states
+    import('./ui/menu.js').then(({ clearButtonLoading }) => {
+        if (clearButtonLoading) {
+            clearButtonLoading()
+        }
+    })
+    
+    // Initialize board from server if provided (authoritative source)
+    // Only update map data once at the start, don't re-render (grid is already rendered)
+    // Note: board comes in game:state, but we handle it there to avoid double-rendering
+    // if (state.board) {
+    //     initializeMap(state.board, true)
+    // }
+    
     const myPlayer = state.players?.find(p => p.id === socket.id)
 
     if (myPlayer) {
@@ -143,6 +167,13 @@ socket.on('room:created', (state) => {
 
 socket.on('room:updated', (state) => {
     console.log("Room updated:", state.players);
+    
+    // Clear loading states (if any menu buttons were in loading state)
+    import('./ui/menu.js').then(({ clearButtonLoading }) => {
+        if (clearButtonLoading) {
+            clearButtonLoading()
+        }
+    })
     
     // Check if game is running or still in lobby
     const isGameRunning = state.isRunning !== false // Default to true if not specified (for backward compatibility)
@@ -255,26 +286,13 @@ socket.on('game:end', (data) => {
     // Stop the timer
     stopTimer()
     
-    // Display end screen with winner information
-    const winnerText = document.getElementById('winner-text')
-    if (winnerText) {
-        if (data.isDraw) {
-            winnerText.textContent = 'Draw! All players eliminated.'
-        } else if (data.winner) {
-            const winnerName = data.winner.isNPC ? `${data.winner.name} (Bot)` : data.winner.name
-            winnerText.textContent = `Winner: ${winnerName}!`
-        } else {
-            winnerText.textContent = 'Game Over'
-        }
-    }
-    
-    // Show final scoreboard
-    if (data.players) {
-        renderScoreboard(data.players, socket.id)
-    }
-    
-    // Show end screen
+    // Show end screen first
     showEndScreen()
+    
+    // Render enhanced endgame screen with winner and final scores
+    import('./ui/endgame.js').then(({ renderEndScreen }) => {
+        renderEndScreen(data, socket.id)
+    })
     
     // Reset player state for next game
     resetPlayer()
@@ -282,8 +300,17 @@ socket.on('game:end', (data) => {
 })
 
 socket.on('error', (data) => {
-alert(data.message)
-
+    // Use toast notification instead of alert
+    import('./ui/notifications.js').then(({ showError }) => {
+        showError(data.message)
+    })
+    
+    // Clear loading states on error
+    import('./ui/menu.js').then(({ clearButtonLoading }) => {
+        if (clearButtonLoading) {
+            clearButtonLoading()
+        }
+    })
 })
 
 // New player joined
@@ -323,6 +350,12 @@ socket.on('game:pause', (payload) => {
 socket.on('bomb:placed', (bombData) => {
     console.log('Bomb placed by another player:', bombData)
     placeRemoteBomb(bombData)
+})
+
+// Server-authoritative bomb explosion (enables visible chain reactions)
+socket.on('bomb:exploded', (bombData) => {
+    console.log('Bomb exploded (server):', bombData)
+    handleServerBombExplosion(bombData)
 })
 
 socket.on('block:destroyed', (data) => {

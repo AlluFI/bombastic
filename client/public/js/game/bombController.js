@@ -38,7 +38,7 @@ function trackBomb(playerId, bombId, x, y) {
     console.log(`Player ${playerId} now has ${getPlayerBombCount(playerId)} bomb(s)`)
 }
 
-function untrackBomb(playerId, bombId, x, y) {
+export function untrackBomb(playerId, bombId, x, y) {
     const bombs = playerBombs.get(playerId)
     if (bombs) {
         bombs.delete(bombId)
@@ -249,6 +249,22 @@ export function placeRemoteBomb(bombData) {
             }
         })
     })
+}
+
+/**
+ * Handle server-authoritative bomb explosion (e.g., chain reactions).
+ * This removes the bomb locally and renders the explosion without applying client-side damage
+ * (server already applies damage).
+ */
+export function handleServerBombExplosion({ bombId, playerId, x, y }) {
+    // Remove local tracking so movement is not blocked after explosion
+    untrackBomb(playerId, bombId, x, y)
+
+    // Remove bomb element if it exists
+    removeBomb(bombId)
+
+    // Render explosion visuals only (no local damage application)
+    renderExplosion(x, y, 2)
 }
 
 export function clearPlayerBombs(playerId) {
