@@ -60,7 +60,10 @@ module.exports = function roomHandlers(io, socket, rooms) {
       y: startPos[0].y,
       color: colors[0],
       lives: CONSTANTS.DEFAULT_LIVES,
-      alive: true
+      alive: true,
+      bombRange: 2,
+      immortal: false,
+      immortalEnd: 0
     }
     room.players.set(socket.id, playerData)
     console.log(`👤 Added host as player:`, playerData)
@@ -150,7 +153,10 @@ module.exports = function roomHandlers(io, socket, rooms) {
       y: startPos[room.players.size].y,
       color: colors[room.players.size],
       lives: CONSTANTS.DEFAULT_LIVES,
-      alive: true
+      alive: true,
+      bombRange: 2,
+      immortal: false,
+      immortalEnd: 0
     })
   
   // Sync game state after player joins

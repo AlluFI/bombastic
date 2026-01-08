@@ -4,19 +4,22 @@ import { getLocalPlayer } from '../player.js'
 import { playSound } from '../audio/soundManager.js'
 
 const POWERUP_TYPES = {
-    BOMB_RANGE: 'bomb_range'
+    BOMB_RANGE: 'bomb_range',
+    IMMORTAL: 'immortal'
 }
 
 // Track active power-ups on the map
 const activePowerups = new Map() // posKey -> { id, type, x, y }
 
 // Track player power-up stats
-const playerStats = new Map() // playerId -> { bombRange: 2 }
+const playerStats = new Map() // playerId -> { bombRange: 2, immortal: false, immortalEnd: 0 }
 
 export function initializePlayerStats(playerId) {
     if (!playerStats.has(playerId)) {
         playerStats.set(playerId, {
-            bombRange: 2 // Default range
+            bombRange: 2, // Default range
+            immortal: false,
+            immortalEnd: 0
         })
     }
 }
@@ -33,7 +36,71 @@ export function addPowerupToPlayer(playerId, powerupType) {
     if (powerupType === POWERUP_TYPES.BOMB_RANGE) {
         stats.bombRange += 1 // Increase range by 1
         console.log(`Player ${playerId} picked up bomb range power-up! New range: ${stats.bombRange}`)
+    } else if (powerupType === POWERUP_TYPES.IMMORTAL) {
+        // Grant 15 seconds of immortality
+        const IMMORTAL_DURATION = 15000
+        stats.immortal = true
+        stats.immortalEnd = Date.now() + IMMORTAL_DURATION
+        console.log(`Player ${playerId} gained immortality for 15 seconds!`)
+        
+        // Update visual indicator
+        updateImmortalVisual(playerId, true)
+        
+        // Auto-remove after duration
+        setTimeout(() => {
+            if (stats.immortalEnd <= Date.now()) {
+                stats.immortal = false
+                stats.immortalEnd = 0
+                updateImmortalVisual(playerId, false)
+                console.log(`Player ${playerId} immortality expired`)
+            }
+        }, IMMORTAL_DURATION)
     }
+}
+
+export function isPlayerImmortal(playerId) {
+    const stats = playerStats.get(playerId)
+    if (!stats) return false
+    
+    // Check if immortal and not expired
+    if (stats.immortal && Date.now() < stats.immortalEnd) {
+        return true
+    }
+    
+    // Auto-expire if time passed
+    if (stats.immortal && Date.now() >= stats.immortalEnd) {
+        stats.immortal = false
+        stats.immortalEnd = 0
+        updateImmortalVisual(playerId, false)
+    }
+    
+    return false
+}
+
+function updateImmortalVisual(playerId, isImmortal) {
+    // Import dynamically to avoid circular dependency
+    import('../player.js').then(({ getLocalPlayer, remotePlayers }) => {
+        const localPlayer = getLocalPlayer()
+        
+        let playerElement = null
+        
+        if (localPlayer && localPlayer.id === playerId) {
+            playerElement = localPlayer.element
+        } else {
+            const remotePlayer = remotePlayers.get(playerId)
+            if (remotePlayer) {
+                playerElement = remotePlayer.element
+            }
+        }
+        
+        if (playerElement) {
+            if (isImmortal) {
+                playerElement.classList.add('immortal')
+            } else {
+                playerElement.classList.remove('immortal')
+            }
+        }
+    })
 }
 
 export function renderPowerup(powerupData) {

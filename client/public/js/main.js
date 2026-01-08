@@ -442,6 +442,31 @@ socket.on('powerup:picked', (data) => {
     }
 })
 
+socket.on('powerup:granted', (data) => {
+    console.log(`Power-up granted to player ${data.playerId}: ${data.type}`)
+    
+    // Apply power-up to the player
+    import('./game/powerupController.js').then(({ addPowerupToPlayer }) => {
+        addPowerupToPlayer(data.playerId, data.type)
+        
+        // Play sound if local player received it
+        if (data.playerId === socket.id) {
+            playSound('powerupPickup')
+        }
+    })
+})
+
+socket.on('powerup:expired', (data) => {
+    console.log(`Power-up expired for player ${data.playerId}: ${data.type}`)
+    
+    // Expiration is automatically handled in isPlayerImmortal when checked
+    // Just trigger a check to update the visual
+    import('./game/powerupController.js').then(({ isPlayerImmortal }) => {
+        // Force check to update visual (will auto-expire and remove visual)
+        isPlayerImmortal(data.playerId)
+    })
+})
+
 socket.on('player:damaged', (data) => {
     console.log(`Player ${data.playerId} was damaged. Lives: ${data.lives}`)
     

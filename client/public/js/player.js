@@ -1,6 +1,7 @@
 import { keys } from "./controls.js"
 import { map } from "./grid.js"
 import { tryPlaceBomb, getBombPositions } from "./game/bombController.js"
+import { isPlayerImmortal } from "./game/powerupController.js"
 
 
 const gridElement = document.getElementById('grid')
@@ -23,7 +24,13 @@ class Player {
     takeDamage() {
         if (!this.alive) return false
         
-        // Check invincibility
+        // Check immortal state (from power-up)
+        if (isPlayerImmortal(this.id)) {
+            console.log(`${this.name} is immortal! Damage blocked.`)
+            return false
+        }
+        
+        // Check invincibility (short-term after taking damage)
         if (this.invincible && Date.now() < this.invincibilityEnd) {
             console.log(`${this.name} is invincible! Damage blocked.`)
             return false
