@@ -16,20 +16,12 @@ app.use(express.static(path.join(__dirname, '../client')))
 
 const rooms = new Map()
 
-
 //Connect client
 io.on('connection', socket => {
- 
   allHandlers(io, socket, rooms)
-
 })
 
-gameLoop(io,rooms)
-
-
-
-
-
+gameLoop(io, rooms)
 
 server.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`))
 

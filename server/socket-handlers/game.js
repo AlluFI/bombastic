@@ -40,9 +40,11 @@ module.exports = function gameHandlers(io, socket, rooms) {
       // Notify others
       socket.to(socket.roomCode).emit('player:left', socket.id)
     }
-  })
-
-  // Handle disconnect
+    })
+    
+     //===================================
+    // Handle disconnect
+    //===================================
   socket.on('disconnect', () => {
   
     // Clean up from room

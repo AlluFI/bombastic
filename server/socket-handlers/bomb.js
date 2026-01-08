@@ -2,7 +2,9 @@
 
 module.exports = function bombHandlers(io, socket, rooms) {
 
+     //========================
      // Handle bomb placement
+     //========================
     socket.on('bomb:place', (bombData) => {
       const room = rooms.get(socket.roomCode)
       if (!room) return
@@ -51,7 +53,9 @@ module.exports = function bombHandlers(io, socket, rooms) {
       })
     })
 
-    // Handle single block destruction
+     //=================================
+     // Handle single block destruction
+     //=================================
     socket.on('block:destroy', (data) => {
         const room = rooms.get(socket.roomCode)
         if (room && room.gameState.board) {
@@ -70,7 +74,9 @@ module.exports = function bombHandlers(io, socket, rooms) {
         })
     })
 
-    // Handle multiple blocks destruction
+     //===================================
+     // Handle multiple blocks destruction
+     //===================================
     socket.on('blocks:destroy', (data) => {
         const room = rooms.get(socket.roomCode)
         if (room && room.gameState.board && data.blocks) {

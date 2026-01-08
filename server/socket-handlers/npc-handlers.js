@@ -10,7 +10,9 @@ const { NPC } = require('../npc');
 
 
 module.exports = function npcHandlers(io, socket, rooms) {
+    //===================================
     // Set game mode (single-player vs multiplayer)
+    //===================================
   socket.on('set-game-mode', (data) => {
     const room = rooms.get(socket.roomCode);
     if (!room || room.host !== socket.id) {
@@ -34,7 +36,10 @@ module.exports = function npcHandlers(io, socket, rooms) {
     io.to(socket.roomCode).emit('game-mode-changed', { mode: data.mode });
   });
 
-  // Configure NPCs for single-player mode
+
+     //===================================
+     // Configure NPCs for single-player mode
+     //===================================
   socket.on('configure-npcs', (data) => {
     const room = rooms.get(socket.roomCode);
     if (!room || room.host !== socket.id) {

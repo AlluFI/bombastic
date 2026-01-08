@@ -2,7 +2,10 @@ const {generateRoomCode, generateBoard, syncRoomGameState, colors, startPos, bro
 
 
 module.exports = function roomHandlers(io, socket, rooms) {
-	//Host new room
+
+    //======================
+    //Host new room
+    //======================
   socket.on('room:host', (data) => {
   console.log(`📥 Received room:host from ${socket.id}, name: ${data.name}`)
   const roomId = generateRoomCode() 
@@ -71,7 +74,9 @@ module.exports = function roomHandlers(io, socket, rooms) {
   broadcastLobbyUpdate(io, rooms)
 })
 
-  //Join to room
+     //=======================
+    //Join to room
+    //========================
   socket.on('room:join', (data) => {
   const roomId = data.roomId
   const room = rooms.get(roomId)
