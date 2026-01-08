@@ -32,18 +32,15 @@ export function renderEndScreen(data, localPlayerId) {
         winnerName.textContent = ''
     }
     
-    // Render final scoreboard (sorted by score, descending)
+    // Render final scoreboard (sorted by elimination order - winner first)
     if (data.players && data.players.length > 0) {
-        // Sort players by score (descending), then by name
-        const sortedPlayers = [...data.players].sort((a, b) => {
-            const scoreDiff = (b.score || 0) - (a.score || 0)
-            if (scoreDiff !== 0) return scoreDiff
-            return (a.name || '').localeCompare(b.name || '')
-        })
-        
-        sortedPlayers.forEach((player, index) => {
+        // Players are already sorted by elimination order (winner first) from server
+        data.players.forEach((player, index) => {
             const isWinner = data.winner && player.id === data.winner.id
             const isLocal = player.id === localPlayerId
+            
+            // Calculate rank (1st place = winner, 2nd place = second-to-last eliminated, etc.)
+            const rank = index + 1
             
             const entry = document.createElement('div')
             entry.className = `final-player-entry ${isWinner ? 'winner' : ''}`
@@ -51,12 +48,16 @@ export function renderEndScreen(data, localPlayerId) {
             const playerName = player.isNPC ? `${player.name} (Bot)` : player.name
             const youLabel = isLocal ? ' <span style="color: #00bfff;">(You)</span>' : ''
             
+            // Format rank with ordinal suffix (1st, 2nd, 3rd, 4th)
+            const rankSuffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th'
+            const rankDisplay = `${rank}${rankSuffix}`
+            
             entry.innerHTML = `
                 <div class="player-name-end">
                     <span class="player-color-indicator" style="background-color: ${player.color || '#888'}"></span>
                     ${playerName}${youLabel}
                 </div>
-                <div class="player-score-end">${player.score || 0}</div>
+                <div class="player-score-end">${rankDisplay}</div>
             `
             
             finalScoreboardList.appendChild(entry)

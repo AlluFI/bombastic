@@ -1,9 +1,43 @@
 const {syncRoomGameState, calculateExplosionBlocks, calculateExplosionTiles, handleNPCAction, checkGameEnd} = require('./utils')
 const {ENABLE_NPC} = require('./config')
+const CONSTANTS = require('./constants')
 
-module.exports = function gameLoop(io,rooms) {
+module.exports = function gameLoop(io, rooms) {
+    // Room cleanup loop (runs every minute)
+    setInterval(() => {
+      const now = Date.now();
+      const roomsToDelete = [];
+      
+      rooms.forEach((room, roomId) => {
+        // Skip if room has players
+        if (room.players && room.players.size > 0) {
+          return;
+        }
+        
+        // Skip if room was just created (give it time)
+        if (!room.createdAt) {
+          room.createdAt = now;
+          return;
+        }
+        
+        // Delete room if it's been empty for too long
+        const timeSinceEmpty = now - (room.lastEmptyTime || room.createdAt);
+        if (timeSinceEmpty > CONSTANTS.ROOM_CLEANUP_DELAY_MS) {
+          roomsToDelete.push(roomId);
+        } else if (!room.lastEmptyTime) {
+          room.lastEmptyTime = now;
+        }
+      });
+      
+      // Delete empty rooms
+      roomsToDelete.forEach(roomId => {
+        console.log(`🧹 Cleaning up empty room: ${roomId}`);
+        rooms.delete(roomId);
+      });
+    }, 60 * 1000); // Check every minute
+    
     // Game loop (runs at 60 FPS)
-setInterval(() => {
+    setInterval(() => {
   rooms.forEach((room, roomId) => {
     // Only process running games
     if (!room.gameState.isRunning) return;
@@ -116,10 +150,24 @@ setInterval(() => {
                   hitPlayers.add(npcId); // Also add to hitPlayers to prevent double-checking
                   
                   // Apply damage to NPC
+                  const wasAlive = npc.alive;
                   npc.lives = Math.max(0, npc.lives - 1);
                   npc.alive = npc.lives > 0;
                   
                   console.log(`NPC ${npc.name} caught in explosion at (${tile.x}, ${tile.y}). Lives: ${npc.lives}, Alive: ${npc.alive}`);
+                  
+                  // Track elimination order
+                  if (wasAlive && !npc.alive) {
+                    // NPC was eliminated - track elimination order
+                    if (!room.eliminationOrder) {
+                      room.eliminationOrder = [];
+                    }
+                    const npcPlayer = room.players.get(npcId);
+                    if (npcPlayer && !room.eliminationOrder.includes(npcId)) {
+                      room.eliminationOrder.push(npcId);
+                      console.log(`💀 ${npc.name} eliminated! Elimination order: ${room.eliminationOrder.length}`);
+                    }
+                  }
                   
                   // Broadcast damage to all players in room
                   io.to(roomId).emit('player:damaged', {
@@ -145,10 +193,23 @@ setInterval(() => {
                 // Handle human player damage
                 const playerObj = room.players.get(player.id);
                 if (playerObj) {
+                  const wasAlive = playerObj.alive;
                   playerObj.lives = Math.max(0, playerObj.lives - 1);
                   playerObj.alive = playerObj.lives > 0;
                   
                   console.log(`💥 Player ${playerObj.name} (${playerObj.id}) caught in explosion at (${tile.x}, ${tile.y}). Lives: ${playerObj.lives}, Alive: ${playerObj.alive}`);
+                  
+                  // Track elimination order
+                  if (wasAlive && !playerObj.alive) {
+                    // Player was eliminated - track elimination order
+                    if (!room.eliminationOrder) {
+                      room.eliminationOrder = [];
+                    }
+                    if (!room.eliminationOrder.includes(playerObj.id)) {
+                      room.eliminationOrder.push(playerObj.id);
+                      console.log(`💀 ${playerObj.name} eliminated! Elimination order: ${room.eliminationOrder.length}`);
+                    }
+                  }
                   
                   // Broadcast damage to all players in room
                   io.to(roomId).emit('player:damaged', {
@@ -187,11 +248,11 @@ setInterval(() => {
               
               // Spawn power-up randomly (30% chance per destroyed block)
               // Only spawn if we haven't reached the max power-ups yet
-              const maxPowerups = room.players.size * 4; // players * 4
+              const maxPowerups = room.players.size * CONSTANTS.MAX_POWERUPS_MULTIPLIER
               const currentPowerups = room.gameState.powerups ? room.gameState.powerups.length : 0;
               
               // Only spawn if we haven't exceeded the max and random chance succeeds
-              if (currentPowerups < maxPowerups && Math.random() < 0.3) {
+              if (currentPowerups < maxPowerups && Math.random() < CONSTANTS.POWERUP_SPAWN_CHANCE) {
                 const powerupId = `powerup-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 const powerup = {
                   id: powerupId,
@@ -230,7 +291,7 @@ setInterval(() => {
     }
     
     // Check for game end (winner detection)
-    const gameEndResult = checkGameEnd(room.gameState);
+    const gameEndResult = checkGameEnd(room.gameState, room);
     if (gameEndResult) {
       // Game has ended - stop the game and notify all players
       room.gameState.isRunning = false;

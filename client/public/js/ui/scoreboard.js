@@ -3,7 +3,7 @@ const scoreboardElement = document.getElementById('scoreboard')
 let localPlayerId = null
 
 function createPlayerEntryHTML(playerData, isLocal = false) {
-    const {name, id, color, lives = 3, score, isNPC = false} = playerData
+    const {name, id, color, lives = 3, isNPC = false} = playerData
 
     const heartsHTML = '❤️'.repeat(lives)
 
@@ -20,7 +20,6 @@ function createPlayerEntryHTML(playerData, isLocal = false) {
             </div>
             <div class="player-stats">
                 <span class="player-lives">${heartsHTML}</span>
-                <span class="player-score">${score}</span>
             </div>
         </div>
     `
@@ -98,13 +97,6 @@ export function updatePlayerStats(playerId, stats) {
         const livesElement = playerEntry.querySelector('.player-lives')
         if (livesElement) {
             livesElement.textContent = '❤️'.repeat(stats.lives)
-        }
-    }
-
-    if (stats.score !== undefined) {
-        const scoreElement = playerEntry.querySelector('.player-score')
-        if (scoreElement) {
-            scoreElement.textContent = stats.score
         }
     }
  }

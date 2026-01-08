@@ -1,5 +1,7 @@
-const { syncRoomGameState,  checkGameEnd} = require('../utils.js')
-
+const { syncRoomGameState, checkGameEnd } = require('../utils.js')
+const { validateRoom, validatePlayer, emitError } = require('../errorHandler.js')
+const { isRateLimited } = require('../rateLimiter.js')
+const { validateMovement } = require('../validation.js')
 
 module.exports = function playerHandlers(io, socket, rooms) {
 
@@ -7,33 +9,48 @@ module.exports = function playerHandlers(io, socket, rooms) {
     // Handle player movement
     //=========================
   socket.on('player:move', (moveData) => {
-    const room = rooms.get(socket.roomCode)
+    // Rate limiting
+    if (isRateLimited(socket, 'MOVE')) {
+      return
+    }
+    
+    // Validate input
+    if (!validateMovement(moveData)) {
+      emitError(socket, 'Invalid movement data', 'INVALID_MOVEMENT')
+      return
+    }
+    
+    // Validate room and player
+    const room = validateRoom(socket, socket.roomCode, rooms)
     if (!room) return
     
-    const player = room.players.get(socket.id)
+    const player = validatePlayer(socket, room)
     if (!player) return
 
     // Validate movement: check if target position is walkable and not blocked by a bomb
     const newX = moveData.x
     const newY = moveData.y
     
-    // Check bounds
+    // Check bounds (double-check with board)
     if (!room.gameState.board || 
         newX < 0 || newX >= room.gameState.board.length ||
         newY < 0 || newY >= (room.gameState.board[0]?.length || 0)) {
-      return // Invalid position, ignore movement
+      emitError(socket, 'Invalid position: out of bounds', 'INVALID_POSITION')
+      return
     }
     
     // Check if tile is walkable (0 = walkable, 1 = block, 2 = wall)
     if (room.gameState.board[newX][newY] !== 0) {
-      return // Blocked by wall or block, ignore movement
+      // Silently ignore - this is expected behavior (blocked movement)
+      return
     }
     
     // Check if there's a bomb at the target position
     if (room.gameState.bombs && room.gameState.bombs.length > 0) {
       const hasBomb = room.gameState.bombs.some(bomb => bomb.x === newX && bomb.y === newY)
       if (hasBomb) {
-        return // Blocked by bomb, ignore movement
+        // Silently ignore - this is expected behavior (blocked by bomb)
+        return
       }
     }
     
@@ -46,7 +63,8 @@ module.exports = function playerHandlers(io, socket, rooms) {
         p.alive && p.id !== socket.id && p.x === newX && p.y === newY
       )
       if (hasPlayer) {
-        return // Blocked by another player/NPC, ignore movement
+        // Silently ignore - this is expected behavior (blocked by player)
+        return
       }
     }
 
@@ -68,11 +86,33 @@ module.exports = function playerHandlers(io, socket, rooms) {
     // Handle player damage
     //=========================
     socket.on('player:damage', (data) => {
-        const room = rooms.get(socket.roomCode)
+        // Validate input
+        if (!data || typeof data !== 'object' || 
+            typeof data.playerId !== 'string' ||
+            typeof data.lives !== 'number' ||
+            typeof data.died !== 'boolean') {
+          emitError(socket, 'Invalid damage data', 'INVALID_DAMAGE_DATA')
+          return
+        }
+        
+        // Validate room and player
+        const room = validateRoom(socket, socket.roomCode, rooms)
         if (!room) return
         
-        const player = room.players.get(data.playerId)
+        const player = validatePlayer(socket, room)
         if (!player) return
+        
+        // Validate that the damage is for the correct player
+        if (data.playerId !== socket.id) {
+          emitError(socket, 'Cannot report damage for another player', 'INVALID_PLAYER')
+          return
+        }
+        
+        // Validate lives value
+        if (data.lives < 0 || data.lives > 3) {
+          emitError(socket, 'Invalid lives value', 'INVALID_LIVES')
+          return
+        }
         
         // Update player lives on server
         player.lives = data.lives
@@ -91,7 +131,7 @@ module.exports = function playerHandlers(io, socket, rooms) {
         })
         
         // Check if game should end
-        const gameEndResult = checkGameEnd(room.gameState)
+        const gameEndResult = checkGameEnd(room.gameState, room)
         if (gameEndResult) {
             room.gameState.isRunning = false
             io.to(socket.roomCode).emit('game:end', {

@@ -1,5 +1,7 @@
 const {generateRoomCode, generateBoard, syncRoomGameState, colors, startPos, broadcastLobbyUpdate} = require('../utils.js')
-
+const {emitError} = require('../errorHandler.js')
+const {sanitizePlayerName} = require('../validation.js')
+const CONSTANTS = require('../constants.js')
 
 module.exports = function roomHandlers(io, socket, rooms) {
 
@@ -7,45 +9,61 @@ module.exports = function roomHandlers(io, socket, rooms) {
     //Host new room
     //======================
   socket.on('room:host', (data) => {
-  console.log(`📥 Received room:host from ${socket.id}, name: ${data.name}`)
-  const roomId = generateRoomCode() 
-  console.log(`🏠 Creating room ${roomId} for host ${socket.id}`)
-  
-  // Create room data structure with a NEW Map for players
-  rooms.set(roomId, {
-    host: socket.id,
-    players: new Map(),
-    started: false,
-    chats: [],
+    // Validate input
+    if (!data || typeof data !== 'object') {
+      emitError(socket, 'Invalid room host data', 'INVALID_DATA')
+      return
+    }
     
-    // Full game state for NPCs
-    gameState: {
-      players: [],      // Array format (synced from players Map)
-      bombs: [],
-      powerups: [],
-      board: generateBoard(), // Generate board once when room is created
-      gameMode: 'multiplayer', // 'multiplayer' | 'single-player'
-      isRunning: false,
-      isPaused: false, // Pause state
-    },
-    // NPC instances (only for single-player mode)
-    npcs: new Map(),    // npc.id -> NPC instance
-  })
-  
-  const room = rooms.get(roomId)
-  
-  // Add host as first player
-  const playerData = {
-    id: socket.id,
-    name: data.name || `Player${room.players.size + 1}`,
-    x: startPos[0].x,
-    y: startPos[0].y,
-    color: colors[0],
-    lives: 3,
-    alive: true
-  }
-  room.players.set(socket.id, playerData)
-  console.log(`👤 Added host as player:`, playerData)
+    // Sanitize and validate player name
+    const sanitizedName = sanitizePlayerName(data.name)
+    if (!sanitizedName) {
+      emitError(socket, `Player name must be between ${CONSTANTS.MIN_PLAYER_NAME_LENGTH} and ${CONSTANTS.MAX_PLAYER_NAME_LENGTH} characters`, 'INVALID_PLAYER_NAME')
+      return
+    }
+    
+    console.log(`📥 Received room:host from ${socket.id}, name: ${sanitizedName}`)
+    const roomId = generateRoomCode() 
+    console.log(`🏠 Creating room ${roomId} for host ${socket.id}`)
+    
+    // Create room data structure with a NEW Map for players
+    const now = Date.now()
+    rooms.set(roomId, {
+      host: socket.id,
+      players: new Map(),
+      started: false,
+      chats: [],
+      eliminationOrder: [], // Track order of player eliminations (last eliminated = winner)
+      createdAt: now, // Track when room was created for cleanup
+      
+      // Full game state for NPCs
+      gameState: {
+        players: [],      // Array format (synced from players Map)
+        bombs: [],
+        powerups: [],
+        board: generateBoard(), // Generate board once when room is created
+        gameMode: 'multiplayer', // 'multiplayer' | 'single-player'
+        isRunning: false,
+        isPaused: false, // Pause state
+      },
+      // NPC instances (only for single-player mode)
+      npcs: new Map(),    // npc.id -> NPC instance
+    })
+    
+    const room = rooms.get(roomId)
+    
+    // Add host as first player
+    const playerData = {
+      id: socket.id,
+      name: sanitizedName,
+      x: startPos[0].x,
+      y: startPos[0].y,
+      color: colors[0],
+      lives: CONSTANTS.DEFAULT_LIVES,
+      alive: true
+    }
+    room.players.set(socket.id, playerData)
+    console.log(`👤 Added host as player:`, playerData)
   
   // Sync game state after room creation
   syncRoomGameState(room)
@@ -78,35 +96,55 @@ module.exports = function roomHandlers(io, socket, rooms) {
     //Join to room
     //========================
   socket.on('room:join', (data) => {
-  const roomId = data.roomId
-  const room = rooms.get(roomId)
-  
-  if (!room) {
-    socket.emit('error', { message: 'Room not found' })
-    return
-  }
-  
-  // Reject if single-player mode
-  if (room.gameState.gameMode === 'single-player') {
-    socket.emit('error', { message: 'Room is in single-player mode' })
-    return
-  }
+    // Validate input
+    if (!data || typeof data !== 'object') {
+      emitError(socket, 'Invalid room join data', 'INVALID_DATA')
+      return
+    }
     
-    if (room.players.size === 4) {
-      socket.emit('error', { message: "Lobby is full" })
+    // Validate room code
+    const {validateRoomCode} = require('../validation.js')
+    if (!validateRoomCode(data.roomId)) {
+      emitError(socket, 'Invalid room code format', 'INVALID_ROOM_CODE')
+      return
+    }
+    
+    // Sanitize and validate player name
+    const sanitizedName = sanitizePlayerName(data.name)
+    if (!sanitizedName) {
+      emitError(socket, `Player name must be between ${CONSTANTS.MIN_PLAYER_NAME_LENGTH} and ${CONSTANTS.MAX_PLAYER_NAME_LENGTH} characters`, 'INVALID_PLAYER_NAME')
+      return
+    }
+    
+    const roomId = data.roomId
+    const room = rooms.get(roomId)
+    
+    if (!room) {
+      emitError(socket, 'Room not found', 'ROOM_NOT_FOUND')
+      return
+    }
+    
+    // Reject if single-player mode
+    if (room.gameState.gameMode === 'single-player') {
+      emitError(socket, 'Room is in single-player mode', 'SINGLE_PLAYER_MODE')
+      return
+    }
+      
+    if (room.players.size >= CONSTANTS.MAX_PLAYERS_PER_ROOM) {
+      emitError(socket, 'Lobby is full', 'LOBBY_FULL')
       return
     }
   
-  // Add new player to room
-  room.players.set(socket.id, {
-    id: socket.id,
-    name: data.name,
-    x: startPos[room.players.size].x,
-    y: startPos[room.players.size].y,
-    color: colors[room.players.size],
-    lives: 3,
-    alive: true
-  })
+    // Add new player to room
+    room.players.set(socket.id, {
+      id: socket.id,
+      name: sanitizedName,
+      x: startPos[room.players.size].x,
+      y: startPos[room.players.size].y,
+      color: colors[room.players.size],
+      lives: CONSTANTS.DEFAULT_LIVES,
+      alive: true
+    })
   
   // Sync game state after player joins
   syncRoomGameState(room)

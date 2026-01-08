@@ -14,7 +14,6 @@ class Player {
         this.y = y
         this.color = color 
         this.lives = 3
-        this.score = 0
         this.alive = true
         this.invincible = false
         this.invincibilityEnd = 0
@@ -145,7 +144,7 @@ class Player {
 let localPlayer
 export const remotePlayers = new Map()
 
-export function createLocalPlayer(id, name, x, y, color) {
+export function createLocalPlayer(id, name, x, y, color, playerData = {}) {
     localPlayer = new Player(
        id || 'local',
      name || 'Player1',
@@ -153,6 +152,10 @@ export function createLocalPlayer(id, name, x, y, color) {
         y || 1,
     color || 'blue'
     );
+    
+    // Set additional properties from playerData
+    if (playerData.lives !== undefined) localPlayer.lives = playerData.lives
+    if (playerData.alive !== undefined) localPlayer.alive = playerData.alive
 
     localPlayer.createDomElement()
     gridElement.appendChild(localPlayer.element)
@@ -175,6 +178,10 @@ export function createRemotePlayer(playerData) {
         playerData.y,
         playerData.color
     )
+    
+    // Set additional properties from playerData
+    if (playerData.lives !== undefined) player.lives = playerData.lives
+    if (playerData.alive !== undefined) player.alive = playerData.alive
 
     player.createDomElement()
     gridElement.appendChild(player.element)

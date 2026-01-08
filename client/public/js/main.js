@@ -202,7 +202,7 @@ socket.on('room:updated', (state) => {
         if (!player) {
             const myPlayer = state.players.find(p => p.id === socket.id)
             if (myPlayer) {
-                player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+                player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color, myPlayer)
             }
         }
         
@@ -221,7 +221,7 @@ socket.on('room:updated', (state) => {
     if (!player) {
         const myPlayer = state.players.find(p => p.id === socket.id)
         if (myPlayer) {
-            player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+            player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color, myPlayer)
             initializePlayerStats(player.id)
             showGameScreen(state.roomCode, state.gameMode)
             renderScoreboard(state.players, socket.id)
@@ -456,6 +456,7 @@ socket.on('player:damaged', (data) => {
         }
     }
 })
+
 
 let lastFrameTime = performance.now();
 let frames = 0;

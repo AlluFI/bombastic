@@ -16,9 +16,11 @@
     'purple',
     'orange']
 
+const CONSTANTS = require('./constants.js')
+
 // Grid dimensions (matching client)
-const GRID_ROWS = 13
-const GRID_COLS = 15
+const GRID_ROWS = CONSTANTS.GRID_ROWS
+const GRID_COLS = CONSTANTS.GRID_COLS
 
 /**
  * Generates the game board
@@ -85,6 +87,11 @@ function generateBoard() {
  * This makes the room state compatible with NPCs
  */
  function syncRoomGameState(room) {
+  // Initialize elimination order if it doesn't exist
+  if (!room.eliminationOrder) {
+    room.eliminationOrder = [];
+  }
+  
   // Sync human players (exclude NPCs from room.players Map)
   room.gameState.players = Array.from(room.players.values())
     .filter(p => !p.isNPC) // Exclude NPCs that might be in the Map
@@ -95,7 +102,6 @@ function generateBoard() {
       y: p.y,
       color: p.color,
       alive: p.alive !== false,  // Default: true
-      score: p.score || 0,
       lives: p.lives || 1,
       isNPC: false,  // Human players
     }));
@@ -111,7 +117,6 @@ function generateBoard() {
         y: npc.position.y,
         color: room.players.get(npcId)?.color || '#888888', // Get color from Map if available
         alive: npc.alive,
-        score: npc.score,
         lives: npc.lives || 1,
         isNPC: true,
       });
@@ -120,7 +125,6 @@ function generateBoard() {
       npcPlayer.x = npc.position.x;
       npcPlayer.y = npc.position.y;
       npcPlayer.alive = npc.alive;
-      npcPlayer.score = npc.score;
       npcPlayer.lives = npc.lives || 1;
       npcPlayer.isNPC = true; // Ensure flag is set
     }
@@ -132,25 +136,63 @@ function generateBoard() {
  * @param {Object} gameState - Current game state
  * @returns {Object|null} Winner info { winner: player object, isDraw: boolean } or null if game continues
  */
-function checkGameEnd(gameState) {
+function checkGameEnd(gameState, room) {
   if (!gameState || !gameState.players) return null;
   
   const alivePlayers = gameState.players.filter(p => p.alive !== false);
   
   // Game ends when only one player is alive (or no players)
   if (alivePlayers.length <= 1) {
+    // Initialize elimination order if it doesn't exist
+    if (!room.eliminationOrder) {
+      room.eliminationOrder = [];
+    }
+    
+    // Add winner to elimination order if not already there (they're last, so highest rank)
     if (alivePlayers.length === 1) {
+      const winner = alivePlayers[0];
+      if (!room.eliminationOrder.includes(winner.id)) {
+        room.eliminationOrder.push(winner.id);
+      }
+      
+      // Sort players by elimination order (last eliminated = winner = rank 1)
+      // Players eliminated first have higher rank numbers (worse placement)
+      const sortedPlayers = [...gameState.players].sort((a, b) => {
+        const aIndex = room.eliminationOrder.indexOf(a.id);
+        const bIndex = room.eliminationOrder.indexOf(b.id);
+        
+        // If not in elimination order, they're still alive (winner) - rank 1
+        if (aIndex === -1) return -1; // Winner comes first
+        if (bIndex === -1) return 1;   // Winner comes first
+        
+        // Higher index = eliminated later = better rank (lower number)
+        return bIndex - aIndex;
+      });
+      
       return {
-        winner: alivePlayers[0],
+        winner: winner,
         isDraw: false,
-        allPlayers: gameState.players // Include all players for scoreboard
+        allPlayers: sortedPlayers // Sorted by elimination order (winner first)
       };
     } else {
       // All players dead - draw
+      // Sort by elimination order (last eliminated = better rank)
+      const sortedPlayers = [...gameState.players].sort((a, b) => {
+        const aIndex = room.eliminationOrder.indexOf(a.id);
+        const bIndex = room.eliminationOrder.indexOf(b.id);
+        
+        // If not in elimination order, something went wrong - put them last
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        
+        // Higher index = eliminated later = better rank (lower number)
+        return bIndex - aIndex;
+      });
+      
       return {
         winner: null,
         isDraw: true,
-        allPlayers: gameState.players
+        allPlayers: sortedPlayers
       };
     }
   }
@@ -266,7 +308,7 @@ function checkGameEnd(gameState) {
         
         // Update NPC stats (bombRange for now, can be extended for other powerup types)
         if (!npcPlayer.bombRange) {
-          npcPlayer.bombRange = 2; // Default range
+          npcPlayer.bombRange = CONSTANTS.DEFAULT_BOMB_RANGE
         }
         
         if (powerup.type === 'bomb_range') {
@@ -297,7 +339,7 @@ function checkGameEnd(gameState) {
     
   } else if (action.type === 'BOMB') {
     // Place bomb for NPC (same as player bomb placement)
-    const BOMB_DURATION = 3000; // 3 seconds, matching client
+    const BOMB_DURATION = CONSTANTS.BOMB_TIMER_MS; // 3 seconds, matching client
     
     // Check if NPC already has an active bomb (max 1 bomb per player/NPC)
     const existingBombs = (room.gameState.bombs || []).filter(b => b.playerId === npcId);
@@ -308,7 +350,7 @@ function checkGameEnd(gameState) {
     
     // Get NPC's bomb range (from powerups)
     const npcPlayer = room.players.get(npcId);
-    const bombRange = npcPlayer?.bombRange || 2; // Default to 2 if not set
+    const bombRange = npcPlayer?.bombRange || CONSTANTS.DEFAULT_BOMB_RANGE
     
     // Generate unique bomb ID for NPC
     const bombId = `${npcId}-bomb-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;

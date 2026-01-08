@@ -106,11 +106,15 @@ module.exports = function npcHandlers(io, socket, rooms) {
         y: npc.position.y,
         color: colors[startIndex],
         alive: true,
-        score: 0,
         lives: 3, // Default lives
         bombRange: 2, // Default bomb range (can be upgraded via powerups)
         isNPC: true,
       });
+      
+      // Initialize elimination order if it doesn't exist
+      if (!room.eliminationOrder) {
+        room.eliminationOrder = [];
+      }
     });
     
     // Sync game state
