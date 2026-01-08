@@ -189,7 +189,6 @@ function checkGameEnd(gameState) {
     // x = row (0-12), y = col (0-14)
     if (newX < 0 || newX >= 13 || newY < 0 || newY >= 15) {
       // Invalid move - don't update position
-      console.log(`NPC ${npcId} tried to move out of bounds: (${newX}, ${newY}). Valid range: x: 0-12, y: 0-14`);
       return;
     }
     
@@ -209,8 +208,7 @@ function checkGameEnd(gameState) {
     if (room.gameState.bombs && room.gameState.bombs.length > 0) {
       const blockingBomb = room.gameState.bombs.find(bomb => bomb.x === newX && bomb.y === newY);
       if (blockingBomb) {
-        // Blocked by bomb - log for debugging
-        console.log(`🚫 NPC ${npcId} (${npc.name}) movement blocked by bomb at (${newX}, ${newY}) placed by ${blockingBomb.playerId}`);
+        // Blocked by bomb - don't move
         return;
       }
     }
@@ -257,6 +255,36 @@ function checkGameEnd(gameState) {
       npcPlayer.y = newY;
     }
     
+    // Check if NPC stepped on a powerup
+    if (room.gameState.powerups && room.gameState.powerups.length > 0) {
+      const powerupIndex = room.gameState.powerups.findIndex(p => p.x === newX && p.y === newY);
+      if (powerupIndex !== -1) {
+        const powerup = room.gameState.powerups[powerupIndex];
+        
+        // Remove powerup from game state
+        room.gameState.powerups.splice(powerupIndex, 1);
+        
+        // Update NPC stats (bombRange for now, can be extended for other powerup types)
+        if (!npcPlayer.bombRange) {
+          npcPlayer.bombRange = 2; // Default range
+        }
+        
+        if (powerup.type === 'bomb_range') {
+          npcPlayer.bombRange += 1;
+          console.log(`NPC ${npc.name} picked up bomb range power-up! New range: ${npcPlayer.bombRange}`);
+        }
+        
+        // Broadcast power-up pickup to all clients
+        io.to(roomId).emit('powerup:picked', {
+          powerupId: powerup.id,
+          playerId: npcId,
+          x: newX,
+          y: newY,
+          type: powerup.type
+        });
+      }
+    }
+    
     // Sync game state immediately after NPC moves to ensure positions are current for collision detection
     syncRoomGameState(room);
     
@@ -278,6 +306,10 @@ function checkGameEnd(gameState) {
       return;
     }
     
+    // Get NPC's bomb range (from powerups)
+    const npcPlayer = room.players.get(npcId);
+    const bombRange = npcPlayer?.bombRange || 2; // Default to 2 if not set
+    
     // Generate unique bomb ID for NPC
     const bombId = `${npcId}-bomb-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
@@ -288,7 +320,7 @@ function checkGameEnd(gameState) {
       playerId: npcId,
       x: npc.position.x,
       y: npc.position.y,
-      range: 2, // Default explosion range (can be upgraded via powerups later)
+      range: bombRange, // Use NPC's bomb range (upgraded via powerups)
       timer: BOMB_DURATION,
       placedAt: Date.now(),
       duration: BOMB_DURATION
@@ -306,10 +338,11 @@ function checkGameEnd(gameState) {
       playerId: npcId,
       x: bomb.x,
       y: bomb.y,
-      duration: BOMB_DURATION
+      duration: BOMB_DURATION,
+      range: bombRange // Include range in broadcast
     });
     
-    console.log(`NPC ${npcId} (${npc.name}) placed bomb at (${bomb.x}, ${bomb.y})`);
+    console.log(`NPC ${npc.name} placed bomb at (${bomb.x}, ${bomb.y})`);
   }
  }
 

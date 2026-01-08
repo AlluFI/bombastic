@@ -23,10 +23,6 @@ setInterval(() => {
         // Get next action
         const action = npc.getNextCommand(Date.now());
         if (action) {
-          // Debug: log bomb actions to help diagnose
-          if (action.type === 'BOMB') {
-            console.log(`💣 NPC ${npcId} (${npc.name}) decided to place bomb at (${npc.position.x}, ${npc.position.y})`);
-          }
           handleNPCAction(io, room, roomId, npcId, action);
         }
       });
@@ -123,7 +119,7 @@ setInterval(() => {
                   npc.lives = Math.max(0, npc.lives - 1);
                   npc.alive = npc.lives > 0;
                   
-                  console.log(`💥 NPC ${npcId} (${npc.name}) caught in explosion at (${tile.x}, ${tile.y}). Lives: ${npc.lives}, Alive: ${npc.alive}`);
+                  console.log(`NPC ${npc.name} caught in explosion at (${tile.x}, ${tile.y}). Lives: ${npc.lives}, Alive: ${npc.alive}`);
                   
                   // Broadcast damage to all players in room
                   io.to(roomId).emit('player:damaged', {

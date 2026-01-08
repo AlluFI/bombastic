@@ -107,6 +107,8 @@ module.exports = function npcHandlers(io, socket, rooms) {
         color: colors[startIndex],
         alive: true,
         score: 0,
+        lives: 3, // Default lives
+        bombRange: 2, // Default bomb range (can be upgraded via powerups)
         isNPC: true,
       });
     });
