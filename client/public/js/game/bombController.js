@@ -4,6 +4,7 @@ import { map } from "../grid.js";
 import { renderExplosion } from "../render/explosionRender.js";
 import { destroyBlocksInTiles } from './blockController.js'
 import { getPlayersAtPosition, getLocalPlayer } from '../player.js'
+import { getPlayerBombRange } from './powerupController.js'
 
 const MAX_BOMBS_PER_PLAYER = 1
 const BOMB_DURATION = 3000
@@ -134,6 +135,9 @@ export function tryPlaceBomb(player) {
 
     trackBomb(player.id, bombId, x, y)
     
+    // Get player's bomb range (from power-ups)
+    const bombRange = getPlayerBombRange(player.id)
+    
     // Render bomb locally
     renderBomb(bombId, x, y, BOMB_DURATION, (explodedBombId, bombX, bombY) => {
         console.log(`Bomb ${explodedBombId} exploded at (${bombX}, ${bombY})`)
@@ -141,8 +145,8 @@ export function tryPlaceBomb(player) {
         // Untrack the bomb
         untrackBomb(player.id, explodedBombId, bombX, bombY)
         
-        // Render explosion
-        renderExplosion(bombX, bombY, 2, (centerX, centerY, affectedTiles, breakableBlocks) => {
+        // Render explosion with player's bomb range
+        renderExplosion(bombX, bombY, bombRange, (centerX, centerY, affectedTiles, breakableBlocks) => {
             console.log(`Explosion complete at (${centerX}, ${centerY})`)
             console.log(`Affected ${affectedTiles.length} tiles`)
             
@@ -195,7 +199,8 @@ export function tryPlaceBomb(player) {
             playerId: player.id,
             x: x,
             y: y,
-            duration: BOMB_DURATION
+            duration: BOMB_DURATION,
+            range: bombRange // Send range to server
         })
     }
     
@@ -203,9 +208,9 @@ export function tryPlaceBomb(player) {
 }
 
 export function placeRemoteBomb(bombData) {
-    const { bombId, playerId, x, y, duration } = bombData
+    const { bombId, playerId, x, y, duration, range = 2 } = bombData
     
-    console.log(`Remote bomb placed by ${playerId} at (${x}, ${y})`)
+    console.log(`Remote bomb placed by ${playerId} at (${x}, ${y}) with range ${range}`)
 
     /* Server side should validate this ?
     const validation = validateTile(x, y)
@@ -220,8 +225,8 @@ export function placeRemoteBomb(bombData) {
     renderBomb(bombId, x, y, duration, (explodedBombId, bombX, bombY) => {
         untrackBomb(playerId, explodedBombId, bombX, bombY)
         
-        // Render explosion and check for player damage
-        renderExplosion(bombX, bombY, 2, (centerX, centerY, affectedTiles) => {
+        // Render explosion with the bomb's range
+        renderExplosion(bombX, bombY, range, (centerX, centerY, affectedTiles) => {
             // Check if local player was hit by remote bomb
             const localPlayer = getLocalPlayer()
             if (localPlayer && localPlayer.alive) {
@@ -256,15 +261,15 @@ export function placeRemoteBomb(bombData) {
  * This removes the bomb locally and renders the explosion without applying client-side damage
  * (server already applies damage).
  */
-export function handleServerBombExplosion({ bombId, playerId, x, y }) {
+export function handleServerBombExplosion({ bombId, playerId, x, y, range = 2 }) {
     // Remove local tracking so movement is not blocked after explosion
     untrackBomb(playerId, bombId, x, y)
 
     // Remove bomb element if it exists
     removeBomb(bombId)
 
-    // Render explosion visuals only (no local damage application)
-    renderExplosion(x, y, 2)
+    // Render explosion visuals with the bomb's range
+    renderExplosion(x, y, range)
 }
 
 export function clearPlayerBombs(playerId) {

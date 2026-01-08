@@ -906,6 +906,28 @@ button.loading::after {
     }
 }
 
+/* Power-up Styles */
+@keyframes powerup-float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.powerup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    user-select: none;
+}
+
+.powerup-bomb_range {
+    filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.8));
+}
+
 /* Game Screen Styles */
 #game-screen {
     background: linear-gradient(180deg, #001a33 0%, #002244 50%, #001a33 100%);

@@ -12,6 +12,7 @@ import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
 import { initializeMap } from "./grid.js"
 import { initializeLobby, showLobbyScreen, hideLobbyScreen, updateLobbyPlayers } from "./ui/lobby.js"
+import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, initializePlayerStats } from "./game/powerupController.js"
 
 
 const socket = io()
@@ -125,6 +126,7 @@ socket.on('room:created', (state) => {
     if (myPlayer) {
         console.log('Creating player from room:created:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
         player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+        initializePlayerStats(player.id)
         console.log('Local player created:', player.id, player.name, `(${player.x}, ${player.y})`)
     } else {
         console.error('Could not find my player in room:created state. Available players:', state.players?.map(p => p.id))
@@ -216,6 +218,7 @@ socket.on('room:updated', (state) => {
         const myPlayer = state.players.find(p => p.id === socket.id)
         if (myPlayer) {
             player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
+            initializePlayerStats(player.id)
             showGameScreen(state.roomCode, state.gameMode)
             renderScoreboard(state.players, socket.id)
             loadChatHistory(state.chats || [])
@@ -262,6 +265,20 @@ socket.on('game:started', (data) => {
         initializeMap(data.board, true)
     }
     
+    // Initialize player stats for all players
+    if (data.players) {
+        data.players.forEach(p => {
+            initializePlayerStats(p.id)
+        })
+    }
+    
+    // Render existing power-ups if any
+    if (data.powerups && Array.isArray(data.powerups)) {
+        data.powerups.forEach(powerup => {
+            renderPowerup(powerup)
+        })
+    }
+    
     // Show game screen
     showGameScreen(data.roomCode, data.gameMode)
     
@@ -297,6 +314,7 @@ socket.on('game:end', (data) => {
     // Reset player state for next game
     resetPlayer()
     clearAllPlayers()
+    clearAllPowerups()
 })
 
 socket.on('error', (data) => {
@@ -369,6 +387,25 @@ socket.on('blocks:destroyed', (data) => {
     destroyBlocksRemote(data.blocks)
 })
 
+socket.on('powerup:spawned', (data) => {
+    console.log(`${data.powerups.length} power-up(s) spawned`)
+    data.powerups.forEach(powerup => {
+        renderPowerup(powerup)
+    })
+})
+
+socket.on('powerup:picked', (data) => {
+    console.log(`Power-up picked up by player ${data.playerId} at (${data.x}, ${data.y})`)
+    removePowerup(data.powerupId, data.x, data.y)
+    
+    // If local player picked it up, update their stats (already applied locally in checkPowerupPickup)
+    // The server has already updated the player's bombRange, so we just need to sync
+    if (data.playerId === socket.id) {
+        // Stats already updated locally when pickup was detected
+        console.log(`Local player ${data.playerId} picked up ${data.type} power-up`)
+    }
+})
+
 socket.on('player:damaged', (data) => {
     console.log(`Player ${data.playerId} was damaged. Lives: ${data.lives}`)
     
@@ -423,6 +460,10 @@ function gameLoop() {
     }
     if (!isPaused) {
         updatePlayerMovement(player)
+        
+        // Check for power-up pickup
+        checkPowerupPickup(player)
+        
         updatePlayerRender(player)
         
         // Also update all remote players' rendering

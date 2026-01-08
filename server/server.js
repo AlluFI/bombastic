@@ -464,6 +464,10 @@ io.on('connection', socket => {
       // Check if player already has an active bomb (max 1 bomb per player/NPC)
       const existingBombs = room.gameState.bombs.filter(b => b.playerId === socket.id);
       if (existingBombs.length === 0) {
+        // Get player's bomb range (default 2, can be upgraded via power-ups)
+        // Use range from client if provided, otherwise use player's stored range
+        const bombRange = bombData.range || (player.bombRange ? player.bombRange : 2)
+        
         // Add bomb to game state
         room.gameState.bombs.push({
           id: bombData.bombId,
@@ -471,7 +475,7 @@ io.on('connection', socket => {
           playerId: socket.id,
           x: bombData.x,
           y: bombData.y,
-          range: 2, // Default explosion range (can be upgraded via powerups later)
+          range: bombRange, // Use player's bomb range
           timer: BOMB_DURATION,
           placedAt: Date.now(),
           duration: BOMB_DURATION
@@ -484,7 +488,8 @@ io.on('connection', socket => {
           playerId: bombData.playerId,
           x: bombData.x,
           y: bombData.y,
-          duration: bombData.duration
+          duration: bombData.duration,
+          range: bombData.range || (player.bombRange ? player.bombRange : 2)
       })
     })
 
@@ -563,6 +568,43 @@ io.on('connection', socket => {
         }
     })
 
+  // Handle power-up pickup
+  socket.on('powerup:pickup', (data) => {
+    const room = rooms.get(socket.roomCode)
+    if (!room) return
+    
+    const player = room.players.get(data.playerId)
+    if (!player) return
+    
+    // Find and remove power-up from game state
+    if (room.gameState.powerups) {
+      const powerupIndex = room.gameState.powerups.findIndex(p => p.id === data.powerupId)
+      if (powerupIndex !== -1) {
+        const powerup = room.gameState.powerups[powerupIndex]
+        room.gameState.powerups.splice(powerupIndex, 1)
+        
+        // Update player stats
+        if (!player.bombRange) {
+          player.bombRange = 2 // Default range
+        }
+        
+        if (powerup.type === 'bomb_range') {
+          player.bombRange += 1
+          console.log(`Player ${player.name} picked up bomb range power-up! New range: ${player.bombRange}`)
+        }
+        
+        // Broadcast power-up pickup to all clients
+        io.to(socket.roomCode).emit('powerup:picked', {
+          powerupId: data.powerupId,
+          playerId: data.playerId,
+          x: data.x,
+          y: data.y,
+          type: powerup.type
+        })
+      }
+    }
+  })
+
   // Handle game start (host only, requires 2+ players)
   socket.on('game:start', (data) => {
     const room = rooms.get(socket.roomCode)
@@ -602,7 +644,8 @@ io.on('connection', socket => {
       players: Array.from(room.players.values()),
       board: room.gameState.board,
       gameMode: room.gameState.gameMode,
-      chats: room.chats
+      chats: room.chats,
+      powerups: room.gameState.powerups || []
     })
     
     // Broadcast lobby update to all clients (lobby is no longer available)
@@ -819,18 +862,45 @@ setInterval(() => {
             bombId: bomb.bombId,
             playerId: bomb.playerId,
             x: bomb.x,
-            y: bomb.y
+            y: bomb.y,
+            range: bomb.range
           });
         });
         
         // Sync game state after applying damage (to update player/NPC states)
         syncRoomGameState(room);
         
-        // Update server board state for destroyed blocks
+        // Update server board state for destroyed blocks and spawn power-ups
         if (destroyedBlocks.length > 0) {
+          const spawnedPowerups = [];
+          
           destroyedBlocks.forEach(block => {
             if (room.gameState.board[block.x] && room.gameState.board[block.x][block.y] === 1) {
               room.gameState.board[block.x][block.y] = 0; // 0 = walkable
+              
+              // Spawn power-up randomly (30% chance per destroyed block)
+              // Only spawn if we haven't reached the max power-ups yet
+              const maxPowerups = room.players.size * 4; // players * 4
+              const currentPowerups = room.gameState.powerups ? room.gameState.powerups.length : 0;
+              
+              // Only spawn if we haven't exceeded the max and random chance succeeds
+              if (currentPowerups < maxPowerups && Math.random() < 0.3) {
+                const powerupId = `powerup-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                const powerup = {
+                  id: powerupId,
+                  type: 'bomb_range',
+                  x: block.x,
+                  y: block.y
+                };
+                
+                if (!room.gameState.powerups) {
+                  room.gameState.powerups = [];
+                }
+                room.gameState.powerups.push(powerup);
+                spawnedPowerups.push(powerup);
+                
+                console.log(`💎 Power-up spawned at (${block.x}, ${block.y}) in room ${roomId}`);
+              }
             }
           });
           
@@ -839,6 +909,13 @@ setInterval(() => {
             blocks: destroyedBlocks,
             timestamp: now
           });
+          
+          // Broadcast power-up spawns
+          if (spawnedPowerups.length > 0) {
+            io.to(roomId).emit('powerup:spawned', {
+              powerups: spawnedPowerups
+            });
+          }
           
           console.log(`${destroyedBlocks.length} blocks destroyed by bomb explosions in room ${roomId}`);
         }
