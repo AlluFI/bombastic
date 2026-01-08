@@ -5,6 +5,7 @@ import { renderExplosion } from "../render/explosionRender.js";
 import { destroyBlocksInTiles } from './blockController.js'
 import { getPlayersAtPosition, getLocalPlayer } from '../player.js'
 import { getPlayerBombRange } from './powerupController.js'
+import { playSound } from '../audio/soundManager.js'
 
 const MAX_BOMBS_PER_PLAYER = 1
 const BOMB_DURATION = 3000
@@ -135,12 +136,18 @@ export function tryPlaceBomb(player) {
 
     trackBomb(player.id, bombId, x, y)
     
+    // Play bomb placement sound
+    playSound('bombPlace')
+    
     // Get player's bomb range (from power-ups)
     const bombRange = getPlayerBombRange(player.id)
     
     // Render bomb locally
     renderBomb(bombId, x, y, BOMB_DURATION, (explodedBombId, bombX, bombY) => {
         console.log(`Bomb ${explodedBombId} exploded at (${bombX}, ${bombY})`)
+        
+        // Play explosion sound
+        playSound('explosion')
         
         // Untrack the bomb
         untrackBomb(player.id, explodedBombId, bombX, bombY)
@@ -154,6 +161,10 @@ export function tryPlaceBomb(player) {
             if (breakableBlocks && breakableBlocks.length > 0) {
                 const destroyed = destroyBlocksInTiles(breakableBlocks)
                 console.log(`Destroyed ${destroyed.length} blocks`)
+                // Play block destruction sound for each block
+                destroyed.forEach(() => {
+                    playSound('blockDestroy', { volume: 0.7 })
+                })
             }
             
             // Check for player damage
@@ -168,6 +179,13 @@ export function tryPlaceBomb(player) {
                         if (player.id === getLocalPlayer()?.id) {
                             console.log(`Applying damage to local player ${player.name} at (${player.x}, ${player.y})`)
                             const died = player.takeDamage()
+                            
+                            // Play sound based on outcome
+                            if (died) {
+                                playSound('playerDeath')
+                            } else {
+                                playSound('playerHit')
+                            }
                             
                             // Update scoreboard hearts
                             import('../ui/scoreboard.js').then(({ updatePlayerStats }) => {
@@ -225,6 +243,9 @@ export function placeRemoteBomb(bombData) {
     renderBomb(bombId, x, y, duration, (explodedBombId, bombX, bombY) => {
         untrackBomb(playerId, explodedBombId, bombX, bombY)
         
+        // Play explosion sound for remote bomb
+        playSound('explosion')
+        
         // Render explosion with the bomb's range
         renderExplosion(bombX, bombY, range, (centerX, centerY, affectedTiles) => {
             // Check if local player was hit by remote bomb
@@ -236,6 +257,13 @@ export function placeRemoteBomb(bombData) {
                 
                 if (wasHit) {
                     const died = localPlayer.takeDamage()
+                    
+                    // Play sound based on outcome
+                    if (died) {
+                        playSound('playerDeath')
+                    } else {
+                        playSound('playerHit')
+                    }
                     
                     // Update scoreboard hearts
                     import('../ui/scoreboard.js').then(({ updatePlayerStats }) => {
@@ -267,6 +295,9 @@ export function handleServerBombExplosion({ bombId, playerId, x, y, range = 2 })
 
     // Remove bomb element if it exists
     removeBomb(bombId)
+
+    // Play explosion sound
+    playSound('explosion')
 
     // Render explosion visuals with the bomb's range
     renderExplosion(x, y, range)

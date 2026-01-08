@@ -2,6 +2,7 @@
 import { socket } from '../main.js'
 import { clearAllPlayers } from '../player.js'
 import { initializeLobbyBrowser } from './lobbyBrowser.js'
+import { playSound } from '../audio/soundManager.js'
 
 //ui screen sections
 const menuScreen = document.getElementById('menue-screen')
@@ -45,6 +46,9 @@ export function showMenuScreen() {
     menuScreen.classList.remove('hidden')
     gameScreen.classList.add('hidden')
     endScreen.classList.add('hidden')
+    
+    // Play menu open sound
+    playSound('menuOpen', { volume: 0.5 })
     
     // Show chat when returning to menu (for multiplayer)
     import('./chat.js').then(({ setChatVisibility }) => {
@@ -216,11 +220,13 @@ export function intializeMenu() {
 
     //Mode toggle buttons
     multiModeBtn.addEventListener('click', () => {
+        playSound('buttonClick')
         modeSelect.value = 'multi'
         handleModeChange()
     })
 
     singleModeBtn.addEventListener('click', () => {
+        playSound('buttonClick')
         modeSelect.value = 'single'
         handleModeChange()
     })
@@ -250,10 +256,22 @@ export function intializeMenu() {
     modeSelect.addEventListener('change', handleModeChange)
     difficultySelect.addEventListener('change', handleDifficultyChange)
     npcCountSelect.addEventListener('change', handleNPCCountChange)
-    startButton.addEventListener('click', handleStartGame)
-    hostButton.addEventListener('click', handleHostGame)
-    joinButton.addEventListener('click', handleJoinGame)
-    restartButton.addEventListener('click', handleRestartGame)
+    startButton.addEventListener('click', () => {
+        playSound('buttonClick')
+        handleStartGame()
+    })
+    hostButton.addEventListener('click', () => {
+        playSound('buttonClick')
+        handleHostGame()
+    })
+    joinButton.addEventListener('click', () => {
+        playSound('buttonClick')
+        handleJoinGame()
+    })
+    restartButton.addEventListener('click', () => {
+        playSound('buttonClick')
+        handleRestartGame()
+    })
     
     // Initialize mode change handler to set initial UI state
     handleModeChange()

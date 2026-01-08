@@ -1,5 +1,6 @@
 import { socket } from '../main.js'
 import { showMenuScreen } from './menu.js'
+import { playSound } from '../audio/soundManager.js'
 
 // UI elements
 const lobbyScreen = document.getElementById('lobby-screen')
@@ -136,6 +137,9 @@ function handleStartGame() {
         return
     }
     
+    // Play button click sound
+    playSound('buttonClick')
+    
     console.log('Starting game...')
     socket.emit('game:start', {
         roomCode: currentRoomCode
@@ -144,6 +148,9 @@ function handleStartGame() {
 
 function handleLeaveLobby() {
     console.log('Leaving lobby...')
+    
+    // Play button click sound
+    playSound('buttonClick')
     
     // Emit leave event
     socket.emit('game:quit')

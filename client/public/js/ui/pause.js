@@ -2,6 +2,7 @@ import { showMenuScreen } from "./menu.js"
 import {socket} from "../main.js"
 import { clearAllPlayers } from "../player.js"
 import { resetPlayer } from "../main.js"
+import { playSound } from "../audio/soundManager.js"
 
 const pauseOverlay = document.getElementById('pause-overlay')
 const pauseMessage = document.getElementById('pause-message')
@@ -25,9 +26,13 @@ export function setPaused(paused, meta = {}) {
         pauseOverlay.classList.remove('hidden')
         pauseMessage.textContent = meta.name ? `Game paused by ${meta.name}` : 'Paused'
         console.log('Game paused', meta.name ? `by ${meta.name}` : '')
+        // Play pause sound
+        playSound('pause')
     } else {
         pauseOverlay.classList.add('hidden')
         console.log('Game resumed')
+        // Play resume sound
+        playSound('resume')
     }
 }
 

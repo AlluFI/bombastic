@@ -13,6 +13,7 @@ import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.
 import { initializeMap } from "./grid.js"
 import { initializeLobby, showLobbyScreen, hideLobbyScreen, updateLobbyPlayers } from "./ui/lobby.js"
 import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, initializePlayerStats } from "./game/powerupController.js"
+import { initializeSoundManager, playSound } from "./audio/soundManager.js"
 
 
 const socket = io()
@@ -26,6 +27,7 @@ intializeTimer()
 intializeScorboard()
 initializeChat(socket)
 initializeLobby()
+initializeSoundManager()
 
 let player
 let lastPosition = { x: 1, y: 1 }
@@ -46,6 +48,8 @@ socket.on('disconnect', () => {
 
 socket.on('connect_error', (error) => {
     console.error('❌ Socket connection error:', error)
+    // Play connection error sound
+    playSound('connectionError')
     // Show error toast
     import('./ui/notifications.js').then(({ showError }) => {
         showError('Failed to connect to server. Please check your connection.')
@@ -257,6 +261,9 @@ socket.on('game-mode-changed', (data) => {
 socket.on('game:started', (data) => {
     console.log('Game started!', data)
     
+    // Play game start sound
+    playSound('gameStart')
+    
     // Hide lobby screen
     hideLobbyScreen()
     
@@ -303,6 +310,14 @@ socket.on('game:end', (data) => {
     // Stop the timer
     stopTimer()
     
+    // Play game end sound
+    playSound('gameEnd')
+    
+    // Check if local player won
+    if (data.winner && data.winner.id === socket.id) {
+        playSound('winner')
+    }
+    
     // Show end screen first
     showEndScreen()
     
@@ -337,6 +352,9 @@ socket.on('player:joined', (playerData) => {
     createRemotePlayer(playerData)
 
     addPlayerToScoreboard(playerData)
+    
+    // Play join sound
+    playSound('playerJoin')
 })
 
 // Other player moved
@@ -352,6 +370,9 @@ socket.on('player:left', (playerId) => {
     removePlayerFromScoreboard(playerId)
 
     clearPlayerBombs(playerId)
+    
+    // Play leave sound
+    playSound('playerLeave')
 })
 
 // Game pause/resume broadcast from server
@@ -425,9 +446,13 @@ socket.on('player:damaged', (data) => {
         
         if (data.died) {
             remotePlayer.die()
+            // Play death sound for remote player
+            playSound('playerDeath')
         } else {
             // Start invincibility animation for remote player
             remotePlayer.startInvincibility(2000)
+            // Play hit sound for remote player
+            playSound('playerHit')
         }
     }
 })

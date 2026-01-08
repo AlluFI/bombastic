@@ -1,6 +1,7 @@
 import { map } from '../grid.js'
 import { socket } from '../main.js'
 import { getLocalPlayer } from '../player.js'
+import { playSound } from '../audio/soundManager.js'
 
 const POWERUP_TYPES = {
     BOMB_RANGE: 'bomb_range'
@@ -93,6 +94,9 @@ export function renderPowerup(powerupData) {
     // Track power-up
     activePowerups.set(posKey, { id, type, x, y, element: powerupElement })
     
+    // Play power-up spawn sound
+    playSound('powerupSpawn', { volume: 0.6 })
+    
     console.log(`Power-up rendered at (${x}, ${y}): ${type}`)
 }
 
@@ -115,6 +119,9 @@ export function checkPowerupPickup(player) {
     
     if (powerup) {
         console.log(`Player ${player.id} picked up power-up at (${player.x}, ${player.y}): ${powerup.type}`)
+        
+        // Play power-up pickup sound
+        playSound('powerupPickup')
         
         // Apply power-up to player locally first (for immediate feedback)
         addPowerupToPlayer(player.id, powerup.type)
