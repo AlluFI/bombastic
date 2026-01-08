@@ -16,6 +16,21 @@ module.exports = function gameHandlers(io, socket, rooms) {
 
     // Update pause state in game state
     room.gameState.isPaused = !!payload.paused
+    
+    // Adjust game start time when pausing/resuming to account for paused duration
+    if (payload.paused) {
+      // Game is being paused - store current pause start time
+      room.pauseStartTime = Date.now();
+    } else {
+      // Game is being resumed - adjust game start time by the pause duration
+      if (room.pauseStartTime) {
+        const pauseDuration = Date.now() - room.pauseStartTime;
+        if (room.gameStartTime) {
+          room.gameStartTime += pauseDuration; // Add pause duration to start time
+        }
+        room.pauseStartTime = null;
+      }
+    }
 
     console.log(`${player.name} ${payload.paused ? 'paused' : 'resumed'} the game`)
 
@@ -120,6 +135,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     
     // Start the game
     room.gameState.isRunning = true
+    room.gameStartTime = Date.now() // Track when game started for timer synchronization
     syncRoomGameState(room)
     
     console.log(`🎮 Game started in room ${socket.roomCode} by host ${socket.id} with ${playerCount} players`)
@@ -131,7 +147,8 @@ module.exports = function gameHandlers(io, socket, rooms) {
       board: room.gameState.board,
       gameMode: room.gameState.gameMode,
       chats: room.chats,
-      powerups: room.gameState.powerups || []
+      powerups: room.gameState.powerups || [],
+      gameStartTime: room.gameStartTime // Send server timestamp for timer sync
     })
     
     // Broadcast lobby update to all clients (lobby is no longer available)

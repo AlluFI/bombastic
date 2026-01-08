@@ -262,6 +262,52 @@ button:active:not(:disabled) {
         inset 0 0 15px rgba(0, 0, 0, 0.5);
 }
 
+/* NPC Difficulty Selectors */
+#npc-difficulty-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+.npc-difficulty-item {
+    width: 100%;
+}
+
+.npc-difficulty-item label {
+    display: block;
+    margin-bottom: 8px;
+    color: #00bfff;
+    font-size: 14px;
+    text-transform: uppercase;
+    font-weight: bold;
+    text-shadow: 0 0 6px rgba(0, 191, 255, 0.5);
+}
+
+.npc-difficulty-item select {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 3px solid #0077b6;
+    border-radius: 0;
+    background-color: rgba(0, 26, 51, 0.8);
+    color: #00bfff;
+    box-shadow: 
+        0 0 10px rgba(0, 119, 182, 0.4),
+        inset 0 0 15px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+    font-family: 'Arial', sans-serif;
+    cursor: pointer;
+}
+
+.npc-difficulty-item select:focus {
+    outline: none;
+    border-color: #00bfff;
+    box-shadow: 
+        0 0 15px rgba(0, 191, 255, 0.6),
+        inset 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
 /* Section Headings */
 #menue-screen > h2,
 #multi-player-section > h2,

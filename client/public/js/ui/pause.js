@@ -22,18 +22,25 @@ function resumeGame() {
 export function setPaused(paused, meta = {}) {
     isPaused = !!paused
     
-    if (isPaused) {
-        pauseOverlay.classList.remove('hidden')
-        pauseMessage.textContent = meta.name ? `Game paused by ${meta.name}` : 'Paused'
-        console.log('Game paused', meta.name ? `by ${meta.name}` : '')
-        // Play pause sound
-        playSound('pause')
-    } else {
-        pauseOverlay.classList.add('hidden')
-        console.log('Game resumed')
-        // Play resume sound
-        playSound('resume')
-    }
+    // Import timer functions for pause/resume
+    import('../ui/timer.js').then(({ pauseTimer, resumeTimer }) => {
+        if (isPaused) {
+            pauseOverlay.classList.remove('hidden')
+            pauseMessage.textContent = meta.name ? `Game paused by ${meta.name}` : 'Paused'
+            console.log('Game paused', meta.name ? `by ${meta.name}` : '')
+            // Pause timer
+            pauseTimer()
+            // Play pause sound
+            playSound('pause')
+        } else {
+            pauseOverlay.classList.add('hidden')
+            console.log('Game resumed')
+            // Resume timer
+            resumeTimer()
+            // Play resume sound
+            playSound('resume')
+        }
+    })
 }
 
 function togglePause() {

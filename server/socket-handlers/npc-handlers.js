@@ -123,6 +123,7 @@ module.exports = function npcHandlers(io, socket, rooms) {
     // For single-player mode, automatically start the game after NPCs are configured
     if (room.gameState.gameMode === 'single-player' && !room.gameState.isRunning) {
       room.gameState.isRunning = true;
+      room.gameStartTime = Date.now(); // Track when game started for timer synchronization
       console.log(`Single-player game started in room ${socket.roomCode} with ${room.npcs.size} NPC(s)`);
     }
     

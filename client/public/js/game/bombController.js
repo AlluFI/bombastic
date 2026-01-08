@@ -189,7 +189,7 @@ export function tryPlaceBomb(player) {
                             
                             // Update scoreboard hearts
                             import('../ui/scoreboard.js').then(({ updatePlayerStats }) => {
-                                updatePlayerStats(player.id, { lives: player.lives })
+                                updatePlayerStats(player.id, { lives: player.lives, alive: player.alive })
                             })
                             
                             // Notify server of damage
@@ -267,7 +267,7 @@ export function placeRemoteBomb(bombData) {
                     
                     // Update scoreboard hearts
                     import('../ui/scoreboard.js').then(({ updatePlayerStats }) => {
-                        updatePlayerStats(localPlayer.id, { lives: localPlayer.lives })
+                        updatePlayerStats(localPlayer.id, { lives: localPlayer.lives, alive: localPlayer.alive })
                     })
                     
                     // Notify server

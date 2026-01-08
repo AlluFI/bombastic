@@ -290,11 +290,27 @@ module.exports = function gameLoop(io, rooms) {
       }
     }
     
+    // Send timer sync update (every second, only if game is running and not paused)
+    if (room.gameStartTime && !room.gameState.isPaused) {
+      const now = Date.now();
+      const elapsedSeconds = Math.floor((now - room.gameStartTime) / 1000);
+      
+      // Send timer update every second (throttle to avoid spam)
+      if (!room.lastTimerUpdate || (now - room.lastTimerUpdate) >= 1000) {
+        room.lastTimerUpdate = now;
+        io.to(roomId).emit('timer:sync', {
+          elapsedSeconds: elapsedSeconds,
+          timestamp: now
+        });
+      }
+    }
+    
     // Check for game end (winner detection)
     const gameEndResult = checkGameEnd(room.gameState, room);
     if (gameEndResult) {
       // Game has ended - stop the game and notify all players
       room.gameState.isRunning = false;
+      room.gameStartTime = null; // Clear timer
       
       // Emit game end event to all players in the room
       io.to(roomId).emit('game:end', {

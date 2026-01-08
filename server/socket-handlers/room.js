@@ -52,7 +52,7 @@ module.exports = function roomHandlers(io, socket, rooms) {
     
     const room = rooms.get(roomId)
     
-    // Add host as first player
+    // Add host as first player (no uniqueness check needed - room is empty)
     const playerData = {
       id: socket.id,
       name: sanitizedName,
@@ -132,6 +132,13 @@ module.exports = function roomHandlers(io, socket, rooms) {
       
     if (room.players.size >= CONSTANTS.MAX_PLAYERS_PER_ROOM) {
       emitError(socket, 'Lobby is full', 'LOBBY_FULL')
+      return
+    }
+    
+    // Check if player name is already taken in this room (case-insensitive)
+    const existingNames = Array.from(room.players.values()).map(p => p.name.toLowerCase().trim())
+    if (existingNames.includes(sanitizedName.toLowerCase().trim())) {
+      emitError(socket, 'Player name already taken in this room. Please choose a different name.', 'NAME_TAKEN')
       return
     }
   

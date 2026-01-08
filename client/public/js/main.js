@@ -70,8 +70,8 @@ socket.on('game:state', (state) => {
         initializeMap(state.board, false) // false = don't force re-render
     }
     
-    // Start timer if not already running (for single-player mode)
-    startTimer()
+    // Timer will be synced via timer:sync events from server
+    // Don't start locally to avoid drift
     
     // Handle both old format (allPlayers) and new format (players)
     const players = state.allPlayers || state.players || []
@@ -154,14 +154,13 @@ socket.on('room:created', (state) => {
             mode: 'single-player'
         })
         
-        // Configure NPCs with selected count and difficulty
-        const difficulties = Array(playerData.npcCount).fill(playerData.difficulty)
+        // Configure NPCs with individual difficulties
         socket.emit('configure-npcs', {
             count: playerData.npcCount,
-            difficulties: difficulties
+            difficulties: playerData.difficulties
         })
         
-        console.log(`Single-player game started with ${playerData.npcCount} NPC(s) at ${playerData.difficulty} difficulty`)
+        console.log(`Single-player game started with ${playerData.npcCount} NPC(s) at difficulties:`, playerData.difficulties)
     } else {
         // Multiplayer: show lobby screen (game hasn't started yet)
         const hostId = state.hostId || state.players?.[0]?.id
@@ -244,10 +243,7 @@ socket.on('room:updated', (state) => {
 // Handle NPC configuration confirmation
 socket.on('npcs-configured', (data) => {
     console.log(`NPCs configured: ${data.count} NPC(s)`, data.npcs)
-    // Start timer when game starts (single-player mode)
-    if (playerData.mode === 'single') {
-        startTimer()
-    }
+    // Timer will be synced via timer:sync events from server
     // Request room update to get NPCs in the players list
     // The server will emit room:updated with NPCs included
 })
@@ -289,8 +285,20 @@ socket.on('game:started', (data) => {
     // Show game screen
     showGameScreen(data.roomCode, data.gameMode)
     
-    // Start timer
-    startTimer()
+    // Start timer with server synchronization
+    if (data.gameStartTime) {
+        // Sync timer with server time
+        const now = Date.now()
+        const elapsedSeconds = Math.floor((now - data.gameStartTime) / 1000)
+        import('./ui/timer.js').then(({ syncTimer }) => {
+            syncTimer(elapsedSeconds)
+        })
+    } else {
+        // Fallback: start timer locally if server time not provided
+        import('./ui/timer.js').then(({ startTimer }) => {
+            startTimer()
+        })
+    }
     
     // Update scoreboard
     if (data.players) {
@@ -301,6 +309,13 @@ socket.on('game:started', (data) => {
     if (data.chats) {
         loadChatHistory(data.chats)
     }
+})
+
+// Handle timer synchronization from server
+socket.on('timer:sync', (data) => {
+    import('./ui/timer.js').then(({ syncTimer }) => {
+        syncTimer(data.elapsedSeconds)
+    })
 })
 
 // Handle game end (winner detection)
@@ -431,7 +446,10 @@ socket.on('player:damaged', (data) => {
     console.log(`Player ${data.playerId} was damaged. Lives: ${data.lives}`)
     
     // Update scoreboard for all players (local and remote)
-    updatePlayerStats(data.playerId, { lives: data.lives })
+    updatePlayerStats(data.playerId, { 
+        lives: data.lives,
+        alive: !data.died // Set alive based on died flag
+    })
     
     // Don't update local player from this event - they already updated themselves
     if (data.playerId === socket.id) {

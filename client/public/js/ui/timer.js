@@ -34,6 +34,18 @@ export function startTimer() {
     }, 1000);
 }
 
+export function pauseTimer() {
+    if (!isTimerRunning) return
+    stopTimer()
+    // Keep elapsedSeconds so timer can resume from where it paused
+}
+
+export function resumeTimer() {
+    if (isTimerRunning) return
+    // Resume from current elapsedSeconds
+    startTimer()
+}
+
 export function stopTimer() {
     if (!isTimerRunning) return // timer is already stopped
 
@@ -62,6 +74,11 @@ export function syncTimer(serverSeconds) {
     elapsedSeconds = serverSeconds
     startTime = Date.now() - (elapsedSeconds * 1000)
     updateTimerDisplay()
+    
+    // If timer was stopped, restart it to keep updating
+    if (!isTimerRunning) {
+        startTimer()
+    }
 }
 
 export function intializeTimer() {

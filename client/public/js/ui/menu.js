@@ -20,8 +20,8 @@ const singleModeBtn = document.getElementById('single-mode-btn')
 const multiPlayerSection = document.getElementById('multi-player-section')
 const singlePlayerSection = document.getElementById('single-player-section')
 const npcCountSelect = document.getElementById('npc-count')
-const difficultySection = document.getElementById('difficulty-section')
-const difficultySelect = document.getElementById('difficulty')
+const npcDifficultiesSection = document.getElementById('npc-difficulties-section')
+const npcDifficultyList = document.getElementById('npc-difficulty-list')
 const startButton = document.getElementById('start-button')
 const joinButton = document.getElementById('join-button')
 const hostButton = document.getElementById('host-button')
@@ -35,7 +35,7 @@ const restartButton = document.getElementById('restart-button')
 export const playerData = {
     name: '',
     mode: 'multi', //multi player mode set to default
-    difficulty: 'medium', //default difficulty
+    difficulties: ['medium', 'medium'], //default difficulties for each NPC
     npcCount: 2 //default number of NPCs for single-player
 }
 
@@ -102,8 +102,18 @@ function handleStartGame() {
 
     playerData.name = playerNameSingleInput.value.trim()
     playerData.mode = modeSelect.value
-    playerData.difficulty = difficultySelect.value
     playerData.npcCount = parseInt(npcCountSelect.value, 10)
+    
+    // Collect individual difficulties from selectors
+    playerData.difficulties = []
+    for (let i = 0; i < playerData.npcCount; i++) {
+        const select = document.getElementById(`npc-difficulty-${i}`)
+        if (select) {
+            playerData.difficulties.push(select.value)
+        } else {
+            playerData.difficulties.push('medium') // fallback
+        }
+    }
 
     console.log('📝 Player data recorded:', playerData)    
     console.log('📡 Emitting room:host event with name:', playerData.name)
@@ -143,14 +153,73 @@ function handleModeChange() {
     console.log('player mode changed to :' + selectedMode)
 }
 
-function handleDifficultyChange() {
-    playerData.difficulty = difficultySelect.value
-    console.log('difficulty changed to :' + difficultySelect.value)
+function updateNPCDifficultySelectors() {
+    const count = parseInt(npcCountSelect.value, 10)
+    playerData.npcCount = count
+    
+    // Ensure difficulties array matches count
+    while (playerData.difficulties.length < count) {
+        playerData.difficulties.push('medium')
+    }
+    playerData.difficulties = playerData.difficulties.slice(0, count)
+    
+    // Clear existing selectors
+    npcDifficultyList.innerHTML = ''
+    
+    // Create a difficulty selector for each NPC
+    for (let i = 0; i < count; i++) {
+        const container = document.createElement('div')
+        container.className = 'npc-difficulty-item'
+        container.style.marginBottom = '10px'
+        
+        const label = document.createElement('label')
+        label.textContent = `Bot ${i + 1} Difficulty:`
+        label.style.display = 'block'
+        label.style.marginBottom = '5px'
+        label.style.color = '#00bfff'
+        
+        const select = document.createElement('select')
+        select.id = `npc-difficulty-${i}`
+        select.style.width = '100%'
+        select.style.padding = '8px'
+        select.style.fontSize = '16px'
+        select.style.backgroundColor = 'rgba(0, 119, 182, 0.2)'
+        select.style.color = '#00bfff'
+        select.style.border = '2px solid #0077b6'
+        select.style.borderRadius = '4px'
+        
+        const options = [
+            { value: 'easy', text: 'Easy' },
+            { value: 'medium', text: 'Medium' },
+            { value: 'hard', text: 'Hard' }
+        ]
+        
+        options.forEach(opt => {
+            const option = document.createElement('option')
+            option.value = opt.value
+            option.textContent = opt.text
+            if (opt.value === playerData.difficulties[i]) {
+                option.selected = true
+            }
+            select.appendChild(option)
+        })
+        
+        // Update playerData when selector changes
+        select.addEventListener('change', () => {
+            playerData.difficulties[i] = select.value
+            console.log(`Bot ${i + 1} difficulty changed to: ${select.value}`)
+        })
+        
+        container.appendChild(label)
+        container.appendChild(select)
+        npcDifficultyList.appendChild(container)
+    }
+    
+    console.log(`Updated ${count} NPC difficulty selectors`)
 }
 
 function handleNPCCountChange() {
-    playerData.npcCount = parseInt(npcCountSelect.value, 10)
-    console.log('NPC count changed to :' + playerData.npcCount)
+    updateNPCDifficultySelectors()
 }
 
 function handleHostGame() {
@@ -190,7 +259,7 @@ function handleRestartGame() {
     // Reset player data
     playerData.name = ''
     playerData.mode = 'multi'
-    playerData.difficulty = 'medium'
+    playerData.difficulties = ['medium', 'medium']
     playerData.npcCount = 2
     
     // Reset UI inputs
@@ -199,8 +268,10 @@ function handleRestartGame() {
     playerNameSingleInput.value = ''
     joinInput.value = ''
     modeSelect.value = 'multi'
-    difficultySelect.value = 'medium'
     npcCountSelect.value = '2'
+    
+    // Reset NPC difficulty selectors
+    updateNPCDifficultySelectors()
     
     // Reset mode UI
     handleModeChange()
@@ -254,8 +325,10 @@ export function intializeMenu() {
     joinInput.addEventListener('input', checkJoinButton)
 
     modeSelect.addEventListener('change', handleModeChange)
-    difficultySelect.addEventListener('change', handleDifficultyChange)
     npcCountSelect.addEventListener('change', handleNPCCountChange)
+    
+    // Initialize NPC difficulty selectors on page load
+    updateNPCDifficultySelectors()
     startButton.addEventListener('click', () => {
         playSound('buttonClick')
         handleStartGame()

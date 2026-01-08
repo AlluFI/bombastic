@@ -3,9 +3,11 @@ const scoreboardElement = document.getElementById('scoreboard')
 let localPlayerId = null
 
 function createPlayerEntryHTML(playerData, isLocal = false) {
-    const {name, id, color, lives = 3, isNPC = false} = playerData
+    const {name, id, color, lives = 3, isNPC = false, alive = true} = playerData
 
-    const heartsHTML = '❤️'.repeat(lives)
+    // Show gray hearts (💔) if player is dead, red hearts (❤️) if alive
+    const heartSymbol = (lives <= 0 || !alive) ? '🖤' : '❤️'
+    const heartsHTML = heartSymbol.repeat(Math.max(lives, 0))
 
     const youLabel = isLocal ? '<span class="you-label">(You)</span>' : ''
     const botLabel = isNPC ? '<span class="bot-label">(Bot)</span>' : ''
@@ -93,10 +95,27 @@ export function updatePlayerStats(playerId, stats) {
         return
     }
 
-    if (stats.lives !== undefined) {
+    if (stats.lives !== undefined || stats.alive !== undefined) {
         const livesElement = playerEntry.querySelector('.player-lives')
         if (livesElement) {
-            livesElement.textContent = '❤️'.repeat(stats.lives)
+            // Get lives from stats, or keep current if not provided
+            const currentLives = livesElement.textContent.match(/[❤️🖤]/g)?.length || 0
+            const lives = stats.lives !== undefined ? stats.lives : currentLives
+            
+            // Determine if player is alive
+            // If alive is explicitly set, use it; otherwise check if lives > 0
+            const isAlive = stats.alive !== undefined ? stats.alive : (lives > 0)
+            
+            // Show gray hearts (🖤) if player is dead, red hearts (❤️) if alive
+            const heartSymbol = (lives <= 0 || !isAlive) ? '🖤' : '❤️'
+            livesElement.textContent = heartSymbol.repeat(Math.max(lives, 0))
+            
+            // Add/remove dead class for styling
+            if (lives <= 0 || !isAlive) {
+                playerEntry.classList.add('player-dead')
+            } else {
+                playerEntry.classList.remove('player-dead')
+            }
         }
     }
  }
