@@ -406,14 +406,44 @@ function calculateExplosionTiles(bomb, board) {
   return explosionTiles;
 }
 
+function broadcastLobbyUpdate(io, rooms) {
+  const activeLobbies = getActiveLobbies(rooms)
+  io.emit('lobby:updated', { lobbies: activeLobbies })
+}
+
+function getActiveLobbies(rooms) {
+  const activeLobbies = []
+  
+  rooms.forEach((room, roomCode) => {
+    // Only include multiplayer lobbies that haven't started
+    if (room.gameState.gameMode === 'multiplayer' && !room.gameState.isRunning) {
+      const playerCount = room.players.size
+      const maxPlayers = 4 // Max players per room
+      
+      // Only show if not full
+      if (playerCount < maxPlayers) {
+        activeLobbies.push({
+          roomCode: roomCode,
+          playerCount: playerCount,
+          maxPlayers: maxPlayers
+        })
+      }
+    }
+  })
+  
+  return activeLobbies
+}
+
 module.exports = {
   generateRoomCode,
   generateBoard,
   startPos,
   colors,
   syncRoomGameState,
+  broadcastLobbyUpdate,
   handleNPCAction,
   checkGameEnd,
   calculateExplosionBlocks,
-  calculateExplosionTiles
+  calculateExplosionTiles,
+  getActiveLobbies
 }
