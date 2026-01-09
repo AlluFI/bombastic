@@ -1,5 +1,7 @@
 // Server coordinates: x = row (vertical), y = col (horizontal)
 
+// IMPORTANT: These constants must match server/constants.js
+// GRID_ROWS = 13, GRID_COLS = 15
 const GRID_COLS = 15
 const GRID_ROWS = 13
 
@@ -31,111 +33,55 @@ let gridRendered = false
 
 /**
  * Initializes the map from server board data
- * Falls back to local generation if no server board provided
+ * Server always provides the board, so this is the authoritative source
  * Only renders the grid if it hasn't been rendered yet (to avoid clearing player elements)
  * 
  * IMPORTANT: This preserves locally destroyed blocks when syncing from server
  */
-export function initializeMap(serverBoard = null, forceRender = false) {
-    if (serverBoard) {
-        // Convert server board to client format
-        const serverMap = convertServerBoardToClient(serverBoard)
-        
-        // If map already exists, preserve destroyed blocks (empty tiles that were breakable)
-        // The server board always has the original state, so we need to merge intelligently
-        if (map && map.length > 0 && !forceRender) {
-            // Merge: preserve tiles that are currently 'empty' (they might be destroyed blocks)
-            // Only update tiles that should be different (but server doesn't change blocks, so this is mostly preserving)
-            for (let r = 0; r < serverMap.length && r < map.length; r++) {
-                if (!map[r]) map[r] = []
-                for (let c = 0; c < serverMap[r].length && c < map[r].length; c++) {
-                    // If current tile is 'empty' and server says 'breakable', keep it empty
-                    // (block was destroyed client-side and should stay destroyed)
-                    if (map[r][c] === 'empty' && serverMap[r][c] === 'breakable') {
-                        // Keep the empty state (preserve destroyed block)
-                        continue
-                    }
-                    // Otherwise, use server's value (for walls, initially empty tiles, etc.)
-                    // Note: This won't restore destroyed blocks, which is correct
-                    map[r][c] = serverMap[r][c]
-                }
-            }
-        } else {
-            // First time initialization or forced - use server map as-is
-            map = serverMap
-        }
-        
-        // Only render if grid hasn't been rendered yet, or if forced
-        // This prevents clearing player elements that are already in the DOM
-        if (!gridRendered || forceRender) {
-            renderMap()
-            gridRendered = true
-        }
-    } else {
-        // Fallback: generate locally
-        generateMap()
-        
-        // Only render if grid hasn't been rendered yet
-        if (!gridRendered || forceRender) {
-            renderMap()
-            gridRendered = true
-        }
-    }
-}
-
-/**
- * Local map generation (fallback if server doesn't provide board)
- */
-function generateMap() {
-    for (let r = 0; r < GRID_ROWS; r++) {
-        map[r] = []
-        for (let c = 0; c < GRID_COLS; c++) {
-            //border walls -> style solid
-            if (r === 0 || r === GRID_ROWS -1 || c === 0 || c === GRID_COLS -1) {
-                map[r][c] = 'solid'
-                continue
-            }
-
-            //internal unbreakable block -> style solid
-            if (r % 2 === 0 && c % 2 === 0) {
-                map[r][c] = 'solid'
-                continue
-            }
-
-            map[r][c] = 'breakable'
-        }
+export function initializeMap(serverBoard, forceRender = false) {
+    if (!serverBoard) {
+        console.error('Server board is required. Cannot initialize map without server board.')
+        return
     }
     
-    //empty spawn zones - Players need free space in corners to start the game
-    const spawns = [
-        [1,1],
-        [1, GRID_COLS-2],
-        [GRID_ROWS -2, 1],
-        [GRID_ROWS-2, GRID_COLS-2]
-    ]
-
-    //make immediate tiles after corners empty allowing players space to initiate the game
-    for(const [r, c] of spawns) {
-        map[r][c] = 'empty'
-        if (map[r][c+1]) {
-            if (c+1 === GRID_COLS -1) {
-                map[r][c-1] = 'empty'
-            } else {
-                map[r][c+1] = 'empty'
+    // Convert server board to client format
+    const serverMap = convertServerBoardToClient(serverBoard)
+    
+    // If map already exists, preserve destroyed blocks (empty tiles that were breakable)
+    // The server board always has the original state, so we need to merge intelligently
+    if (map && map.length > 0 && !forceRender) {
+        // Merge: preserve tiles that are currently 'empty' (they might be destroyed blocks)
+        // Only update tiles that should be different (but server doesn't change blocks, so this is mostly preserving)
+        for (let r = 0; r < serverMap.length && r < map.length; r++) {
+            if (!map[r]) map[r] = []
+            for (let c = 0; c < serverMap[r].length && c < map[r].length; c++) {
+                // If current tile is 'empty' and server says 'breakable', keep it empty
+                // (block was destroyed client-side and should stay destroyed)
+                if (map[r][c] === 'empty' && serverMap[r][c] === 'breakable') {
+                    // Keep the empty state (preserve destroyed block)
+                    continue
+                }
+                // Otherwise, use server's value (for walls, initially empty tiles, etc.)
+                // Note: This won't restore destroyed blocks, which is correct
+                map[r][c] = serverMap[r][c]
             }
         }
-        if (map[r+1]?.[c]) {
-            if (r+1 === GRID_ROWS -1) {
-                map[r-1][c] = 'empty'
-            } else {
-                map[r+1][c] = 'empty'
-            }
-        }
+    } else {
+        // First time initialization or forced - use server map as-is
+        map = serverMap
+    }
+    
+    // Only render if grid hasn't been rendered yet, or if forced
+    // This prevents clearing player elements that are already in the DOM
+    if (!gridRendered || forceRender) {
+        renderMap()
+        gridRendered = true
     }
 }
 
-// Initialize with fallback (will be overridden when server sends board)
-generateMap()
+// Note: Board generation is handled server-side
+// The server always provides the board via the 'game:started' event
+// No local fallback needed - server is the single source of truth
 
 //render map to DOM
 function renderMap() {
@@ -150,8 +96,13 @@ function renderMap() {
     gridElement.style.gridTemplateColumns = `repeat(${GRID_COLS}, 40px)`
     
     // Only clear innerHTML on first render to avoid removing player elements
+    // But preserve any player elements that might already exist
     if (!gridRendered) {
+        // Store player elements before clearing
+        const playerElements = Array.from(gridElement.querySelectorAll('.player'))
         gridElement.innerHTML = ''
+        // Re-append player elements after clearing
+        playerElements.forEach(el => gridElement.appendChild(el))
     }
 
     for (let r = 0; r < GRID_ROWS; r++) {
@@ -176,6 +127,6 @@ function renderMap() {
     gridRendered = true
 }
 
-// Initial render
-renderMap()
+// Note: Initial render happens when server sends board via initializeMap()
+// No need to render empty map on page load
 

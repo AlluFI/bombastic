@@ -3,18 +3,18 @@
 }
 
  const startPos = [
-    { x: 1, y: 1, },
-    { x: 1, y: 13 },
-    { x: 11, y: 1 },
-    { x: 11, y: 13 },
+   { x: 1, y: 1, },
+   { x: 1, y: 13 },
+   { x: 11, y: 1 },
+   { x: 11, y: 13 },
 ]
  const colors =[
-    'blue',
-    'red',
-    'green',
-    'yellow',
-    'purple',
-    'orange']
+   'blue',
+   'red',
+   'green',
+   'yellow',
+   'purple',
+   'orange']
 
 /**
  * Find the next available color index that's not already taken
@@ -183,12 +183,18 @@ function checkGameEnd(gameState, room) {
       room.eliminationOrder = [];
     }
     
-    // Add winner to elimination order if not already there (they're last, so highest rank)
+    // Add winner to elimination order (they're last, so highest rank)
+    // IMPORTANT: Remove winner from eliminationOrder first if they're already in it,
+    // then add them at the end to ensure they have the highest index
     if (alivePlayers.length === 1) {
       const winner = alivePlayers[0];
-      if (!room.eliminationOrder.includes(winner.id)) {
-        room.eliminationOrder.push(winner.id);
+      // Remove winner from eliminationOrder if they're already in it (shouldn't happen, but safety check)
+      const winnerIndex = room.eliminationOrder.indexOf(winner.id);
+      if (winnerIndex !== -1) {
+        room.eliminationOrder.splice(winnerIndex, 1);
       }
+      // Add winner at the end (highest index = best rank)
+      room.eliminationOrder.push(winner.id);
       
       // Sort players by elimination order (last eliminated = winner = rank 1)
       // Players eliminated first have higher rank numbers (worse placement)
@@ -201,8 +207,13 @@ function checkGameEnd(gameState, room) {
         if (bIndex === -1) return 1;   // Winner comes first
         
         // Higher index = eliminated later = better rank (lower number)
+        // Sort descending: highest index (winner) first
         return bIndex - aIndex;
       });
+      
+      // Debug: Verify sorting is correct
+      console.log('Game end - Elimination order:', room.eliminationOrder);
+      console.log('Game end - Sorted players:', sortedPlayers.map(p => `${p.name} (index: ${room.eliminationOrder.indexOf(p.id)})`));
       
       return {
         winner: winner,
@@ -312,10 +323,11 @@ function checkGameEnd(gameState, room) {
       }
     }
     
-    // Also check human players directly
+    // Also check human players directly (exclude NPCs from this check)
     if (room.players) {
       for (const [playerId, player] of room.players.entries()) {
-        if (player.alive && player.x === newX && player.y === newY) {
+        // Skip NPCs (they're checked above) and the current NPC
+        if (playerId !== npcId && !player.isNPC && player.alive && player.x === newX && player.y === newY) {
           // Blocked by a human player
           return;
         }

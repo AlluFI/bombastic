@@ -165,6 +165,13 @@ export function createLocalPlayer(id, name, x, y, color, playerData = {}) {
     if (playerData.alive !== undefined) localPlayer.alive = playerData.alive
 
     localPlayer.createDomElement()
+    
+    // Ensure grid element exists and is accessible
+    if (!gridElement) {
+        console.error('Grid element not found when creating local player!')
+        return localPlayer
+    }
+    
     gridElement.appendChild(localPlayer.element)
     // Update position after element is added to DOM
     // Use requestAnimationFrame to ensure grid is rendered
@@ -191,6 +198,13 @@ export function createRemotePlayer(playerData) {
     if (playerData.alive !== undefined) player.alive = playerData.alive
 
     player.createDomElement()
+    
+    // Ensure grid element exists and is accessible
+    if (!gridElement) {
+        console.error('Grid element not found when creating remote player!', playerData.id)
+        return
+    }
+    
     gridElement.appendChild(player.element)
     
     // Initialize player stats for powerup tracking

@@ -264,10 +264,39 @@ socket.on('game:started', (data) => {
     // Hide lobby screen
     hideLobbyScreen()
     
+    // Show game screen FIRST so grid element is accessible
+    showGameScreen(data.roomCode, data.gameMode)
+    
     // Initialize board if provided
     if (data.board) {
         initializeMap(data.board, true)
     }
+    
+    // Create/update all players (must happen after grid is rendered and screen is visible)
+    // Use double requestAnimationFrame to ensure grid is fully rendered and visible
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (data.players && data.players.length > 0) {
+                // Create local player if it doesn't exist
+                const myPlayer = data.players.find(p => p.id === socket.id)
+                if (myPlayer && !player) {
+                    console.log('Creating local player from game:started:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
+                    player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color, myPlayer)
+                }
+                
+                // Create/update remote players (including NPCs)
+                data.players.forEach(p => {
+                    if (p.id !== socket.id) {
+                        if (!remotePlayers.has(p.id)) {
+                            createRemotePlayer(p)
+                        } else {
+                            updateRemotePlayer(p.id, p.x, p.y)
+                        }
+                    }
+                })
+            }
+        })
+    })
     
     // Initialize player stats for all players
     if (data.players) {
@@ -282,9 +311,6 @@ socket.on('game:started', (data) => {
             renderPowerup(powerup)
         })
     }
-    
-    // Show game screen
-    showGameScreen(data.roomCode, data.gameMode)
     
     // Start timer with server synchronization
     if (data.gameStartTime) {

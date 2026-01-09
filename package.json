@@ -4,9 +4,11 @@
   "description": "Server for Bomberman-clone multiplayer game",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "cd server && nodemon server.js",
-    "test:npc": "node server/npc/test-npc.js"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:npc": "node server/npc/test-npc.js",
+    "start": "cd server && nodemon server.js"
   },
   "author": "",
   "license": "ISC",
@@ -14,5 +16,9 @@
     "express": "^5.2.1",
     "nodemon": "^3.1.11",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^29.7.0"
   }
 }

@@ -23,6 +23,12 @@ io.on('connection', socket => {
 
 gameLoop(io, rooms)
 
-server.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`))
+server.listen(PORT, () => {
+  console.log(`Server running: http://localhost:${PORT}`)
+  console.log(`\n🌐 To play on local network:`)
+  console.log(`   1. Find your IP address (ifconfig/ipconfig)`)
+  console.log(`   2. Open http://[YOUR_IP]:${PORT} on other devices`)
+  console.log(`   3. Make sure devices are on the same WiFi network\n`)
+})
 
  

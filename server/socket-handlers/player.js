@@ -58,6 +58,7 @@ module.exports = function playerHandlers(io, socket, rooms) {
     syncRoomGameState(room)
     
     // Check if there's another player or NPC at the target position
+    // Check gameState.players first (includes synced NPCs)
     if (room.gameState.players && room.gameState.players.length > 0) {
       const hasPlayer = room.gameState.players.some(p => 
         p.alive && p.id !== socket.id && p.x === newX && p.y === newY
@@ -65,6 +66,26 @@ module.exports = function playerHandlers(io, socket, rooms) {
       if (hasPlayer) {
         // Silently ignore - this is expected behavior (blocked by player)
         return
+      }
+    }
+    
+    // Also check NPCs directly to catch any that might not be synced yet
+    if (room.npcs) {
+      for (const [npcId, npc] of room.npcs.entries()) {
+        if (npc.alive && npc.position.x === newX && npc.position.y === newY) {
+          // Blocked by an NPC
+          return
+        }
+      }
+    }
+    
+    // Also check human players directly as defensive check
+    if (room.players) {
+      for (const [playerId, player] of room.players.entries()) {
+        if (playerId !== socket.id && player.alive && player.x === newX && player.y === newY) {
+          // Blocked by another human player
+          return
+        }
       }
     }
 

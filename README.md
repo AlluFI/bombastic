@@ -39,8 +39,34 @@ A real-time multiplayer Bomberman-style game built with vanilla JavaScript and N
    ```
 
 4. **Open in browser**
-   - Navigate to `http://localhost:3000`
-   - The game will load automatically
+   - **Local play**: Navigate to `http://localhost:3000`
+   - **Network play**: Navigate to `http://[YOUR_IP]:3000` (see below)
+
+### 🌐 Playing on Local Network (WiFi)
+
+You can play with friends on the same WiFi network:
+
+1. **Find your computer's IP address:**
+   - **macOS/Linux**: Run `ifconfig` or `ip addr` in terminal, look for your WiFi adapter (usually `en0` or `wlan0`)
+   - **Windows**: Run `ipconfig` in Command Prompt, look for "IPv4 Address" under your WiFi adapter
+   - Example: `192.168.1.100`
+
+2. **Start the server** (if not already running):
+   ```bash
+   npm start
+   ```
+
+3. **On the host computer**: Open `http://localhost:3000` or `http://[YOUR_IP]:3000`
+
+4. **On other devices** (phones, tablets, other computers on same WiFi):
+   - Open `http://[YOUR_IP]:3000` in a web browser
+   - Replace `[YOUR_IP]` with the IP address from step 1
+   - Example: `http://192.168.1.100:3000`
+
+5. **Firewall Note**: If other devices can't connect, you may need to:
+   - **macOS**: Allow incoming connections in System Settings > Firewall
+   - **Windows**: Allow port 3000 through Windows Firewall
+   - **Linux**: Configure firewall rules (e.g., `sudo ufw allow 3000`)
 
 ### Development
 
@@ -169,11 +195,35 @@ Edit `server/config.js` to enable/disable features:
 
 ## 🧪 Testing
 
-### Run NPC Tests
+The project includes a comprehensive test suite using Jest.
+
+### Running Tests
 
 ```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (for development)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run NPC-specific tests
 npm run test:npc
 ```
+
+### Test Coverage
+
+The test suite includes:
+- **Validation Tests**: Input sanitization, coordinate validation, room code validation
+- **Rate Limiter Tests**: Rate limiting enforcement, time windows, cleanup
+- **Error Handler Tests**: Error creation, socket error emission, validation helpers
+- **Game Logic Tests**: Board generation, explosion calculations, game end detection
+- **Constants Tests**: Configuration constant validation
+- **Room Management Tests**: Player name uniqueness, room capacity
+
+See `TESTING.md` for detailed testing documentation.
 
 ### Manual Testing
 
