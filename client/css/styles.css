@@ -593,9 +593,17 @@ button.loading::after {
     z-index: 1;
 }
 
+#lobby-screen{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 #lobby-content {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     align-items: center;
     gap: 30px;
     max-width: 500px;
