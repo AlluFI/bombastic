@@ -1,7 +1,7 @@
 import { keys } from "./controls.js"
 import { map } from "./grid.js"
 import { tryPlaceBomb, getBombPositions } from "./game/bombController.js"
-import { isPlayerImmortal } from "./game/powerupController.js"
+import { isPlayerImmortal, initializePlayerStats } from "./game/powerupController.js"
 
 
 const gridElement = document.getElementById('grid')
@@ -192,6 +192,12 @@ export function createRemotePlayer(playerData) {
 
     player.createDomElement()
     gridElement.appendChild(player.element)
+    
+    // Initialize player stats for powerup tracking
+   
+        initializePlayerStats(playerData.id)
+ 
+    
     // Update position after element is added to DOM
     // Use requestAnimationFrame to ensure grid is rendered
     requestAnimationFrame(() => {
@@ -297,23 +303,23 @@ export function updatePlayerMovement(player) {
     if (keys.up) {
         newX--
         moved = true
-        player.element?.classList.add('facing-up')
-        player.element?.classList.remove('facing-down', 'facing-left', 'facing-right')
+        // player.element?.classList.add('facing-up')
+        // player.element?.classList.remove('facing-down', 'facing-left', 'facing-right')
     } else if (keys.down) {
         newX++
         moved = true
-        player.element?.classList.add('facing-down')
-        player.element?.classList.remove('facing-up', 'facing-left', 'facing-right')
+        // player.element?.classList.add('facing-down')
+        // player.element?.classList.remove('facing-up', 'facing-left', 'facing-right')
     } else if (keys.left) {
         newY--
         moved = true
-        player.element?.classList.add('facing-left')
-        player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
+        // player.element?.classList.add('facing-left')
+        // player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
     } else if (keys.right) {
         newY++
         moved = true
-        player.element?.classList.add('facing-right')
-        player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
+        // player.element?.classList.add('facing-right')
+        // player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
     }
     
     // Only process movement if a key is pressed

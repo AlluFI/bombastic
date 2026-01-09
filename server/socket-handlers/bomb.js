@@ -57,7 +57,6 @@ module.exports = function bombHandlers(io, socket, rooms) {
       // Check if player already has an active bomb (max 1 bomb per player/NPC)
       const existingBombs = room.gameState.bombs.filter(b => b.playerId === socket.id);
       if (existingBombs.length > 0) {
-        emitError(socket, 'You already have an active bomb', 'BOMB_LIMIT_REACHED')
         return
       }
       

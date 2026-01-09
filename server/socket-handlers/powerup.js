@@ -62,7 +62,7 @@ module.exports = function powerupHandlers(socket, io, rooms) {
       console.log(`Player ${player.name} picked up bomb range power-up! New range: ${player.bombRange}`)
     }
     
-    // Broadcast power-up pickup to all clients
+    // Broadcast power-up pickup to all clients in the room (including sender for sync)
     io.to(socket.roomCode).emit('powerup:picked', {
       powerupId: data.powerupId,
       playerId: data.playerId,

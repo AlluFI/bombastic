@@ -204,9 +204,9 @@ export function tryPlaceBomb(player) {
                                     died: died
                                 })
                             }
-                        }
+                        }   
                     }
-                })
+                })  
             })
             
             if (hitPlayers.size > 0) {
