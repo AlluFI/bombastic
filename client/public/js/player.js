@@ -297,23 +297,23 @@ export function updatePlayerMovement(player) {
     if (keys.up) {
         newX--
         moved = true
-        player.element?.classList.add('facing-up')
-        player.element?.classList.remove('facing-down', 'facing-left', 'facing-right')
+        // player.element?.classList.add('facing-up')
+        // player.element?.classList.remove('facing-down', 'facing-left', 'facing-right')
     } else if (keys.down) {
         newX++
         moved = true
-        player.element?.classList.add('facing-down')
-        player.element?.classList.remove('facing-up', 'facing-left', 'facing-right')
+        // player.element?.classList.add('facing-down')
+        // player.element?.classList.remove('facing-up', 'facing-left', 'facing-right')
     } else if (keys.left) {
         newY--
         moved = true
-        player.element?.classList.add('facing-left')
-        player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
+        // player.element?.classList.add('facing-left')
+        // player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
     } else if (keys.right) {
         newY++
         moved = true
-        player.element?.classList.add('facing-right')
-        player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
+        // player.element?.classList.add('facing-right')
+        // player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
     }
     
     // Only process movement if a key is pressed
