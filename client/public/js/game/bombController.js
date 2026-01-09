@@ -178,11 +178,7 @@ export function tryPlaceBomb(player) {
                         // If it's the local player, apply damage and notify server
                         if (player.id === getLocalPlayer()?.id) {
                             console.log(`Applying damage to local player ${player.name} at (${player.x}, ${player.y})`)
-                            player.takeDamage().then(died => {
-                                if (died !== undefined) {
-                                    // Handle death if needed
-                                }
-                            })
+                            const died = player.takeDamage()
                             
                             // Play sound based on outcome
                             if (died) {
