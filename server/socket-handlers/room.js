@@ -111,7 +111,7 @@ module.exports = function roomHandlers(io, socket, rooms) {
       emitError(socket, 'Invalid room code format', 'INVALID_ROOM_CODE')
       return
     }
-    
+
     // Sanitize and validate player name
     const sanitizedName = sanitizePlayerName(data.name)
     if (!sanitizedName) {
@@ -126,6 +126,11 @@ module.exports = function roomHandlers(io, socket, rooms) {
       emitError(socket, 'Room not found', 'ROOM_NOT_FOUND')
       return
     }
+
+    if (room.gameState.isRunning) {
+      emitError(socket, "Game already started")
+      return
+    } 
     
     // Reject if single-player mode
     if (room.gameState.gameMode === 'single-player') {
