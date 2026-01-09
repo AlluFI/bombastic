@@ -171,11 +171,25 @@ export function removePowerup(powerupId, x, y) {
     const posKey = `${x}-${y}`
     const powerup = activePowerups.get(posKey)
     
+    // Try to find by position first
     if (powerup && powerup.element) {
         powerup.element.remove()
         activePowerups.delete(posKey)
-        console.log(`Power-up removed at (${x}, ${y})`)
+        return true
     }
+    
+    // If not found by position, try to find by ID (fallback)
+    for (const [key, pw] of activePowerups.entries()) {
+        if (pw.id === powerupId) {
+            if (pw.element) {
+                pw.element.remove()
+            }
+            activePowerups.delete(key)
+            return true
+        }
+    }
+    
+    return false
 }
 
 export function checkPowerupPickup(player) {
@@ -185,8 +199,6 @@ export function checkPowerupPickup(player) {
     const powerup = activePowerups.get(posKey)
     
     if (powerup) {
-        console.log(`Player ${player.id} picked up power-up at (${player.x}, ${player.y}): ${powerup.type}`)
-        
         // Play power-up pickup sound
         playSound('powerupPickup')
         

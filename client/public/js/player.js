@@ -1,7 +1,7 @@
 import { keys } from "./controls.js"
 import { map } from "./grid.js"
 import { tryPlaceBomb, getBombPositions } from "./game/bombController.js"
-import { isPlayerImmortal } from "./game/powerupController.js"
+import { isPlayerImmortal, initializePlayerStats } from "./game/powerupController.js"
 
 
 const gridElement = document.getElementById('grid')
@@ -192,6 +192,12 @@ export function createRemotePlayer(playerData) {
 
     player.createDomElement()
     gridElement.appendChild(player.element)
+    
+    // Initialize player stats for powerup tracking
+   
+        initializePlayerStats(playerData.id)
+ 
+    
     // Update position after element is added to DOM
     // Use requestAnimationFrame to ensure grid is rendered
     requestAnimationFrame(() => {

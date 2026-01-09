@@ -12,7 +12,7 @@ import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
 import { initializeMap } from "./grid.js"
 import { initializeLobby, showLobbyScreen, hideLobbyScreen, updateLobbyPlayers } from "./ui/lobby.js"
-import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, initializePlayerStats } from "./game/powerupController.js"
+import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, initializePlayerStats, addPowerupToPlayer } from "./game/powerupController.js"
 import { initializeSoundManager, playSound } from "./audio/soundManager.js"
 import "./ui/audio-toggle.js"
 
@@ -432,14 +432,13 @@ socket.on('powerup:spawned', (data) => {
 })
 
 socket.on('powerup:picked', (data) => {
-    console.log(`Power-up picked up by player ${data.playerId} at (${data.x}, ${data.y})`)
+    // Remove powerup visually
     removePowerup(data.powerupId, data.x, data.y)
     
-    // If local player picked it up, update their stats (already applied locally in checkPowerupPickup)
-    // The server has already updated the player's bombRange, so we just need to sync
-    if (data.playerId === socket.id) {
-        // Stats already updated locally when pickup was detected
-        console.log(`Local player ${data.playerId} picked up ${data.type} power-up`)
+    // If remote player picked it up, apply the powerup to them
+    if (data.playerId !== socket.id) {
+        // Apply power-up to remote player
+        addPowerupToPlayer(data.playerId, data.type)
     }
 })
 
