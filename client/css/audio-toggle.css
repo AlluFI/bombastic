@@ -1,0 +1,56 @@
+/* Audio Toggle Button */
+.audio-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    max-width: 50px;
+    padding: 8px;
+    font-size: 24px;
+    background: rgba(0, 119, 182, 0.3);
+    border: 2px solid #0077b6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0;
+    text-transform: none;
+    box-shadow:
+        0 0 10px rgba(0, 119, 182, 0.5),
+        inset 0 0 10px rgba(0, 191, 255, 0.1);
+}
+
+.audio-toggle::before {
+    display: none;
+}
+
+.audio-toggle:hover {
+    background: rgba(0, 119, 182, 0.5);
+    transform: scale(1.1);
+    box-shadow:
+        0 0 15px rgba(0, 191, 255, 0.8),
+        inset 0 0 15px rgba(0, 191, 255, 0.2);
+}
+
+.audio-toggle:active {
+    transform: scale(0.95);
+}
+
+.audio-toggle.muted {
+    background: rgba(182, 0, 0, 0.3);
+    border-color: #b60000;
+    box-shadow:
+        0 0 10px rgba(182, 0, 0, 0.5),
+        inset 0 0 10px rgba(255, 0, 0, 0.1);
+}
+
+.audio-toggle.muted:hover {
+    background: rgba(182, 0, 0, 0.5);
+    box-shadow:
+        0 0 15px rgba(255, 0, 0, 0.8),
+        inset 0 0 15px rgba(255, 0, 0, 0.2);
+}

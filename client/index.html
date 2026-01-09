@@ -10,12 +10,13 @@
     <link rel="stylesheet" href="./css/scoreboard.css">
     <link rel="stylesheet" href="./css/bomb.css">
     <link rel="stylesheet" href="./css/explosion.css">
+    <link rel="stylesheet" href="./css/audio-toggle.css">
+
 </head>
 <body>
     <div id="app">
         <div id="menue-screen" class="screen">
-            <span id="audio-toggle">🔊</span>
-            <span id="audio-toggle" class="hidden">🔇</span>
+            <button id="audio-toggle" class="audio-toggle" aria-label="Toggle sound">🔊</button>
             <h1>Bombastic Live</h1>
             <!-- Game Mode Selection at top -->
             <div class="mode-toggle">
@@ -85,8 +86,7 @@
         </div>
 
         <div id="lobby-screen" class="screen hidden">
-            <span id="audio-toggle">🔊</span>
-            <span id="audio-toggle" class="hidden">🔇</span>
+            <button id="audio-toggle-lobby" class="audio-toggle" aria-label="Toggle sound">🔊</button>
             <h1>Lobby</h1>
             <div id="lobby-content">
                 <div id="lobby-room-code">
@@ -110,8 +110,7 @@
         </div>
 
         <div id="game-screen" class="screen hidden">
-            <span id="audio-toggle">🔊</span>
-            <span id="audio-toggle" class="hidden">🔇</span>
+            <button id="audio-toggle-game" class="audio-toggle" aria-label="Toggle sound">🔊</button>
             <div id="fps-counter"
                 style="position:absolute;top:10px;left:10px;color:#fff;background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;font-family:monospace;z-index:2000;">
                 FPS: <span id="fps-value">0</span>

@@ -14,6 +14,7 @@ import { initializeMap } from "./grid.js"
 import { initializeLobby, showLobbyScreen, hideLobbyScreen, updateLobbyPlayers } from "./ui/lobby.js"
 import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, initializePlayerStats } from "./game/powerupController.js"
 import { initializeSoundManager, playSound } from "./audio/soundManager.js"
+import "./ui/audio-toggle.js"
 
 
 const socket = io()
