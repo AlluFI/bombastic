@@ -311,7 +311,9 @@ button:active:not(:disabled) {
 /* Section Headings */
 #menue-screen > h2,
 #multi-player-section > h2,
-#single-player-section > h2 {
+#single-player-section > h2, 
+#npc-difficulties-section>h2 {
+
     color: #00bfff;
     text-transform: uppercase;
     font-size: 28px;

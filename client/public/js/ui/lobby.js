@@ -153,7 +153,7 @@ function handleLeaveLobby() {
     playSound('buttonClick')
     
     // Emit leave event
-    socket.emit('game:quit')
+    socket.emit('lobby:leave')
     
     // Return to menu
     hideLobbyScreen()

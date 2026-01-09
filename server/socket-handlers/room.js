@@ -1,4 +1,4 @@
-const {generateRoomCode, generateBoard, syncRoomGameState, colors, startPos, broadcastLobbyUpdate} = require('../utils.js')
+const {generateRoomCode, generateBoard, syncRoomGameState, colors, startPos, getNextAvailableColorIndex, getNextAvailablePositionIndex, broadcastLobbyUpdate} = require('../utils.js')
 const {emitError} = require('../errorHandler.js')
 const {sanitizePlayerName} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
@@ -145,13 +145,17 @@ module.exports = function roomHandlers(io, socket, rooms) {
       return
     }
   
+    // Find next available color and position
+    const colorIndex = getNextAvailableColorIndex(room.players)
+    const posIndex = getNextAvailablePositionIndex(room.players)
+  
     // Add new player to room
     room.players.set(socket.id, {
       id: socket.id,
       name: sanitizedName,
-      x: startPos[room.players.size].x,
-      y: startPos[room.players.size].y,
-      color: colors[room.players.size],
+      x: startPos[posIndex].x,
+      y: startPos[posIndex].y,
+      color: colors[colorIndex],
       lives: CONSTANTS.DEFAULT_LIVES,
       alive: true,
       bombRange: 2,

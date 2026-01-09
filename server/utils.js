@@ -16,6 +16,41 @@
     'purple',
     'orange']
 
+/**
+ * Find the next available color index that's not already taken
+ * @param {Map} players - Map of existing players
+ * @returns {number} - Index of the next available color
+ */
+function getNextAvailableColorIndex(players) {
+  const usedColors = new Set(Array.from(players.values()).map(p => p.color))
+  for (let i = 0; i < colors.length; i++) {
+    if (!usedColors.has(colors[i])) {
+      return i
+    }
+  }
+  // Fallback: if all colors are used, return the count (will wrap around)
+  return players.size % colors.length
+}
+
+/**
+ * Find the next available starting position index that's not already taken
+ * @param {Map} players - Map of existing players
+ * @returns {number} - Index of the next available position
+ */
+function getNextAvailablePositionIndex(players) {
+  const usedPositions = new Set(
+    Array.from(players.values()).map(p => `${p.x},${p.y}`)
+  )
+  for (let i = 0; i < startPos.length; i++) {
+    const posKey = `${startPos[i].x},${startPos[i].y}`
+    if (!usedPositions.has(posKey)) {
+      return i
+    }
+  }
+  // Fallback: if all positions are used, return the count
+  return players.size % startPos.length
+}
+
 const CONSTANTS = require('./constants.js')
 
 // Grid dimensions (matching client)
@@ -514,6 +549,8 @@ module.exports = {
   generateBoard,
   startPos,
   colors,
+  getNextAvailableColorIndex,
+  getNextAvailablePositionIndex,
   syncRoomGameState,
   broadcastLobbyUpdate,
   handleNPCAction,

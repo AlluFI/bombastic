@@ -64,44 +64,55 @@ module.exports = function gameHandlers(io, socket, rooms) {
   
     // Clean up from room
     const room = rooms.get(socket.roomCode);
-    if (room) {
-      // Remove player from room
-      room.players.delete(socket.id);
-
-      socket.to(socket.roomCode).emit('player:left', socket.id)
-
-      
-      // If host disconnected, handle room cleanup
-      if (room.host === socket.id) {
-        // Clean up NPCs
-        room.npcs.clear();
-        // Optionally: delete room or transfer host
-      }
-      
-      // Sync game state
-      syncRoomGameState(room);
-      
-      // Notify room
-      io.to(socket.roomCode).emit('room:updated', {
-        players: Array.from(room.players.values()),
-        roomCode: socket.roomCode,
-        chats: room.chats,
-        hostId: room.host,
-        isRunning: room.gameState.isRunning,
-        gameMode: room.gameState.gameMode
-      });
-      
-      // Broadcast lobby update (player left)
-      broadcastLobbyUpdate(io, rooms)
-      
-      // If room is empty or host left, remove room
-      if (room.players.size === 0 || room.host === socket.id) {
-        rooms.delete(socket.roomCode)
-        console.log(`🗑️ Room ${socket.roomCode} deleted (empty or host left)`)
-        // Broadcast lobby update (room removed)
-        broadcastLobbyUpdate(io, rooms)
-      }
+    if (!room) return
+    
+    const roomCode = socket.roomCode
+    const player = room.players.get(socket.id)
+    
+    if (player) {
+      console.log(`${player.name} disconnected from room ${roomCode}`)
     }
+    
+    // Remove player from room
+    room.players.delete(socket.id);
+
+    // Notify others that player left
+    socket.to(roomCode).emit('player:left', socket.id)
+    
+    // Check if room is now empty
+    if (room.players.size === 0) {
+      // Delete empty room
+      rooms.delete(roomCode)
+      console.log(`🗑️ Room ${roomCode} deleted (empty after disconnect)`)
+      // Broadcast lobby update (room removed)
+      broadcastLobbyUpdate(io, rooms)
+      return
+    }
+    
+    // If the host disconnected, transfer host to the next player
+    if (room.host === socket.id) {
+      const nextHost = room.players.keys().next().value
+      room.host = nextHost
+      console.log(`👑 Host transferred to ${nextHost} in room ${roomCode}`)
+      // Clean up NPCs when host disconnects
+      room.npcs.clear();
+    }
+    
+    // Sync game state
+    syncRoomGameState(room);
+    
+    // Notify remaining players of updated room state
+    io.to(roomCode).emit('room:updated', {
+      players: Array.from(room.players.values()),
+      roomCode: roomCode,
+      chats: room.chats,
+      hostId: room.host,
+      isRunning: room.gameState.isRunning,
+      gameMode: room.gameState.gameMode
+    });
+    
+    // Broadcast lobby update (player count changed)
+    broadcastLobbyUpdate(io, rooms)
   })
     
     //===================================================
