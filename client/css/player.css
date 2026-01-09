@@ -5,7 +5,7 @@
     z-index: 3;
     transition: top 0.1s linear, left 0.1s linear;
     background-color: transparent;
-    transform: translate(15%, 15%);
+    transform: translate(15%, 8%);
 }
 
 .player svg {
