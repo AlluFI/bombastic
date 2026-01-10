@@ -1,4 +1,4 @@
-const {syncRoomGameState, broadcastLobbyUpdate} = require('../utils.js')
+const {syncRoomGameState, broadcastLobbyUpdate, generateBoard, startPos} = require('../utils.js')
 const { logPlayerAction, logRoomEvent } = require('../logger')
 
 
@@ -143,6 +143,38 @@ module.exports = function gameHandlers(io, socket, rooms) {
     if (playerCount < 2) {
       socket.emit('error', { message: 'Need at least 2 players to start the game' })
       return
+    }
+    
+    // Reset game state for new game
+    room.eliminationOrder = [] // Clear previous elimination order
+    
+    // Regenerate the board (fresh map)
+    room.gameState.board = generateBoard()
+    
+    // Clear all bombs and powerups
+    room.gameState.bombs = []
+    room.gameState.powerups = []
+    
+    // Reset player positions to spawn points and reset stats
+    let posIndex = 0
+    room.players.forEach(player => {
+      // Reset stats
+      player.lives = 3
+      player.alive = true
+      
+      // Reset position to spawn point
+      player.x = startPos[posIndex].x
+      player.y = startPos[posIndex].y
+      posIndex = (posIndex + 1) % startPos.length
+    })
+    
+    // Reset NPCs if any exist
+    if (room.npcs) {
+      room.npcs.forEach(npc => {
+        npc.lives = 3
+        npc.alive = true
+        // NPCs will get repositioned by the NPC system
+      })
     }
     
     // Start the game

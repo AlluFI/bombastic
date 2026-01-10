@@ -44,6 +44,19 @@ export function hideLobbyScreen() {
     isHost = false
 }
 
+export function returnToLobby() {
+    // Hide end screen and game screen
+    document.getElementById('end-screen').classList.add('hidden')
+    document.getElementById('game-screen').classList.add('hidden')
+    document.getElementById('menue-screen').classList.add('hidden')
+    
+    // Show lobby screen with current room state
+    lobbyScreen.classList.remove('hidden')
+    
+    // Request updated room state from server
+    socket.emit('room:state-request')
+}
+
 export function updateLobbyPlayers(players, hostId) {
     currentPlayers = (players || []).map(p => ({
         ...p,

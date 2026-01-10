@@ -7,7 +7,7 @@ import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen, showEndScreen, showMenuScreen } from "./ui/menu.js";
 import { initializeTimer, startTimer, stopTimer } from "./ui/timer.js";
 import { initializeScoreboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard, updatePlayerStats } from "./ui/scoreboard.js";
-import { placeRemoteBomb, clearPlayerBombs, handleServerBombExplosion } from "./game/bombController.js";
+import { placeRemoteBomb, clearPlayerBombs, clearAllBombs, handleServerBombExplosion } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
 import { initializeMap } from "./grid.js"
@@ -241,6 +241,12 @@ socket.on('game:started', (data) => {
     // Play game start sound
     playSound('gameStart')
     
+    // Clear previous game state
+    clearAllPlayers()
+    clearAllPowerups()
+    clearAllBombs()
+    resetPlayer()
+    
     // Hide lobby screen
     hideLobbyScreen()
     
@@ -335,6 +341,16 @@ socket.on('game:end', (data) => {
     // Check if local player won
     if (data.winner && data.winner.id === socket.id) {
         playSound('winner')
+    }
+    
+    // Update restart button text based on game mode
+    const restartButton = document.getElementById('restart-button')
+    if (restartButton) {
+        if (playerData.mode === 'single') {
+            restartButton.textContent = 'Back to Menu'
+        } else {
+            restartButton.textContent = 'Back to Lobby'
+        }
     }
     
     // Show end screen first

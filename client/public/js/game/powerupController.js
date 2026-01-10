@@ -15,13 +15,12 @@ const activePowerups = new Map() // posKey -> { id, type, x, y }
 const playerStats = new Map() // playerId -> { bombRange: 2, immortal: false, immortalEnd: 0 }
 
 export function initializePlayerStats(playerId) {
-    if (!playerStats.has(playerId)) {
-        playerStats.set(playerId, {
-            bombRange: 2, // Default range
-            immortal: false,
-            immortalEnd: 0
-        })
-    }
+    // Always reset player stats (important for new games)
+    playerStats.set(playerId, {
+        bombRange: 2, // Default range
+        immortal: false,
+        immortalEnd: 0
+    })
 }
 
 export function getPlayerBombRange(playerId) {
