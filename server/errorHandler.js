@@ -4,6 +4,8 @@
  * Provides standardized error handling and logging for the game server.
  */
 
+const { logError, logWarning } = require('./logger');
+
 /**
  * Standard error response format
  * @param {string} message - Error message
@@ -27,7 +29,7 @@ function createError(message, code = 'UNKNOWN_ERROR') {
  */
 function emitError(socket, message, code) {
   if (!socket || !socket.emit) {
-    console.error('Invalid socket provided to emitError');
+    logError('Invalid socket provided to emitError', { code });
     return;
   }
   
@@ -35,7 +37,7 @@ function emitError(socket, message, code) {
   socket.emit('error', error);
   
   // Log error for debugging
-  console.error(`[ERROR] ${code}: ${message} (Socket: ${socket.id})`);
+  logError(message, { code, socketId: socket.id, errorCode: code });
 }
 
 /**
@@ -91,46 +93,9 @@ function validatePlayer(socket, room) {
   return player;
 }
 
-/**
- * Wraps an async handler with error handling
- * @param {Function} handler - Async handler function
- * @returns {Function} - Wrapped handler
- */
-function asyncHandler(handler) {
-  return async (socket, ...args) => {
-    try {
-      await handler(socket, ...args);
-    } catch (error) {
-      console.error(`[ERROR] Unhandled error in handler:`, error);
-      emitError(socket, 'An unexpected error occurred', 'INTERNAL_ERROR');
-    }
-  };
-}
-
-/**
- * Logs an error with context
- * @param {string} message - Error message
- * @param {Object} context - Additional context
- */
-function logError(message, context = {}) {
-  console.error(`[ERROR] ${message}`, context);
-}
-
-/**
- * Logs a warning with context
- * @param {string} message - Warning message
- * @param {Object} context - Additional context
- */
-function logWarning(message, context = {}) {
-  console.warn(`[WARN] ${message}`, context);
-}
-
 module.exports = {
   createError,
   emitError,
   validateRoom,
   validatePlayer,
-  asyncHandler,
-  logError,
-  logWarning,
 };

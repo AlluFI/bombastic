@@ -81,7 +81,7 @@ export function syncTimer(serverSeconds) {
     }
 }
 
-export function intializeTimer() {
+export function initializeTimer() {
     console.log('Timer initialized')
 
     updateTimerDisplay() //initial display set to 00:00

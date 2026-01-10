@@ -4,6 +4,7 @@ const {
   colors,
   startPos,
 } = require('../utils.js');
+const { logRoomEvent } = require('../logger');
 
 const { NPC } = require('../npc');
 
@@ -124,7 +125,10 @@ module.exports = function npcHandlers(io, socket, rooms) {
     if (room.gameState.gameMode === 'single-player' && !room.gameState.isRunning) {
       room.gameState.isRunning = true;
       room.gameStartTime = Date.now(); // Track when game started for timer synchronization
-      console.log(`Single-player game started in room ${socket.roomCode} with ${room.npcs.size} NPC(s)`);
+      logRoomEvent(socket.roomCode, 'Single-player game started', {
+        npcCount: room.npcs.size,
+        gameMode: 'single-player'
+      });
     }
     
     // Notify room (include updated players list with NPCs)

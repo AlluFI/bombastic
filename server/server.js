@@ -5,6 +5,7 @@ const { Server } = require('socket.io')
 const {PORT} = require('./config')
 const allHandlers  = require('./socket-handlers')
 const gameLoop = require('./game-loop')
+const { logger } = require('./logger')
 
 //socket.io setup
 const app = express()
@@ -24,11 +25,13 @@ io.on('connection', socket => {
 gameLoop(io, rooms)
 
 server.listen(PORT, () => {
-  console.log(`Server running: http://localhost:${PORT}`)
-  console.log(`\n🌐 To play on local network:`)
-  console.log(`   1. Find your IP address (ifconfig/ipconfig)`)
-  console.log(`   2. Open http://[YOUR_IP]:${PORT} on other devices`)
-  console.log(`   3. Make sure devices are on the same WiFi network\n`)
+  logger.info({ port: PORT }, `Server running: http://localhost:${PORT}`)
+  logger.info({
+    port: PORT,
+    instructions: {
+      step1: 'Find your IP address (ifconfig/ipconfig)',
+      step2: `Open http://[YOUR_IP]:${PORT} on other devices`,
+      step3: 'Make sure devices are on the same WiFi network'
+    }
+  }, '🌐 To play on local network')
 })
-
- 

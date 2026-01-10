@@ -1,7 +1,8 @@
 const {generateRoomCode, generateBoard, syncRoomGameState, colors, startPos, getNextAvailableColorIndex, getNextAvailablePositionIndex, broadcastLobbyUpdate} = require('../utils.js')
 const {emitError} = require('../errorHandler.js')
-const {sanitizePlayerName} = require('../validation.js')
+const {sanitizePlayerName, validateRoomCode} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
+const { logRoomEvent, logPlayerAction, logSocketEvent } = require('../logger')
 
 module.exports = function roomHandlers(io, socket, rooms) {
 
@@ -22,9 +23,9 @@ module.exports = function roomHandlers(io, socket, rooms) {
       return
     }
     
-    console.log(`📥 Received room:host from ${socket.id}, name: ${sanitizedName}`)
+    logSocketEvent(socket.id, 'room:host', { name: sanitizedName })
     const roomId = generateRoomCode() 
-    console.log(`🏠 Creating room ${roomId} for host ${socket.id}`)
+    logRoomEvent(roomId, 'Creating room for host', { socketId: socket.id, playerName: sanitizedName })
     
     // Create room data structure with a NEW Map for players
     const now = Date.now()
@@ -66,11 +67,11 @@ module.exports = function roomHandlers(io, socket, rooms) {
       immortalEnd: 0
     }
     room.players.set(socket.id, playerData)
-    console.log(`👤 Added host as player:`, playerData)
+    logPlayerAction(socket.id, sanitizedName, 'added as host', { roomId, playerData: { x: playerData.x, y: playerData.y, color: playerData.color } })
   
   // Sync game state after room creation
   syncRoomGameState(room)
-  console.log(`🔄 Synced game state. Players in gameState:`, room.gameState.players.map(p => ({ id: p.id, name: p.name })))
+  logRoomEvent(roomId, 'Game state synced', { playerCount: room.gameState.players.length })
   
   //  JOIN THE SOCKET.IO ROOM
   socket.join(roomId)
@@ -87,9 +88,8 @@ module.exports = function roomHandlers(io, socket, rooms) {
     isRunning: room.gameState.isRunning,
     gameMode: room.gameState.gameMode
   }
-  console.log(`📤 Emitting room:created to ${socket.id} with players:`, responseData.players.map(p => ({ id: p.id, name: p.name })))
+  logSocketEvent(socket.id, 'room:created', { roomId, playerCount: responseData.players.length })
   socket.emit('room:created', responseData)
-  console.log(`✅ room:created event sent`)
   
   // Broadcast lobby update to all clients
   broadcastLobbyUpdate(io, rooms)
@@ -106,7 +106,6 @@ module.exports = function roomHandlers(io, socket, rooms) {
     }
     
     // Validate room code
-    const {validateRoomCode} = require('../validation.js')
     if (!validateRoomCode(data.roomId)) {
       emitError(socket, 'Invalid room code format', 'INVALID_ROOM_CODE')
       return

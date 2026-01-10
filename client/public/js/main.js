@@ -2,11 +2,11 @@ import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
 import { createLocalPlayer, createRemotePlayer, removeRemotePlayer, updateRemotePlayer, remotePlayers, clearAllPlayers } from "./player.js";
 import { updatePlayerMovement } from "./player.js";
 import { updatePlayerRender } from "./renderPlayer.js";
-import { intializeMenu, playerData } from "./ui/menu.js";
+import { initializeMenu, playerData } from "./ui/menu.js";
 import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen, showEndScreen, showMenuScreen } from "./ui/menu.js";
-import { intializeTimer, startTimer, stopTimer } from "./ui/timer.js";
-import { intializeScorboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard, updatePlayerStats } from "./ui/scoreboard.js";
+import { initializeTimer, startTimer, stopTimer } from "./ui/timer.js";
+import { initializeScoreboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard, updatePlayerStats } from "./ui/scoreboard.js";
 import { placeRemoteBomb, clearPlayerBombs, handleServerBombExplosion } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
@@ -20,12 +20,10 @@ import "./ui/audio-toggle.js"
 const socket = io()
 export { socket };
 
-console.log('main.js loaded, initializing...')
-
-intializeMenu()
+initializeMenu()
 initializePauseMenu()
-intializeTimer()
-intializeScorboard()
+initializeTimer()
+initializeScoreboard()
 initializeChat(socket)
 initializeLobby()
 initializeSoundManager()
@@ -40,15 +38,15 @@ export function resetPlayer() {
 
 // Socket event handlers
 socket.on('connect', () => {
-    console.log('✅ Socket connected with ID:', socket.id) 
+    // Socket connected successfully
 })
 
 socket.on('disconnect', () => {
-    console.log('❌ Socket disconnected')
+    // Socket disconnected
 })
 
 socket.on('connect_error', (error) => {
-    console.error('❌ Socket connection error:', error)
+    // Connection error - error handling below
     // Play connection error sound
     playSound('connectionError')
     // Show error toast
@@ -82,12 +80,9 @@ socket.on('game:state', (state) => {
         
         // Only create local player if it doesn't exist yet
         if (myPlayer && !player) {
-            console.log('Creating player from game:state event:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
             player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
             // Pass gameMode from server state if available
             showGameScreen(null, state.gameMode)
-        } else if (!myPlayer) {
-            console.warn('My player not found in game:state. Socket ID:', socket.id, 'Players:', players.map(p => p.id))
         }
         
         // Update/create remote players (including NPCs)
@@ -104,14 +99,10 @@ socket.on('game:state', (state) => {
         
         // Update scoreboard
         renderScoreboard(players, socket.id)
-    } else {
-        console.warn('game:state received with no players')
     }
 })
 
 socket.on('room:created', (state) => {
-    console.log('room:created received. Socket ID:', socket.id, 'Players in state:', state.players?.map(p => ({ id: p.id, name: p.name })))
-    
     // Clear loading states
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
         if (clearButtonLoading) {
@@ -129,12 +120,8 @@ socket.on('room:created', (state) => {
     const myPlayer = state.players?.find(p => p.id === socket.id)
 
     if (myPlayer) {
-        console.log('Creating player from room:created:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
         player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
         initializePlayerStats(player.id)
-        console.log('Local player created:', player.id, player.name, `(${player.x}, ${player.y})`)
-    } else {
-        console.error('Could not find my player in room:created state. Available players:', state.players?.map(p => p.id))
     }
 
     state.players?.forEach(p => {
@@ -160,8 +147,6 @@ socket.on('room:created', (state) => {
             count: playerData.npcCount,
             difficulties: playerData.difficulties
         })
-        
-        console.log(`Single-player game started with ${playerData.npcCount} NPC(s) at difficulties:`, playerData.difficulties)
     } else {
         // Multiplayer: show lobby screen (game hasn't started yet)
         const hostId = state.hostId || state.players?.[0]?.id
@@ -172,8 +157,6 @@ socket.on('room:created', (state) => {
 })
 
 socket.on('room:updated', (state) => {
-    console.log("Room updated:", state.players);
-    
     // Clear loading states (if any menu buttons were in loading state)
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
         if (clearButtonLoading) {
@@ -243,7 +226,6 @@ socket.on('room:updated', (state) => {
 
 // Handle NPC configuration confirmation
 socket.on('npcs-configured', (data) => {
-    console.log(`NPCs configured: ${data.count} NPC(s)`, data.npcs)
     // Timer will be synced via timer:sync events from server
     // Request room update to get NPCs in the players list
     // The server will emit room:updated with NPCs included
@@ -251,13 +233,11 @@ socket.on('npcs-configured', (data) => {
 
 // Handle game mode change confirmation
 socket.on('game-mode-changed', (data) => {
-    console.log(`Game mode changed to: ${data.mode}`)
+    // Game mode changed - handled by server state
 })
 
 // Handle game started (transition from lobby to game)
 socket.on('game:started', (data) => {
-    console.log('Game started!', data)
-    
     // Play game start sound
     playSound('gameStart')
     
@@ -280,7 +260,6 @@ socket.on('game:started', (data) => {
                 // Create local player if it doesn't exist
                 const myPlayer = data.players.find(p => p.id === socket.id)
                 if (myPlayer && !player) {
-                    console.log('Creating local player from game:started:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
                     player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color, myPlayer)
                 }
                 
@@ -347,8 +326,6 @@ socket.on('timer:sync', (data) => {
 
 // Handle game end (winner detection)
 socket.on('game:end', (data) => {
-    console.log('Game ended:', data)
-    
     // Stop the timer
     stopTimer()
     
@@ -390,7 +367,6 @@ socket.on('error', (data) => {
 
 // New player joined
 socket.on('player:joined', (playerData) => {
-    console.log('Player joined:', playerData.name)
     createRemotePlayer(playerData)
 
     addPlayerToScoreboard(playerData)
@@ -406,7 +382,6 @@ socket.on('player:moved', (moveData) => {
 
 // Player left
 socket.on('player:left', (playerId) => {
-    console.log('Player left:', playerId)
     removeRemotePlayer(playerId)
 
     removePlayerFromScoreboard(playerId)
@@ -429,29 +404,23 @@ socket.on('game:pause', (payload) => {
 })
 
 socket.on('bomb:placed', (bombData) => {
-    console.log('Bomb placed by another player:', bombData)
     placeRemoteBomb(bombData)
 })
 
 // Server-authoritative bomb explosion (enables visible chain reactions)
 socket.on('bomb:exploded', (bombData) => {
-    console.log('Bomb exploded (server):', bombData)
     handleServerBombExplosion(bombData)
 })
 
 socket.on('block:destroyed', (data) => {
-    console.log('Block destroyed by server:', data)
     destroyBlockRemote(data.x, data.y)
 })
 
-
 socket.on('blocks:destroyed', (data) => {
-    console.log(`${data.blocks.length} blocks destroyed by server`)
     destroyBlocksRemote(data.blocks)
 })
 
 socket.on('powerup:spawned', (data) => {
-    console.log(`${data.powerups.length} power-up(s) spawned`)
     data.powerups.forEach(powerup => {
         renderPowerup(powerup)
     })
@@ -469,8 +438,6 @@ socket.on('powerup:picked', (data) => {
 })
 
 socket.on('powerup:granted', (data) => {
-    console.log(`Power-up granted to player ${data.playerId}: ${data.type}`)
-    
     // Apply power-up to the player
     import('./game/powerupController.js').then(({ addPowerupToPlayer }) => {
         addPowerupToPlayer(data.playerId, data.type)
@@ -488,8 +455,6 @@ socket.on('powerup:granted', (data) => {
 })
 
 socket.on('powerup:expired', (data) => {
-    console.log(`Power-up expired for player ${data.playerId}: ${data.type}`)
-    
     // Expiration is automatically handled in isPlayerImmortal when checked
     // Just trigger a check to update the visual
     import('./game/powerupController.js').then(({ isPlayerImmortal }) => {
@@ -499,8 +464,6 @@ socket.on('powerup:expired', (data) => {
 })
 
 socket.on('player:damaged', (data) => {
-    console.log(`Player ${data.playerId} was damaged. Lives: ${data.lives}`)
-    
     // Update scoreboard for all players (local and remote)
     updatePlayerStats(data.playerId, { 
         lives: data.lives,
@@ -509,7 +472,6 @@ socket.on('player:damaged', (data) => {
     
     // Don't update local player from this event - they already updated themselves
     if (data.playerId === socket.id) {
-        console.log('Ignoring damage event for local player (already applied)')
         return
     }
     
@@ -551,10 +513,6 @@ function updateFPS() {
 function gameLoop() {
     updateFPS()
     if (!player) {
-        // Debug: log occasionally if player is missing
-        if (Math.random() < 0.01) { // 1% chance
-            console.warn('Game loop running but player is null. Socket ID:', socket.id)
-        }
         requestAnimationFrame(gameLoop)
         return
     }

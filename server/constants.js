@@ -15,11 +15,11 @@ module.exports = {
   
   // Bomb Configuration
   BOMB_TIMER_MS: 3000,
-  BOMB_EXPLOSION_DURATION_MS: 500,
+  BOMB_EXPLOSION_DURATION_MS: 500, // Reserved for future explosion animation duration
   
   // Player Mechanics
-  INVINCIBILITY_DURATION_MS: 2000,
-  MOVEMENT_COOLDOWN_MS: 150,
+  INVINCIBILITY_DURATION_MS: 2000, // Reserved for future invincibility frames after damage
+  MOVEMENT_COOLDOWN_MS: 150, // Reserved for future movement cooldown implementation
   
   // Grid Configuration
   GRID_ROWS: 13,

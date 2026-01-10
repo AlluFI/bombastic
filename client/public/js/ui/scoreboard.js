@@ -120,7 +120,7 @@ export function updatePlayerStats(playerId, stats) {
     }
  }
 
- export function intializeScorboard() {
+ export function initializeScoreboard() {
     console.log('Scoreboard initialised')
 
     scoreboardElement.innerHTML = '<p class="no-player">Waiting for players...</p>'

@@ -21,7 +21,7 @@ function allHandlers(io, socket, rooms) {
     roomHandlers(io, socket, rooms)
     npcHandlers(io, socket, rooms)
     playerHandlers(io, socket, rooms)
-    powerupHandlers(socket, io, rooms)
+    powerupHandlers(io, socket, rooms)
 }
 
 module.exports = allHandlers

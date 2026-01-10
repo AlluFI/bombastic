@@ -26,18 +26,15 @@ class Player {
         
         // Check immortal state (from power-up)
         if (isPlayerImmortal(this.id)) {
-            console.log(`${this.name} is immortal! Damage blocked.`)
             return false
         }
         
         // Check invincibility (short-term after taking damage)
         if (this.invincible && Date.now() < this.invincibilityEnd) {
-            console.log(`${this.name} is invincible! Damage blocked.`)
             return false
         }
         
         this.lives--
-        console.log(`${this.name} took damage! Lives remaining: ${this.lives}`)
         
         // Start invincibility (2 seconds)
         this.startInvincibility(2000)
@@ -78,7 +75,6 @@ class Player {
     
     die() {
         this.alive = false
-        console.log(`${this.name} has died!`)
         
         // Stop invincibility animation if active
         this.invincible = false
@@ -134,7 +130,6 @@ class Player {
         if (!tile) {
             // Tile doesn't exist yet - grid might not be rendered
             // Try again on next frame
-            console.warn(`Tile tile-${this.x}-${this.y} not found for player ${this.id}. Grid might not be ready.`)
             return
         }
         
@@ -168,7 +163,6 @@ export function createLocalPlayer(id, name, x, y, color, playerData = {}) {
     
     // Ensure grid element exists and is accessible
     if (!gridElement) {
-        console.error('Grid element not found when creating local player!')
         return localPlayer
     }
     
@@ -201,7 +195,6 @@ export function createRemotePlayer(playerData) {
     
     // Ensure grid element exists and is accessible
     if (!gridElement) {
-        console.error('Grid element not found when creating remote player!', playerData.id)
         return
     }
     
@@ -364,15 +357,5 @@ export function updatePlayerMovement(player) {
     } else if (newX !== player.x || newY !== player.y) {
         // Movement blocked - still apply cooldown to prevent spam when blocked
         lastMovementTime = now
-        // Debug: log blocked movement
-        const blockedReason = !map[newX] ? 'out of bounds' : 
-                              map[newX][newY] === 'breakable' ? 'block' : 
-                              map[newX][newY] === 'solid' ? 'wall' : 
-                              hasBomb ? 'bomb' : 
-                              hasPlayer ? 'player/npc' : 'unknown';
-        // Only log occasionally to avoid spam
-        if (Math.random() < 0.01) {
-            console.log(`Movement blocked at (${newX}, ${newY}): ${blockedReason}. Current pos: (${player.x}, ${player.y})`);
-        }
     }
 }

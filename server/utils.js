@@ -1,4 +1,6 @@
- function generateRoomCode() {
+const { logNPCAction, logger } = require('./logger')
+
+function generateRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
@@ -214,11 +216,13 @@ function checkGameEnd(gameState, room) {
       });
       
       // Debug: Verify sorting is correct
-      console.log('Game end - Elimination order:', room.eliminationOrder);
-      console.log('Game end - Sorted players:', sortedPlayers.map(p => {
-        const idx = room.eliminationOrder.lastIndexOf(p.id);
-        return `${p.name} (lastIndex: ${idx})`;
-      }));
+      logger.debug({
+        eliminationOrder: room.eliminationOrder,
+        sortedPlayers: sortedPlayers.map(p => {
+          const idx = room.eliminationOrder.lastIndexOf(p.id);
+          return { name: p.name, id: p.id, lastIndex: idx };
+        })
+      }, 'Game end - Players sorted by elimination order');
       
       return {
         winner: winner,
@@ -366,7 +370,12 @@ function checkGameEnd(gameState, room) {
         
         if (powerup.type === 'bomb_range') {
           npcPlayer.bombRange += 1;
-          console.log(`NPC ${npc.name} picked up bomb range power-up! New range: ${npcPlayer.bombRange}`);
+          logNPCAction(npcId, npc.name, 'picked up bomb range power-up', {
+            roomId,
+            powerupType: powerup.type,
+            newRange: npcPlayer.bombRange,
+            position: { x: newX, y: newY }
+          });
         }
         
         // Broadcast power-up pickup to all clients
@@ -437,9 +446,14 @@ function checkGameEnd(gameState, room) {
       range: bombRange // Include range in broadcast
     });
     
-    console.log(`NPC ${npc.name} placed bomb at (${bomb.x}, ${bomb.y})`);
+    logNPCAction(npcId, npc.name, 'placed bomb', {
+      roomId,
+      position: { x: bomb.x, y: bomb.y },
+      bombId: bombId,
+      range: bombRange
+    });
   }
- }
+}
 
 /**
  * Calculates which blocks are destroyed by a bomb explosion

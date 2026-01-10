@@ -69,7 +69,6 @@ export function showGameScreen(roomCode, gameMode = null) {
     // Check both playerData.mode (client-side) and gameMode (server-side)
     import('./chat.js').then(({ setChatVisibility }) => {
         const isSinglePlayer = gameMode === 'single-player' || playerData.mode === 'single'
-        console.log('Setting chat visibility:', { gameMode, playerDataMode: playerData.mode, isSinglePlayer })
         setChatVisibility(!isSinglePlayer)
     })
 }
@@ -98,8 +97,6 @@ export function clearButtonLoading() {
 }
 
 function handleStartGame() {
-    console.log('🎮 Start button clicked - starting single-player game')
-
     playerData.name = playerNameSingleInput.value.trim()
     playerData.mode = modeSelect.value
     playerData.npcCount = parseInt(npcCountSelect.value, 10)
@@ -115,9 +112,6 @@ function handleStartGame() {
         }
     }
 
-    console.log('📝 Player data recorded:', playerData)    
-    console.log('📡 Emitting room:host event with name:', playerData.name)
-
     // Set loading state
     setButtonLoading(startButton, true)
 
@@ -127,7 +121,6 @@ function handleStartGame() {
         name: playerData.name
     })
     
-    console.log('✅ room:host event emitted, waiting for room:created...')
     // The rest will be handled in the 'room:created' event handler in main.js
 }
 
@@ -150,7 +143,6 @@ function handleModeChange() {
     // Show/hide multiplayer specific UI
     multiPlayerSection.classList.toggle('hidden', isSinglePlayer)
 
-    console.log('player mode changed to :' + selectedMode)
 }
 
 function updateNPCDifficultySelectors() {
@@ -207,15 +199,12 @@ function updateNPCDifficultySelectors() {
         // Update playerData when selector changes
         select.addEventListener('change', () => {
             playerData.difficulties[i] = select.value
-            console.log(`Bot ${i + 1} difficulty changed to: ${select.value}`)
         })
         
         container.appendChild(label)
         container.appendChild(select)
         npcDifficultyList.appendChild(container)
     }
-    
-    console.log(`Updated ${count} NPC difficulty selectors`)
 }
 
 function handleNPCCountChange() {
@@ -283,9 +272,7 @@ function handleRestartGame() {
     // The socket connection remains, but game state is reset
 }
 
-export function intializeMenu() {
-    console.log('menue intialized')
-    
+export function initializeMenu() {
     // Initialize lobby browser
     initializeLobbyBrowser()
 

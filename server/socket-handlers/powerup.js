@@ -2,8 +2,9 @@ const {validateRoom, validatePlayer, emitError} = require('../errorHandler.js')
 const {isRateLimited} = require('../rateLimiter.js')
 const {validatePowerupPickup} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
+const { logPlayerAction } = require('../logger')
 
-module.exports = function powerupHandlers(socket, io, rooms) {
+module.exports = function powerupHandlers(io, socket, rooms) {
     // Handle power-up pickup
   socket.on('powerup:pickup', (data) => {
     // Rate limiting
@@ -59,7 +60,12 @@ module.exports = function powerupHandlers(socket, io, rooms) {
     
     if (powerup.type === 'bomb_range') {
       player.bombRange += 1
-      console.log(`Player ${player.name} picked up bomb range power-up! New range: ${player.bombRange}`)
+      logPlayerAction(player.id, player.name, 'picked up bomb range power-up', {
+        roomId: socket.roomCode,
+        powerupType: powerup.type,
+        newRange: player.bombRange,
+        position: { x: data.x, y: data.y }
+      })
     }
     
     // Broadcast power-up pickup to all clients in the room (including sender for sync)

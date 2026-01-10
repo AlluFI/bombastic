@@ -51,19 +51,14 @@ function setBombState(bombElement, state) {
 
     if(state === 'warning') {
         bombElement.classList.add('warning')
-        console.log('Bomb is in WARNING state')
     } else if (state === 'critical') {
         bombElement.classList.add('critical')
-        console.log('Bomb is in CRITICAL state')
     }
 }
 
 export function renderBomb(bombId, x, y, duration = BOMB_DURATION, onExplode = null) {
-    console.log(`Rendering bomb ${bombId} at ${x}, ${y}`)
-
     // Check if bomb already exists (by ID)
     if (activeBombs.has(bombId)) {
-        console.warn(`Bomb ${bombId} already exists - preventing duplicate render`)
         return
     }
     
@@ -75,7 +70,6 @@ export function renderBomb(bombId, x, y, duration = BOMB_DURATION, onExplode = n
             const existingX = parseInt(bombData.element.dataset.x)
             const existingY = parseInt(bombData.element.dataset.y)
             if (!isNaN(existingX) && !isNaN(existingY) && existingX === x && existingY === y) {
-                console.warn(`Bomb already exists at position (${x}, ${y}) - preventing duplicate render (bombId: ${existingBombId})`)
                 return
             }
         }
@@ -110,7 +104,6 @@ export function renderBomb(bombId, x, y, duration = BOMB_DURATION, onExplode = n
     }, duration - CRITICAL_TIME)
 
     const explodeTimeout = setTimeout(() => {
-        console.log(`Bomb ${bombId} exploding`)
         bombElement.classList.add('exploding')
         if (onExplode) {
             onExplode(bombId, x, y)
@@ -136,11 +129,8 @@ export function removeBomb(bombId) {
     const bombData = activeBombs.get(bombId)
 
     if (!bombData) {
-        console.warn(`Bomb ${bombId} not found`)
         return
     }
-
-    console.log(`Removing bomb ${bombId}`)
 
     bombData.timeouts.forEach(timeOut => {
         clearTimeout(timeOut)
@@ -167,7 +157,6 @@ export function getBombPosition(bombId) {
 }
 
 export function removeAllBombs() {
-    console.log('Removing all bombs')
     activeBombs.forEach((_, bombId) => {
         removeBomb(bombId)
     })

@@ -2,6 +2,7 @@ const { syncRoomGameState, checkGameEnd } = require('../utils.js')
 const { validateRoom, validatePlayer, emitError } = require('../errorHandler.js')
 const { isRateLimited } = require('../rateLimiter.js')
 const { validateMovement } = require('../validation.js')
+const { logPlayerAction } = require('../logger')
 
 module.exports = function playerHandlers(io, socket, rooms) {
 
@@ -139,7 +140,11 @@ module.exports = function playerHandlers(io, socket, rooms) {
         player.lives = data.lives
         player.alive = !data.died
         
-        console.log(`${player.name} took damage. Lives: ${player.lives}, Alive: ${player.alive}`)
+        logPlayerAction(player.id, player.name, 'took damage', {
+          roomId: socket.roomCode,
+          lives: player.lives,
+          alive: player.alive
+        })
         
         // Sync game state
         syncRoomGameState(room)

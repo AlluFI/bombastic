@@ -1,6 +1,7 @@
 const {syncRoomGameState, calculateExplosionBlocks, calculateExplosionTiles, handleNPCAction, checkGameEnd} = require('./utils')
 const {ENABLE_NPC} = require('./config')
 const CONSTANTS = require('./constants')
+const { logRoomEvent, logPlayerAction, logNPCAction, logGameEvent, logger } = require('./logger')
 
 module.exports = function gameLoop(io, rooms) {
     // Room cleanup loop (runs every minute)
@@ -31,7 +32,7 @@ module.exports = function gameLoop(io, rooms) {
       
       // Delete empty rooms
       roomsToDelete.forEach(roomId => {
-        console.log(`🧹 Cleaning up empty room: ${roomId}`);
+        logRoomEvent(roomId, 'Cleaning up empty room');
         rooms.delete(roomId);
       });
     }, 60 * 1000); // Check every minute
@@ -48,7 +49,7 @@ module.exports = function gameLoop(io, rooms) {
       if (player.immortal && player.immortalEnd && now >= player.immortalEnd) {
         player.immortal = false;
         player.immortalEnd = 0;
-        console.log(`🛡️ Player ${player.name} (${playerId}) immortality expired`);
+        logPlayerAction(playerId, player.name, 'immortality expired', { roomId, type: 'immortal' });
         // Broadcast expiration to clients
         io.to(roomId).emit('powerup:expired', {
           playerId: playerId,
@@ -133,7 +134,11 @@ module.exports = function gameLoop(io, rooms) {
               // Trigger chain reaction: set bomb's timer to 0 so it explodes immediately
               otherBomb.placedAt = now - otherBomb.duration; // Set elapsed time to duration (triggers explosion)
               hasMoreExplosions = true; // Continue processing chain reactions
-              console.log(`💣 Chain reaction: Bomb at (${otherBomb.x}, ${otherBomb.y}) triggered by explosion at (${bomb.x}, ${bomb.y})`);
+              logGameEvent('Chain reaction triggered', {
+                roomId,
+                triggeredBomb: { x: otherBomb.x, y: otherBomb.y },
+                triggeringBomb: { x: bomb.x, y: bomb.y }
+              });
             }
           });
         });
@@ -169,7 +174,12 @@ module.exports = function gameLoop(io, rooms) {
                   npc.lives = Math.max(0, npc.lives - 1);
                   npc.alive = npc.lives > 0;
                   
-                  console.log(`NPC ${npc.name} caught in explosion at (${tile.x}, ${tile.y}). Lives: ${npc.lives}, Alive: ${npc.alive}`);
+                  logNPCAction(npcId, npc.name, 'caught in explosion', {
+                    roomId,
+                    position: { x: tile.x, y: tile.y },
+                    lives: npc.lives,
+                    alive: npc.alive
+                  });
                   
                   // Track elimination order
                   if (wasAlive && !npc.alive) {
@@ -180,7 +190,10 @@ module.exports = function gameLoop(io, rooms) {
                     const npcPlayer = room.players.get(npcId);
                     if (npcPlayer && !room.eliminationOrder.includes(npcId)) {
                       room.eliminationOrder.push(npcId);
-                      console.log(`💀 ${npc.name} eliminated! Elimination order: ${room.eliminationOrder.length}`);
+                      logNPCAction(npcId, npc.name, 'eliminated', {
+                        roomId,
+                        eliminationOrder: room.eliminationOrder.length
+                      });
                     }
                   }
                   
@@ -207,7 +220,12 @@ module.exports = function gameLoop(io, rooms) {
                       bombOwner.immortal = true;
                       bombOwner.immortalEnd = Date.now() + IMMORTAL_DURATION;
                       
-                      console.log(`✨ Player ${bombOwner.name} (${bombOwner.id}) gained immortality for 15 seconds after hitting NPC ${npc.name}!`);
+                      logPlayerAction(bombOwner.id, bombOwner.name, 'gained immortality after hitting NPC', {
+                        roomId,
+                        target: npc.name,
+                        duration: IMMORTAL_DURATION,
+                        type: 'immortal'
+                      });
                       
                       // Broadcast immortal power-up to all clients
                       io.to(roomId).emit('powerup:granted', {
@@ -245,14 +263,19 @@ module.exports = function gameLoop(io, rooms) {
                   const isImmortal = playerObj.immortal && Date.now() < playerObj.immortalEnd;
                   
                   if (isImmortal) {
-                    console.log(`🛡️ Player ${playerObj.name} (${playerObj.id}) is immortal! Damage blocked.`);
+                    logPlayerAction(playerObj.id, playerObj.name, 'damage blocked (immortal)', { roomId, position: { x: tile.x, y: tile.y } });
                     // Skip damage but still grant immortal to bomb owner
                   } else {
                     const wasAlive = playerObj.alive;
                     playerObj.lives = Math.max(0, playerObj.lives - 1);
                     playerObj.alive = playerObj.lives > 0;
                     
-                    console.log(`💥 Player ${playerObj.name} (${playerObj.id}) caught in explosion at (${tile.x}, ${tile.y}). Lives: ${playerObj.lives}, Alive: ${playerObj.alive}`);
+                    logPlayerAction(playerObj.id, playerObj.name, 'caught in explosion', {
+                      roomId,
+                      position: { x: tile.x, y: tile.y },
+                      lives: playerObj.lives,
+                      alive: playerObj.alive
+                    });
                     
                     // Track elimination order
                     if (wasAlive && !playerObj.alive) {
@@ -262,7 +285,10 @@ module.exports = function gameLoop(io, rooms) {
                       }
                       if (!room.eliminationOrder.includes(playerObj.id)) {
                         room.eliminationOrder.push(playerObj.id);
-                        console.log(`💀 ${playerObj.name} eliminated! Elimination order: ${room.eliminationOrder.length}`);
+                        logPlayerAction(playerObj.id, playerObj.name, 'eliminated', {
+                          roomId,
+                          eliminationOrder: room.eliminationOrder.length
+                        });
                       }
                     }
                     
@@ -290,7 +316,12 @@ module.exports = function gameLoop(io, rooms) {
                       bombOwner.immortal = true;
                       bombOwner.immortalEnd = Date.now() + IMMORTAL_DURATION;
                       
-                      console.log(`✨ Player ${bombOwner.name} (${bombOwner.id}) gained immortality for 15 seconds after hitting ${playerObj.name}!`);
+                      logPlayerAction(bombOwner.id, bombOwner.name, 'gained immortality after hitting player', {
+                        roomId,
+                        target: playerObj.name,
+                        duration: IMMORTAL_DURATION,
+                        type: 'immortal'
+                      });
                       
                       // Broadcast immortal power-up to all clients
                       io.to(roomId).emit('powerup:granted', {
@@ -350,7 +381,12 @@ module.exports = function gameLoop(io, rooms) {
                 room.gameState.powerups.push(powerup);
                 spawnedPowerups.push(powerup);
                 
-                console.log(`💎 Power-up spawned at (${block.x}, ${block.y}) in room ${roomId}`);
+                logGameEvent('Power-up spawned', {
+                  roomId,
+                  powerupId: powerupId,
+                  type: powerup.type,
+                  position: { x: block.x, y: block.y }
+                });
               }
             }
           });
@@ -368,7 +404,11 @@ module.exports = function gameLoop(io, rooms) {
             });
           }
           
-          console.log(`${destroyedBlocks.length} blocks destroyed by bomb explosions in room ${roomId}`);
+          logGameEvent('Blocks destroyed by bomb explosions', {
+            roomId,
+            blockCount: destroyedBlocks.length,
+            powerupsSpawned: spawnedPowerups.length
+          });
         }
       }
     }
@@ -402,7 +442,14 @@ module.exports = function gameLoop(io, rooms) {
         players: gameEndResult.allPlayers, // All players with final scores
       });
       
-      console.log(`Game ended in room ${roomId}: ${gameEndResult.isDraw ? 'Draw' : `Winner: ${gameEndResult.winner.name}`}`);
+      logRoomEvent(roomId, 'Game ended', {
+        isDraw: gameEndResult.isDraw,
+        winner: gameEndResult.isDraw ? null : {
+          id: gameEndResult.winner.id,
+          name: gameEndResult.winner.name
+        },
+        totalPlayers: gameEndResult.allPlayers?.length || 0
+      });
     } else {
       // Broadcast updated game state to room
       io.to(roomId).emit('game:state', room.gameState);

@@ -2,6 +2,7 @@ const {validateRoom, validatePlayer, emitError} = require('../errorHandler.js')
 const {isRateLimited} = require('../rateLimiter.js')
 const {validateBombPlacement, validateCoordinates} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
+const { logPlayerAction, logGameEvent } = require('../logger')
 
 module.exports = function bombHandlers(io, socket, rooms) {
 
@@ -45,7 +46,10 @@ module.exports = function bombHandlers(io, socket, rooms) {
         return
       }
       
-      console.log(`${player.name} placed bomb at (${bombData.x}, ${bombData.y}) in room ${socket.roomCode}`)
+      logPlayerAction(socket.id, player.name, 'placed bomb', {
+        roomId: socket.roomCode,
+        position: { x: bombData.x, y: bombData.y }
+      })
       
       // CRITICAL: Add bomb to room.gameState.bombs so NPCs can see it and avoid it
       // This matches NPC bomb placement logic
@@ -107,7 +111,10 @@ module.exports = function bombHandlers(io, socket, rooms) {
             // Update server board state (mark as walkable for NPCs)
             if (room.gameState.board[data.x] && room.gameState.board[data.x][data.y] === 1) {
                 room.gameState.board[data.x][data.y] = 0 // 0 = walkable
-                console.log(`Block destroyed at (${data.x}, ${data.y}) - board updated`)
+                logGameEvent('Block destroyed', {
+                  roomId: socket.roomCode,
+                  position: { x: data.x, y: data.y }
+                })
             }
         }
         
@@ -148,7 +155,10 @@ module.exports = function bombHandlers(io, socket, rooms) {
                     room.gameState.board[block.x][block.y] = 0 // 0 = walkable
                 }
             })
-            console.log(`${data.blocks.length} blocks destroyed - board updated`)
+            logGameEvent('Blocks destroyed', {
+              roomId: socket.roomCode,
+              blockCount: data.blocks.length
+            })
         }
         
         // Broadcast to other players in the same room

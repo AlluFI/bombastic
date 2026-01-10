@@ -41,14 +41,12 @@ function trackBomb(playerId, bombId, x, y) {
 
     const posKey = `${x}-${y}`
     bombPositions.set(posKey, bombId)
-    console.log(`Player ${playerId} now has ${getPlayerBombCount(playerId)} bomb(s)`)
 }
 
 export function untrackBomb(playerId, bombId, x, y) {
     const bombs = playerBombs.get(playerId)
     if (bombs) {
         bombs.delete(bombId)
-        console.log(`Player ${playerId} now has ${getPlayerBombCount(playerId)} bomb(s)`)
     }
 
     const posKey = `${x}-${y}`
@@ -116,7 +114,6 @@ function canPlaceBomb(playerId) {
     // Check if player already has max bombs
     const bombCount = getPlayerBombCount(playerId)
     if (bombCount >= MAX_BOMBS_PER_PLAYER) {
-        console.log(`Player ${playerId} already has max bombs (${MAX_BOMBS_PER_PLAYER})`)
         return false
     }
     
@@ -125,7 +122,6 @@ function canPlaceBomb(playerId) {
 
 export function tryPlaceBomb(player) {
     if (!player) {
-        console.warn('No player to place bomb')
         return false
     }
     
@@ -140,25 +136,20 @@ export function tryPlaceBomb(player) {
 
     const validation = validateTile(x, y)
     if (!validation.valid) {
-        console.log(`Cannot place bomb: ${validation.reason}`)
         return false
     }
     
     // Double-check bomb count AFTER validation to prevent race conditions
     // This ensures we don't place multiple bombs if called rapidly
     if (getPlayerBombCount(player.id) >= MAX_BOMBS_PER_PLAYER) {
-        console.log(`Player ${player.id} already has max bombs (race condition prevented)`)
         return false
     }
     
     // Check if bomb already exists at this position (additional safety check)
     const posKey = `${x}-${y}`
     if (bombPositions.has(posKey)) {
-        console.log(`Bomb already exists at position (${x}, ${y}) - preventing duplicate`)
         return false
     }
-    
-    console.log(`Placing bomb at (${x}, ${y})`)
 
     // Track bomb BEFORE rendering to prevent race conditions
     trackBomb(player.id, bombId, x, y)
@@ -174,23 +165,17 @@ export function tryPlaceBomb(player) {
     
     // Render bomb locally
     renderBomb(bombId, x, y, BOMB_DURATION, (explodedBombId, bombX, bombY) => {
-        console.log(`Bomb ${explodedBombId} exploded at (${bombX}, ${bombY})`)
-        
         // Play explosion sound
         playSound('explosion')
         
         // Untrack the bomb
         untrackBomb(player.id, explodedBombId, bombX, bombY)
         
-        // Render explosion with player's bomb range
+        // Render explosion with player's bomb range (bomb exploded)
         renderExplosion(bombX, bombY, bombRange, (centerX, centerY, affectedTiles, breakableBlocks) => {
-            console.log(`Explosion complete at (${centerX}, ${centerY})`)
-            console.log(`Affected ${affectedTiles.length} tiles`)
-            
             // Destroy breakable blocks
             if (breakableBlocks && breakableBlocks.length > 0) {
                 const destroyed = destroyBlocksInTiles(breakableBlocks)
-                console.log(`Destroyed ${destroyed.length} blocks`)
                 // Play block destruction sound for each block
                 destroyed.forEach(() => {
                     playSound('blockDestroy', { volume: 0.7 })
@@ -207,7 +192,6 @@ export function tryPlaceBomb(player) {
                         
                         // If it's the local player, apply damage and notify server
                         if (player.id === getLocalPlayer()?.id) {
-                            console.log(`Applying damage to local player ${player.name} at (${player.x}, ${player.y})`)
                             const died = player.takeDamage()
                             
                             // Play sound based on outcome
@@ -234,10 +218,6 @@ export function tryPlaceBomb(player) {
                     }
                 })  
             })
-            
-            if (hitPlayers.size > 0) {
-                console.log(`Explosion hit ${hitPlayers.size} player(s):`, Array.from(hitPlayers))
-            }
         })
     })
 
@@ -257,14 +237,6 @@ export function tryPlaceBomb(player) {
 
 export function placeRemoteBomb(bombData) {
     const { bombId, playerId, x, y, duration, range = 2 } = bombData
-    
-    console.log(`Remote bomb placed by ${playerId} at (${x}, ${y}) with range ${range}`)
-
-    /* Server side should validate this ?
-    const validation = validateTile(x, y)
-    if (!validation.valid) {
-        console.warn(`Remote bomb at invalid position: ${validation.reason}`)
-    }*/
     
     // Track this bomb (with x, y for position tracking)
     trackBomb(playerId, bombId, x, y)
