@@ -30,6 +30,7 @@ class SoundManager {
             // Power-ups
             powerupSpawn: null, // 'sounds/powerup-spawn.mp3'
             powerupPickup: null, // 'sounds/powerup-pickup.mp3'
+            powerupImmortal: null, // 'sounds/powerup-immortal.mp3'
             
             // UI & Menu
             buttonClick: null, // 'sounds/button-click.mp3'
@@ -193,6 +194,7 @@ class SoundManager {
             blockDestroy: { type: 'square', frequency: 250, duration: 0.2, volume: 0.3 },
             powerupSpawn: { type: 'sine', frequency: 600, duration: 0.2, volume: 0.4 },
             powerupPickup: { type: 'sine', frequency: 800, duration: 0.15, volume: 0.4 },
+            powerupImmortal: { type: 'sine', frequency: 1000, duration: 0.3, volume: 0.6 }, // Higher pitch, longer duration for special reward
             buttonClick: { type: 'square', frequency: 500, duration: 0.1, volume: 0.3 },
             buttonHover: { type: 'sine', frequency: 700, duration: 0.05, volume: 0.2 },
             menuOpen: { type: 'sine', frequency: 400, duration: 0.2, volume: 0.3 },

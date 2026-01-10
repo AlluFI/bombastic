@@ -476,8 +476,13 @@ socket.on('powerup:granted', (data) => {
         addPowerupToPlayer(data.playerId, data.type)
         
         // Play sound if local player received it
+        // Use different sound for immortal (special reward) vs regular pickup
         if (data.playerId === socket.id) {
-            playSound('powerupPickup')
+            if (data.type === 'immortal') {
+                playSound('powerupImmortal') // Special sound for immortal reward
+            } else {
+                playSound('powerupPickup') // Regular pickup sound
+            }
         }
     })
 })
