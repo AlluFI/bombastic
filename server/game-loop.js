@@ -190,6 +190,33 @@ module.exports = function gameLoop(io, rooms) {
                     lives: npc.lives,
                     died: !npc.alive
                   });
+                  
+                  // Grant immortal power-up to bomb owner when their bomb hits an NPC
+                  // Only grant if bomb owner is different from hit NPC and bomb owner is alive
+                  if (bomb.playerId && bomb.playerId !== npcId) {
+                    const bombOwner = room.players.get(bomb.playerId);
+                    if (bombOwner && bombOwner.alive) {
+                      // Initialize immortal state if not exists
+                      if (bombOwner.immortal === undefined) {
+                        bombOwner.immortal = false;
+                        bombOwner.immortalEnd = 0;
+                      }
+                      
+                      // Grant 15 seconds of immortality
+                      const IMMORTAL_DURATION = 15000;
+                      bombOwner.immortal = true;
+                      bombOwner.immortalEnd = Date.now() + IMMORTAL_DURATION;
+                      
+                      console.log(`✨ Player ${bombOwner.name} (${bombOwner.id}) gained immortality for 15 seconds after hitting NPC ${npc.name}!`);
+                      
+                      // Broadcast immortal power-up to all clients
+                      io.to(roomId).emit('powerup:granted', {
+                        playerId: bombOwner.id,
+                        type: 'immortal',
+                        duration: IMMORTAL_DURATION
+                      });
+                    }
+                  }
                 }
               });
             }

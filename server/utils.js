@@ -199,8 +199,10 @@ function checkGameEnd(gameState, room) {
       // Sort players by elimination order (last eliminated = winner = rank 1)
       // Players eliminated first have higher rank numbers (worse placement)
       const sortedPlayers = [...gameState.players].sort((a, b) => {
-        const aIndex = room.eliminationOrder.indexOf(a.id);
-        const bIndex = room.eliminationOrder.indexOf(b.id);
+        // Use lastIndexOf to get the last occurrence (most recent position)
+        // This handles edge cases where a player might appear multiple times
+        const aIndex = room.eliminationOrder.lastIndexOf(a.id);
+        const bIndex = room.eliminationOrder.lastIndexOf(b.id);
         
         // If not in elimination order, they're still alive (winner) - rank 1
         if (aIndex === -1) return -1; // Winner comes first
@@ -213,7 +215,10 @@ function checkGameEnd(gameState, room) {
       
       // Debug: Verify sorting is correct
       console.log('Game end - Elimination order:', room.eliminationOrder);
-      console.log('Game end - Sorted players:', sortedPlayers.map(p => `${p.name} (index: ${room.eliminationOrder.indexOf(p.id)})`));
+      console.log('Game end - Sorted players:', sortedPlayers.map(p => {
+        const idx = room.eliminationOrder.lastIndexOf(p.id);
+        return `${p.name} (lastIndex: ${idx})`;
+      }));
       
       return {
         winner: winner,
@@ -224,8 +229,9 @@ function checkGameEnd(gameState, room) {
       // All players dead - draw
       // Sort by elimination order (last eliminated = better rank)
       const sortedPlayers = [...gameState.players].sort((a, b) => {
-        const aIndex = room.eliminationOrder.indexOf(a.id);
-        const bIndex = room.eliminationOrder.indexOf(b.id);
+        // Use lastIndexOf to get the last occurrence (most recent position)
+        const aIndex = room.eliminationOrder.lastIndexOf(a.id);
+        const bIndex = room.eliminationOrder.lastIndexOf(b.id);
         
         // If not in elimination order, something went wrong - put them last
         if (aIndex === -1) return 1;
