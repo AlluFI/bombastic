@@ -61,9 +61,24 @@ function setBombState(bombElement, state) {
 export function renderBomb(bombId, x, y, duration = BOMB_DURATION, onExplode = null) {
     console.log(`Rendering bomb ${bombId} at ${x}, ${y}`)
 
+    // Check if bomb already exists (by ID)
     if (activeBombs.has(bombId)) {
-        console.warn(`Bomb ${bombId} already exists`)
+        console.warn(`Bomb ${bombId} already exists - preventing duplicate render`)
         return
+    }
+    
+    // Check if bomb already exists at this position (by position)
+    // This prevents multiple bombs from being rendered at the same position
+    // Even if they have different IDs (race condition protection)
+    for (const [existingBombId, bombData] of activeBombs.entries()) {
+        if (bombData && bombData.element && bombData.element.dataset) {
+            const existingX = parseInt(bombData.element.dataset.x)
+            const existingY = parseInt(bombData.element.dataset.y)
+            if (!isNaN(existingX) && !isNaN(existingY) && existingX === x && existingY === y) {
+                console.warn(`Bomb already exists at position (${x}, ${y}) - preventing duplicate render (bombId: ${existingBombId})`)
+                return
+            }
+        }
     }
 
     const bombElement = createBombElement(bombId, x, y, Math.ceil(duration / 1000))

@@ -9,6 +9,7 @@ import { playSound } from '../audio/soundManager.js'
 
 const MAX_BOMBS_PER_PLAYER = 1
 const BOMB_DURATION = 3000
+const BOMB_PLACEMENT_COOLDOWN = 300 // milliseconds between bomb placements (prevents spam)
 
 //how many active bombs each player has
 const playerBombs = new Map()
@@ -17,6 +18,9 @@ const playerBombs = new Map()
 let bombIdCounter = 0
 
 const bombPositions = new Map()
+
+// Track last bomb placement time per player to prevent spam
+const lastBombPlacementTime = new Map()
 
 function generateBombId(playerId) {
     bombIdCounter++
@@ -101,8 +105,16 @@ function validateTile(x, y) {
 }
 
 function canPlaceBomb(playerId) {
-    const bombCount = getPlayerBombCount(playerId)
+    // Check cooldown to prevent spam
+    const lastPlacement = lastBombPlacementTime.get(playerId)
+    const now = Date.now()
+    if (lastPlacement && (now - lastPlacement) < BOMB_PLACEMENT_COOLDOWN) {
+        // Still in cooldown - ignore bomb placement
+        return false
+    }
     
+    // Check if player already has max bombs
+    const bombCount = getPlayerBombCount(playerId)
     if (bombCount >= MAX_BOMBS_PER_PLAYER) {
         console.log(`Player ${playerId} already has max bombs (${MAX_BOMBS_PER_PLAYER})`)
         return false
@@ -117,7 +129,7 @@ export function tryPlaceBomb(player) {
         return false
     }
     
-    // Check if player can place another bomb
+    // Check if player can place another bomb (includes cooldown check)
     if (!canPlaceBomb(player.id)) {
         return false
     }
@@ -130,11 +142,29 @@ export function tryPlaceBomb(player) {
     if (!validation.valid) {
         console.log(`Cannot place bomb: ${validation.reason}`)
         return false
-    }   
+    }
+    
+    // Double-check bomb count AFTER validation to prevent race conditions
+    // This ensures we don't place multiple bombs if called rapidly
+    if (getPlayerBombCount(player.id) >= MAX_BOMBS_PER_PLAYER) {
+        console.log(`Player ${player.id} already has max bombs (race condition prevented)`)
+        return false
+    }
+    
+    // Check if bomb already exists at this position (additional safety check)
+    const posKey = `${x}-${y}`
+    if (bombPositions.has(posKey)) {
+        console.log(`Bomb already exists at position (${x}, ${y}) - preventing duplicate`)
+        return false
+    }
     
     console.log(`Placing bomb at (${x}, ${y})`)
 
+    // Track bomb BEFORE rendering to prevent race conditions
     trackBomb(player.id, bombId, x, y)
+    
+    // Update last placement time to enforce cooldown
+    lastBombPlacementTime.set(player.id, Date.now())
     
     // Play bomb placement sound
     playSound('bombPlace')
@@ -319,6 +349,9 @@ export function clearPlayerBombs(playerId) {
         })
         playerBombs.delete(playerId)
     }
+    
+    // Clear bomb placement cooldown when all bombs are cleared (e.g., new game)
+    lastBombPlacementTime.delete(playerId)
 }
 
 export function clearAllBombs() {

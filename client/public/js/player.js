@@ -290,15 +290,23 @@ export function getLocalPlayer() {
 let lastMovementTime = 0
 const MOVEMENT_COOLDOWN = 150 // milliseconds between moves (allows ~6-7 moves per second)
 
+// Bomb placement cooldown tracking
+let lastBombPlacementAttempt = 0
+const BOMB_PLACEMENT_COOLDOWN = 300 // milliseconds between bomb placement attempts (prevents spam)
+
 export function updatePlayerMovement(player) {
     // Dead players can't move or place bombs
     if (!player.alive) {
         return
     }
     
-    // Check bomb placement first (not affected by movement cooldown)
-    if (keys.space) {
-        tryPlaceBomb(player)
+    // Check bomb placement first (with cooldown to prevent spam)
+    const now = Date.now()
+    if (keys.space && (now - lastBombPlacementAttempt) >= BOMB_PLACEMENT_COOLDOWN) {
+        const placed = tryPlaceBomb(player)
+        if (placed) {
+            lastBombPlacementAttempt = now
+        }
         keys.space = false  // Prevent holding spacebar to spam bombs
     }
     
