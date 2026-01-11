@@ -259,16 +259,32 @@ module.exports = function gameLoop(io, rooms) {
                     playerObj.immortalEnd = 0;
                   }
                   
-                  // Check if player is immortal
+                  // Initialize invincibility state if not exists (short-term after taking damage)
+                  if (playerObj.invincible === undefined) {
+                    playerObj.invincible = false;
+                    playerObj.invincibilityEnd = 0;
+                  }
+                  
+                  // Check if player is immortal (power-up)
                   const isImmortal = playerObj.immortal && Date.now() < playerObj.immortalEnd;
+                  
+                  // Check if player is invincible (recently took damage)
+                  const isInvincible = playerObj.invincible && Date.now() < playerObj.invincibilityEnd;
                   
                   if (isImmortal) {
                     logPlayerAction(playerObj.id, playerObj.name, 'damage blocked (immortal)', { roomId, position: { x: tile.x, y: tile.y } });
                     // Skip damage but still grant immortal to bomb owner
+                  } else if (isInvincible) {
+                    logPlayerAction(playerObj.id, playerObj.name, 'damage blocked (invincible)', { roomId, position: { x: tile.x, y: tile.y } });
+                    // Skip damage - player is still invincible from recent hit
                   } else {
                     const wasAlive = playerObj.alive;
                     playerObj.lives = Math.max(0, playerObj.lives - 1);
                     playerObj.alive = playerObj.lives > 0;
+                    
+                    // Start invincibility period (2 seconds)
+                    playerObj.invincible = true;
+                    playerObj.invincibilityEnd = Date.now() + 2000;
                     
                     logPlayerAction(playerObj.id, playerObj.name, 'caught in explosion', {
                       roomId,
