@@ -156,8 +156,21 @@ module.exports = function gameHandlers(io, socket, rooms) {
     room.gameState.powerups = []
     
     // Reset player positions to spawn points and reset stats
+    // First, separate human players from NPCs
+    const humanPlayers = []
+    const npcPlayers = []
+    
+    room.players.forEach((player, playerId) => {
+      if (player.isNPC) {
+        npcPlayers.push({ player, playerId })
+      } else {
+        humanPlayers.push({ player, playerId })
+      }
+    })
+    
+    // Reset human players to corners (starting from position 0)
     let posIndex = 0
-    room.players.forEach(player => {
+    humanPlayers.forEach(({ player }) => {
       // Reset stats
       player.lives = 3
       player.alive = true
@@ -168,12 +181,23 @@ module.exports = function gameHandlers(io, socket, rooms) {
       posIndex = (posIndex + 1) % startPos.length
     })
     
-    // Reset NPCs if any exist
-    if (room.npcs) {
-      room.npcs.forEach(npc => {
+    // Reset NPCs to remaining corners
+    if (room.npcs && room.npcs.size > 0) {
+      room.npcs.forEach((npc, npcId) => {
+        // Reset stats
         npc.lives = 3
         npc.alive = true
-        // NPCs will get repositioned by the NPC system
+        
+        // Reposition NPC to next available corner
+        // Find NPC's entry in room.players to update it too
+        const npcPlayer = room.players.get(npcId)
+        if (npcPlayer) {
+          npc.position.x = startPos[posIndex].x
+          npc.position.y = startPos[posIndex].y
+          npcPlayer.x = startPos[posIndex].x
+          npcPlayer.y = startPos[posIndex].y
+          posIndex = (posIndex + 1) % startPos.length
+        }
       })
     }
     

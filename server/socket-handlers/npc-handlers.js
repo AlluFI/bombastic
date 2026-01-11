@@ -85,6 +85,9 @@ module.exports = function npcHandlers(io, socket, rooms) {
     }
     
     // Create NPCs
+    // Count human players (excluding NPCs) before creating NPCs
+    const humanPlayerCount = Array.from(room.players.values()).filter(p => !p.isNPC).length;
+    
     npcsToCreate.forEach((npcConfig, index) => {
       const npcId = npcConfig.id || `npc-${index + 1}`;
       const npcName = npcConfig.name || `Bot ${index + 1}`;
@@ -93,9 +96,11 @@ module.exports = function npcHandlers(io, socket, rooms) {
       const npc = new NPC(npcId, npcName, difficulty);
       
       // Set NPC initial position (before adding to room)
-      const startIndex = room.players.size;
-      npc.position.x = startPos[startIndex].x;
-      npc.position.y = startPos[startIndex].y;
+      // Calculate position index: human players + this NPC's index
+      // This ensures each NPC gets a unique corner position
+      const posIndex = (humanPlayerCount + index) % startPos.length;
+      npc.position.x = startPos[posIndex].x;
+      npc.position.y = startPos[posIndex].y;
       
       room.npcs.set(npcId, npc);
       
@@ -105,7 +110,7 @@ module.exports = function npcHandlers(io, socket, rooms) {
         name: npc.name,
         x: npc.position.x,
         y: npc.position.y,
-        color: colors[startIndex],
+        color: colors[posIndex],
         alive: true,
         lives: 3, // Default lives
         bombRange: 2, // Default bomb range (can be upgraded via powerups)
