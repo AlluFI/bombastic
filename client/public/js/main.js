@@ -94,14 +94,13 @@ socket.on('game:state', (state) => {
             if (p.id !== socket.id) {
                 if (!remotePlayers.has(p.id)) {
                     createRemotePlayer(p)
+                    // Only render scoreboard when a new player is added
+                    renderScoreboard(players, socket.id)
                 } else {
                     updateRemotePlayer(p.id, p.x, p.y)
                 }
             }
         })
-        
-        // Update scoreboard
-        renderScoreboard(players, socket.id)
     } else {
         console.warn('game:state received with no players')
     }
@@ -439,6 +438,10 @@ socket.on('game:pause', (payload) => {
 })
 
 socket.on('bomb:placed', (bombData) => {
+    // Don't place local player's bombs again - they already placed it locally
+    if (bombData.playerId === socket.id) {
+        return
+    }
     placeRemoteBomb(bombData)
 })
 
@@ -505,8 +508,21 @@ socket.on('player:damaged', (data) => {
         alive: !data.died // Set alive based on died flag
     })
     
-    // Don't update local player from this event - they already updated themselves
+    // Handle local player damage
     if (data.playerId === socket.id) {
+        if (player) {
+            // Update lives from server (authoritative)
+            player.lives = data.lives
+            
+            if (data.died) {
+                player.die()
+                playSound('playerDeath')
+            } else {
+                // Start invincibility animation for local player
+                player.startInvincibility(2000)
+                playSound('playerHit')
+            }
+        }
         return
     }
     
@@ -579,8 +595,15 @@ function gameLoop() {
             // Player should be invincible - ensure animation is active
             if (player.element && player.alive) {
                 // Only set if not already set to avoid unnecessary style updates
-                if (!player.element.style.animation || !player.element.style.animation.includes('player-flash')) {
-                    player.element.style.animation = 'player-flash 0.2s infinite'
+                const currentAnimation = player.element.style.getPropertyValue('animation')
+                if (!currentAnimation || !currentAnimation.includes('player-flash')) {
+                    // Temporarily remove immortal class to allow flash animation
+                    const hadImmortalClass = player.element.classList.contains('immortal')
+                    if (hadImmortalClass) {
+                        player.element.classList.remove('immortal')
+                        player.element.dataset.wasImmortal = 'true'
+                    }
+                    player.element.style.setProperty('animation', 'player-flash 0.2s infinite', 'important')
                     player.element.style.opacity = '1'
                     player.element.style.filter = ''
                 }
@@ -589,9 +612,14 @@ function gameLoop() {
             // Invincibility expired
             player.invincible = false
             if (player.element && player.alive) {
-                player.element.style.animation = ''
+                player.element.style.removeProperty('animation')
                 player.element.style.opacity = '1'
                 player.element.style.filter = ''
+                // Restore immortal class if it was present before
+                if (player.element.dataset.wasImmortal === 'true') {
+                    player.element.classList.add('immortal')
+                    delete player.element.dataset.wasImmortal
+                }
             }
         }
     }
@@ -599,8 +627,15 @@ function gameLoop() {
         if (remotePlayer.invincible && now < remotePlayer.invincibilityEnd) {
             // Remote player should be invincible - ensure animation is active
             if (remotePlayer.element && remotePlayer.alive) {
-                if (!remotePlayer.element.style.animation || !remotePlayer.element.style.animation.includes('player-flash')) {
-                    remotePlayer.element.style.animation = 'player-flash 0.2s infinite'
+                const currentAnimation = remotePlayer.element.style.getPropertyValue('animation')
+                if (!currentAnimation || !currentAnimation.includes('player-flash')) {
+                    // Temporarily remove immortal class to allow flash animation
+                    const hadImmortalClass = remotePlayer.element.classList.contains('immortal')
+                    if (hadImmortalClass) {
+                        remotePlayer.element.classList.remove('immortal')
+                        remotePlayer.element.dataset.wasImmortal = 'true'
+                    }
+                    remotePlayer.element.style.setProperty('animation', 'player-flash 0.2s infinite', 'important')
                     remotePlayer.element.style.opacity = '1'
                     remotePlayer.element.style.filter = ''
                 }
@@ -609,9 +644,14 @@ function gameLoop() {
             // Invincibility expired
             remotePlayer.invincible = false
             if (remotePlayer.element && remotePlayer.alive) {
-                remotePlayer.element.style.animation = ''
+                remotePlayer.element.style.removeProperty('animation')
                 remotePlayer.element.style.opacity = '1'
                 remotePlayer.element.style.filter = ''
+                // Restore immortal class if it was present before
+                if (remotePlayer.element.dataset.wasImmortal === 'true') {
+                    remotePlayer.element.classList.add('immortal')
+                    delete remotePlayer.element.dataset.wasImmortal
+                }
             }
         }
     })

@@ -52,10 +52,19 @@ class Player {
         
         // Flash animation
         if (this.element) {
-            this.element.style.animation = 'player-flash 0.2s infinite'
+            // Temporarily remove immortal class to allow flash animation
+            const hadImmortalClass = this.element.classList.contains('immortal')
+            if (hadImmortalClass) {
+                this.element.classList.remove('immortal')
+            }
+            
+            this.element.style.setProperty('animation', 'player-flash 0.2s infinite', 'important')
             // Ensure element is visible (in case it was hidden)
             this.element.style.opacity = '1'
             this.element.style.filter = ''
+            
+            // Store the immortal class state to restore later
+            this.element.dataset.wasImmortal = hadImmortalClass ? 'true' : 'false'
         }
         
         // Remove invincibility after duration
@@ -63,11 +72,17 @@ class Player {
             this.invincible = false
             if (this.element) {
                 // Clear animation
-                this.element.style.animation = ''
+                this.element.style.removeProperty('animation')
                 // Ensure element is visible and normal after invincibility ends
                 if (this.alive) {
                     this.element.style.opacity = '1'
                     this.element.style.filter = ''
+                    
+                    // Restore immortal class if it was present before
+                    if (this.element.dataset.wasImmortal === 'true') {
+                        this.element.classList.add('immortal')
+                    }
+                    delete this.element.dataset.wasImmortal
                 }
             }
         }, duration)
@@ -136,9 +151,19 @@ class Player {
         const tilePosition = tile.getBoundingClientRect()
 
         //Align the player to the tile
-        this.element.style.position = 'absolute'
-        this.element.style.left = tilePosition.left + 'px'
-        this.element.style.top = tilePosition.top + 'px'
+        // Only update if position actually changed to avoid style recalculation
+        const newLeft = tilePosition.left + 'px'
+        const newTop = tilePosition.top + 'px'
+        
+        if (this.element.style.left !== newLeft) {
+            this.element.style.left = newLeft
+        }
+        if (this.element.style.top !== newTop) {
+            this.element.style.top = newTop
+        }
+        if (this.element.style.position !== 'absolute') {
+            this.element.style.position = 'absolute'
+        }
 
     }
 }

@@ -3,7 +3,6 @@ import { socket } from "../main.js";
 import { map } from "../grid.js";
 import { renderExplosion } from "../render/explosionRender.js";
 import { destroyBlocksInTiles } from './blockController.js'
-import { getPlayersAtPosition, getLocalPlayer } from '../player.js'
 import { getPlayerBombRange } from './powerupController.js'
 import { playSound } from '../audio/soundManager.js'
 
@@ -182,42 +181,8 @@ export function tryPlaceBomb(player) {
                 })
             }
             
-            // Check for player damage
-            const hitPlayers = new Set() // Use Set to ensure uniqueness
-            affectedTiles.forEach(tile => {
-                const playersAtTile = getPlayersAtPosition(tile.x, tile.y)
-                playersAtTile.forEach(player => {
-                    if (!hitPlayers.has(player.id)) {
-                        hitPlayers.add(player.id)
-                        
-                        // If it's the local player, apply damage and notify server
-                        if (player.id === getLocalPlayer()?.id) {
-                            const died = player.takeDamage()
-                            
-                            // Play sound based on outcome
-                            if (died) {
-                                playSound('playerDeath')
-                            } else {
-                                playSound('playerHit')
-                            }
-                            
-                            // Update scoreboard hearts
-                            import('../ui/scoreboard.js').then(({ updatePlayerStats }) => {
-                                updatePlayerStats(player.id, { lives: player.lives, alive: player.alive })
-                            })
-                            
-                            // Notify server of damage
-                            if (socket) {
-                                socket.emit('player:damage', {
-                                    playerId: player.id,
-                                    lives: player.lives,
-                                    died: died
-                                })
-                            }
-                        }   
-                    }
-                })  
-            })
+            // Note: Player damage is handled server-side via 'player:damaged' events
+            // No client-side damage calculation needed
         })
     })
 
@@ -250,38 +215,8 @@ export function placeRemoteBomb(bombData) {
         
         // Render explosion with the bomb's range
         renderExplosion(bombX, bombY, range, (centerX, centerY, affectedTiles) => {
-            // Check if local player was hit by remote bomb
-            const localPlayer = getLocalPlayer()
-            if (localPlayer && localPlayer.alive) {
-                const wasHit = affectedTiles.some(tile => 
-                    tile.x === localPlayer.x && tile.y === localPlayer.y
-                )
-                
-                if (wasHit) {
-                    const died = localPlayer.takeDamage()
-                    
-                    // Play sound based on outcome
-                    if (died) {
-                        playSound('playerDeath')
-                    } else {
-                        playSound('playerHit')
-                    }
-                    
-                    // Update scoreboard hearts
-                    import('../ui/scoreboard.js').then(({ updatePlayerStats }) => {
-                        updatePlayerStats(localPlayer.id, { lives: localPlayer.lives, alive: localPlayer.alive })
-                    })
-                    
-                    // Notify server
-                    if (socket) {
-                        socket.emit('player:damage', {
-                            playerId: localPlayer.id,
-                            lives: localPlayer.lives,
-                            died: died
-                        })
-                    }
-                }
-            }
+            // Note: Player damage is handled server-side via 'player:damaged' events
+            // No client-side damage calculation needed
         })
     })
 }
