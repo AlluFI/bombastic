@@ -1,4 +1,4 @@
-import { renderBomb, removeBomb } from "../render/bombRender.js";
+import { renderBomb, removeBomb, hasBombExploded, markBombAsExploded } from "../render/bombRender.js";
 import { socket } from "../main.js";
 import { map } from "../grid.js";
 import { renderExplosion } from "../render/explosionRender.js";
@@ -292,10 +292,18 @@ export function placeRemoteBomb(bombData) {
  * (server already applies damage).
  */
 export function handleServerBombExplosion({ bombId, playerId, x, y, range = 2 }) {
+    // Check if bomb already exploded client-side (prevents double explosion rendering)
+    if (hasBombExploded(bombId)) {
+        return
+    }
+    
+    // Mark as exploded before removing to prevent timeout callback from firing
+    markBombAsExploded(bombId)
+    
     // Remove local tracking so movement is not blocked after explosion
     untrackBomb(playerId, bombId, x, y)
 
-    // Remove bomb element if it exists
+    // Remove bomb element if it exists (this also clears timeouts)
     removeBomb(bombId)
 
     // Play explosion sound

@@ -74,6 +74,7 @@ export function renderBomb(bombId, x, y, duration = BOMB_DURATION, onExplode = n
             }
         }
     }
+    
 
     const bombElement = createBombElement(bombId, x, y, Math.ceil(duration / 1000))
 
@@ -104,6 +105,14 @@ export function renderBomb(bombId, x, y, duration = BOMB_DURATION, onExplode = n
     }, duration - CRITICAL_TIME)
 
     const explodeTimeout = setTimeout(() => {
+        // Check if bomb still exists and hasn't already exploded (prevent double explosion)
+        const bombData = activeBombs.get(bombId)
+        if (!bombData || bombData.hasExploded) {
+            return
+        }
+        
+        // Mark as exploded before calling callback
+        bombData.hasExploded = true
         bombElement.classList.add('exploding')
         if (onExplode) {
             onExplode(bombId, x, y)
@@ -113,7 +122,7 @@ export function renderBomb(bombId, x, y, duration = BOMB_DURATION, onExplode = n
         }, 300);
     }, duration);
 
-    activeBombs.set(bombId, {
+    const bombData = {
         element: bombElement,
         timeouts: [
             placingTimeout,
@@ -121,8 +130,13 @@ export function renderBomb(bombId, x, y, duration = BOMB_DURATION, onExplode = n
             warningTimeout,
             criticalTimeout,
             explodeTimeout
-        ]
-    })
+        ],
+        hasExploded: false, // Flag to track if explosion callback has fired
+        x: x, // Store position for verification
+        y: y
+    }
+    
+    activeBombs.set(bombId, bombData)
 }
 
 export function removeBomb(bombId) {
@@ -164,4 +178,26 @@ export function removeAllBombs() {
 
 export function getActiveBombsCount() {
     return activeBombs.size
+}
+
+/**
+ * Check if a bomb has already exploded (prevents double explosion)
+ * @param {string} bombId - Bomb ID to check
+ * @returns {boolean} True if bomb has exploded or doesn't exist
+ */
+export function hasBombExploded(bombId) {
+    const bombData = activeBombs.get(bombId)
+    return !bombData || bombData.hasExploded === true
+}
+
+/**
+ * Mark a bomb as exploded (before removing it)
+ * This prevents the timeout callback from firing if server explodes bomb early
+ * @param {string} bombId - Bomb ID to mark as exploded
+ */
+export function markBombAsExploded(bombId) {
+    const bombData = activeBombs.get(bombId)
+    if (bombData) {
+        bombData.hasExploded = true
+    }
 }

@@ -572,17 +572,41 @@ function gameLoop() {
     }
     
     // Check and clear expired invincibility for all players
+    // Also ensure invincibility animation is active if player is invincible
     const now = Date.now()
-    if (player && player.invincible && now >= player.invincibilityEnd) {
-        player.invincible = false
-        if (player.element && player.alive) {
-            player.element.style.animation = ''
-            player.element.style.opacity = '1'
-            player.element.style.filter = ''
+    if (player) {
+        if (player.invincible && now < player.invincibilityEnd) {
+            // Player should be invincible - ensure animation is active
+            if (player.element && player.alive) {
+                // Only set if not already set to avoid unnecessary style updates
+                if (!player.element.style.animation || !player.element.style.animation.includes('player-flash')) {
+                    player.element.style.animation = 'player-flash 0.2s infinite'
+                    player.element.style.opacity = '1'
+                    player.element.style.filter = ''
+                }
+            }
+        } else if (player.invincible && now >= player.invincibilityEnd) {
+            // Invincibility expired
+            player.invincible = false
+            if (player.element && player.alive) {
+                player.element.style.animation = ''
+                player.element.style.opacity = '1'
+                player.element.style.filter = ''
+            }
         }
     }
     remotePlayers.forEach(remotePlayer => {
-        if (remotePlayer.invincible && now >= remotePlayer.invincibilityEnd) {
+        if (remotePlayer.invincible && now < remotePlayer.invincibilityEnd) {
+            // Remote player should be invincible - ensure animation is active
+            if (remotePlayer.element && remotePlayer.alive) {
+                if (!remotePlayer.element.style.animation || !remotePlayer.element.style.animation.includes('player-flash')) {
+                    remotePlayer.element.style.animation = 'player-flash 0.2s infinite'
+                    remotePlayer.element.style.opacity = '1'
+                    remotePlayer.element.style.filter = ''
+                }
+            }
+        } else if (remotePlayer.invincible && now >= remotePlayer.invincibilityEnd) {
+            // Invincibility expired
             remotePlayer.invincible = false
             if (remotePlayer.element && remotePlayer.alive) {
                 remotePlayer.element.style.animation = ''
