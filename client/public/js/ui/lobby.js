@@ -151,8 +151,7 @@ function handleStartGame() {
     }
     
     // Play button click sound
-    playSound('buttonClick')
-    
+    playSound('buttonClick') 
     console.log('Starting game...')
     socket.emit('game:start', {
         roomCode: currentRoomCode
