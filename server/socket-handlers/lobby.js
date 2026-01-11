@@ -8,6 +8,25 @@ module.exports = function lobbyHandlers(io, socket, rooms) {
     socket.emit('lobby:list', activeLobbies)
   })
 
+  // Handle room state request (for returning to lobby from end screen)
+  socket.on('room:state-request', () => {
+    const room = rooms.get(socket.roomCode)
+    if (!room) {
+      socket.emit('error', { message: 'Room not found' })
+      return
+    }
+    
+    // Send current room state back to the requesting player
+    socket.emit('room:updated', {
+      players: Array.from(room.players.values()),
+      roomCode: socket.roomCode,
+      chats: room.chats,
+      hostId: room.host,
+      isRunning: room.gameState.isRunning,
+      gameMode: room.gameState.gameMode
+    })
+  })
+
   socket.on('lobby:leave', () => {
     const room = rooms.get(socket.roomCode)
     if (!room) return

@@ -303,7 +303,6 @@ export function updatePlayerMovement(player) {
         keys.space = false  // Prevent holding spacebar to spam bombs
     }
     
-    const now = Date.now()
     const timeSinceLastMove = now - lastMovementTime
     
     // Only allow movement if enough time has passed since last move
@@ -318,30 +317,25 @@ export function updatePlayerMovement(player) {
     if (keys.up) {
         newX--
         moved = true
-        // player.element?.classList.add('facing-up')
-        // player.element?.classList.remove('facing-down', 'facing-left', 'facing-right')
-    } else if (keys.down) {
+        } else if (keys.down) {
         newX++
         moved = true
-        // player.element?.classList.add('facing-down')
-        // player.element?.classList.remove('facing-up', 'facing-left', 'facing-right')
-    } else if (keys.left) {
+        } else if (keys.left) {
         newY--
         moved = true
-        // player.element?.classList.add('facing-left')
-        // player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
-    } else if (keys.right) {
+        } else if (keys.right) {
         newY++
         moved = true
-        // player.element?.classList.add('facing-right')
-        // player.element?.classList.remove('facing-up', 'facing-down', 'facing-right')
+    
+        
     }
+    
     
     // Only process movement if a key is pressed
     if (!moved) {
         return
     }
-
+        
     // Check if target position is walkable (not a block/wall, not a bomb, and not another player/NPC)
     const isWalkable = map[newX] && map[newX][newY] === 'empty'
     const bombPositions = getBombPositions()

@@ -7,9 +7,9 @@ import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen, showEndScreen, showMenuScreen } from "./ui/menu.js";
 import { initializeTimer, startTimer, stopTimer } from "./ui/timer.js";
 import { initializeScoreboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard, updatePlayerStats } from "./ui/scoreboard.js";
-import { placeRemoteBomb, clearPlayerBombs, handleServerBombExplosion } from "./game/bombController.js";
+import { placeRemoteBomb, clearPlayerBombs, clearAllBombs, handleServerBombExplosion } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
-import { destroyBlockRemote, destroyBlocksRemote } from "./game/blockController.js"
+import { destroyBlockRemote, destroyBlocksRemote, clearDestroyedBlocks } from "./game/blockController.js"
 import { initializeMap } from "./grid.js"
 import { initializeLobby, showLobbyScreen, hideLobbyScreen, updateLobbyPlayers } from "./ui/lobby.js"
 import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, initializePlayerStats, addPowerupToPlayer } from "./game/powerupController.js"
@@ -38,15 +38,15 @@ export function resetPlayer() {
 
 // Socket event handlers
 socket.on('connect', () => {
-    // Socket connected successfully
+    console.log('✅ Socket connected with ID:', socket.id) 
 })
 
 socket.on('disconnect', () => {
-    // Socket disconnected
+    console.log('❌ Socket disconnected')
 })
 
 socket.on('connect_error', (error) => {
-    // Connection error - error handling below
+    console.error('❌ Socket connection error:', error)
     // Play connection error sound
     playSound('connectionError')
     // Show error toast
@@ -80,9 +80,12 @@ socket.on('game:state', (state) => {
         
         // Only create local player if it doesn't exist yet
         if (myPlayer && !player) {
+            console.log('Creating player from game:state event:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
             player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
             // Pass gameMode from server state if available
             showGameScreen(null, state.gameMode)
+        } else if (!myPlayer) {
+            console.warn('My player not found in game:state. Socket ID:', socket.id, 'Players:', players.map(p => p.id))
         }
         
         // Update/create remote players (including NPCs)
@@ -99,10 +102,14 @@ socket.on('game:state', (state) => {
         
         // Update scoreboard
         renderScoreboard(players, socket.id)
+    } else {
+        console.warn('game:state received with no players')
     }
 })
 
 socket.on('room:created', (state) => {
+    console.log('room:created received. Socket ID:', socket.id, 'Players in state:', state.players?.map(p => ({ id: p.id, name: p.name })))
+    
     // Clear loading states
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
         if (clearButtonLoading) {
@@ -120,8 +127,12 @@ socket.on('room:created', (state) => {
     const myPlayer = state.players?.find(p => p.id === socket.id)
 
     if (myPlayer) {
+        console.log('Creating player from room:created:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
         player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
         initializePlayerStats(player.id)
+        console.log('Local player created:', player.id, player.name, `(${player.x}, ${player.y})`)
+    } else {
+        console.error('Could not find my player in room:created state. Available players:', state.players?.map(p => p.id))
     }
 
     state.players?.forEach(p => {
@@ -147,6 +158,8 @@ socket.on('room:created', (state) => {
             count: playerData.npcCount,
             difficulties: playerData.difficulties
         })
+        
+        console.log(`Single-player game started with ${playerData.npcCount} NPC(s) at difficulties:`, playerData.difficulties)
     } else {
         // Multiplayer: show lobby screen (game hasn't started yet)
         const hostId = state.hostId || state.players?.[0]?.id
@@ -157,6 +170,8 @@ socket.on('room:created', (state) => {
 })
 
 socket.on('room:updated', (state) => {
+    console.log("Room updated:", state.players);
+    
     // Clear loading states (if any menu buttons were in loading state)
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
         if (clearButtonLoading) {
@@ -226,6 +241,7 @@ socket.on('room:updated', (state) => {
 
 // Handle NPC configuration confirmation
 socket.on('npcs-configured', (data) => {
+    console.log(`NPCs configured: ${data.count} NPC(s)`, data.npcs)
     // Timer will be synced via timer:sync events from server
     // Request room update to get NPCs in the players list
     // The server will emit room:updated with NPCs included
@@ -233,13 +249,22 @@ socket.on('npcs-configured', (data) => {
 
 // Handle game mode change confirmation
 socket.on('game-mode-changed', (data) => {
-    // Game mode changed - handled by server state
+    console.log(`Game mode changed to: ${data.mode}`)
 })
 
 // Handle game started (transition from lobby to game)
 socket.on('game:started', (data) => {
+    console.log('Game started!', data)
+    
     // Play game start sound
     playSound('gameStart')
+    
+    // Clear previous game state
+    clearAllPlayers()
+    clearAllPowerups()
+    clearAllBombs()
+    clearDestroyedBlocks()  // Clear block destruction tracking
+    resetPlayer()
     
     // Hide lobby screen
     hideLobbyScreen()
@@ -335,6 +360,16 @@ socket.on('game:end', (data) => {
     // Check if local player won
     if (data.winner && data.winner.id === socket.id) {
         playSound('winner')
+    }
+    
+    // Update restart button text based on game mode
+    const restartButton = document.getElementById('restart-button')
+    if (restartButton) {
+        if (playerData.mode === 'single') {
+            restartButton.textContent = 'Back to Menu'
+        } else {
+            restartButton.textContent = 'Back to Lobby'
+        }
     }
     
     // Show end screen first

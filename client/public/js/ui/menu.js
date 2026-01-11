@@ -3,6 +3,7 @@ import { socket } from '../main.js'
 import { clearAllPlayers } from '../player.js'
 import { initializeLobbyBrowser } from './lobbyBrowser.js'
 import { playSound } from '../audio/soundManager.js'
+import { returnToLobby } from './lobby.js'
 
 //ui screen sections
 const menuScreen = document.getElementById('menue-screen')
@@ -238,38 +239,24 @@ function handleJoinGame() {
 }
 
 function handleRestartGame() {
-    console.log('Restart button clicked - returning to menu')
-
-    window.location.reload()
+    console.log('Back to Lobby button clicked')
     
-    // Clear all players from the game
+    // Clear all players from the game view
     clearAllPlayers()
     
-    // Reset player data
-    playerData.name = ''
-    playerData.mode = 'multi'
-    playerData.difficulties = ['medium', 'medium']
-    playerData.npcCount = 2
-    
-    // Reset UI inputs
-    playerNameInput.value = ''
-    playerNameJoinInput.value = ''
-    playerNameSingleInput.value = ''
-    joinInput.value = ''
-    modeSelect.value = 'multi'
-    npcCountSelect.value = '2'
-    
-    // Reset NPC difficulty selectors
-    updateNPCDifficultySelectors()
-    
-    // Reset mode UI
-    handleModeChange()
-    
-    // Show menu screen
-    showMenuScreen()
-    
-    // Reset game state (will be handled by main.js resetPlayer)
-    // The socket connection remains, but game state is reset
+    // Check if this is single-player mode
+    if (playerData.mode === 'single') {
+        window.location.reload()
+        console.log('Single-player mode - returning to main menu')
+        showMenuScreen()
+        
+        // Optionally, you can reload to fully reset the state
+        // window.location.reload()
+    } else {
+        // Multiplayer: return to lobby
+        console.log('Multiplayer mode - returning to lobby')
+        returnToLobby()
+    }
 }
 
 export function initializeMenu() {
