@@ -9,7 +9,7 @@
     justify-content: center;
     align-items: center;
 
-    background: radial-gradient(circle, #2a2a2a, 0%, #000000, 100%);
+    background: radial-gradient(circle, #2a2a2a 0%, #000000 100%);
     border: 3px solid #1a1a1a;
     box-shadow: 0 0 10px rgba(0,0,0,0.5), inset 0 -5px 10px rgba(255, 255, 255, 0.1);
     transition: top 0.1s linear, left 0.1s linear;
@@ -85,14 +85,17 @@
 @keyframes bomb-warning {
     0%, 100% {
         transform: scale(1);
-        background: radial-gradient(circle, #2a2a2a 0%, #000000 100%);
+        background: radial-gradient(circle, #cc0000 0%, #660000 100%);
+        border-color: #ff3333;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
     }
     50% {
         transform: scale(1.15);
-        background: radial-gradient(circle, #4a0000 0%, #2a0000 100%);
+        background: radial-gradient(circle, #ff3333 0%, #990000 100%);
         box-shadow: 
-            0 0 20px rgba(255, 51, 51, 0.8),
+            0 0 30px rgba(255, 51, 51, 1),
             inset 0 -5px 10px rgba(255, 51, 51, 0.3);
+        border-color: #ff6666;
     }
 }
 
@@ -114,6 +117,8 @@
 }
 
 .bomb.critical {
+    background: radial-gradient(circle, #9c0101 0%, #660000 100%);
+        border-color: #ff3333;
     animation: bomb-shake 0.2s ease-in-out infinite;
 }
 

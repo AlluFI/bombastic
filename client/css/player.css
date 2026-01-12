@@ -66,18 +66,3 @@
     }
 }
 
-.player.facing-up svg {
-    transform: rotate(0deg);
-}
-
-.player.facing-down svg {
-    transform: rotate(0deg);
-}
-
-.player.facing-left svg {
-    transform: scaleX(-1);
-}
-
-.player.facing-right svg {
-    transform: scaleX(1);
-}

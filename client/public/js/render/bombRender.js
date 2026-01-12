@@ -1,5 +1,5 @@
 const BOMB_DURATION = 3000
-const WARNING_TIME = 2000
+const WARNING_TIME = 1000
 const CRITICAL_TIME = 1000
 
 const activeBombs = new Map()
