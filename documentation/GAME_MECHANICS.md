@@ -117,17 +117,21 @@ This document describes the game mechanics, rules, and systems implemented in th
 - NPCs upgrade bomb range same as players
 - NPCs prioritize power-ups based on difficulty
 
-### Scoring System
+### Winning System
 
-#### Score Sources
-- **Survival**: +10 points per second survived (not implemented)
-- **Elimination**: +50 points for eliminating another player
-- **Power-up Collection**: +5 points per power-up (not implemented)
+#### Winner Determination
+- **Win Condition**: Last player standing (survival-based)
+- **Ranking**: Based on elimination order
+  - Winner = Last player eliminated (or last alive) = 1st place
+  - Second-to-last eliminated = 2nd place
+  - Third-to-last eliminated = 3rd place
+  - First eliminated = Last place
+- **Draw Condition**: All players eliminated simultaneously
 
-#### Score Display
-- Real-time scoreboard shows all players
+#### Scoreboard Display
+- Real-time scoreboard shows all players' lives
 - Updates when players take damage or are eliminated
-- Final scores displayed on endgame screen
+- Final rankings displayed on endgame screen (1st, 2nd, 3rd, 4th)
 
 ### Game Flow
 
@@ -147,9 +151,9 @@ This document describes the game mechanics, rules, and systems implemented in th
 - Players take damage and can be eliminated
 
 #### Game End
-- **Win Condition**: Last player standing
+- **Win Condition**: Last player standing (survival-based)
 - **Draw Condition**: All players eliminated simultaneously
-- **End Screen**: Shows winner and final scores
+- **End Screen**: Shows winner and final rankings (1st, 2nd, 3rd, 4th based on elimination order)
 - **Restart**: Return to main menu
 
 ### Timer System
