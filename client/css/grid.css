@@ -1,3 +1,11 @@
+#grid {
+    background-color: #050510;
+    border: 3px solid #00f0ff;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.1);
+    border-radius: 4px;
+    position: relative;
+}
+
 .tile {
     width: 40px;
     height: 40px;
@@ -7,15 +15,35 @@
 }
 
 .tile.empty {
-    background-color: #ddd;
+    background-color: rgba(194, 200, 207, 0.4);
+    border: 1px solid rgba(0, 240, 255, 0.05);
 }
 
 .tile.solid {
-    background-color: #555;
+    background-color: #25253b;
+    border: 2px solid #00f0ff;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2);
+    z-index: 1;
+}
+
+.tile.solid::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    border: 1px solid rgba(0, 240, 255, 0.3);
 }
 
 .tile.breakable {
-    background-color: #b5651d;
+    background-color: rgba(255, 80, 0, 0.15);
+    border: 2px solid #ff5500;
+    box-shadow: 0 0 8px rgba(255, 80, 0, 0.4), inset 0 0 15px rgba(255, 80, 0, 0.2);
+    /* Digital "X" mark */
+    background-image: 
+        linear-gradient(45deg, transparent 45%, rgba(255, 85, 0, 0.5) 45%, rgba(255, 85, 0, 0.5) 55%, transparent 55%),
+        linear-gradient(-45deg, transparent 45%, rgba(255, 85, 0, 0.5) 45%, rgba(255, 85, 0, 0.5) 55%, transparent 55%);
 }
 
 /*Tile destroying*/
@@ -27,11 +55,14 @@
     0% {
         transform: scale(1);
         opacity: 1;
+        box-shadow: 0 0 10px #ff5500;
     }
     50% {
         transform: scale(1.2) rotate(5deg);
         opacity: 0.8;
-        background-color: #ff6600;
+        background-color: #ffaa00;
+        box-shadow: 0 0 25px #ffaa00;
+        border-color: #ffff00;
     }
     100% {
         transform: scale(0.5) rotate(15deg);
@@ -55,6 +86,7 @@
     50% {
         transform: scale(0.95) translateY(0);
         opacity: 0.7;
+        background-color: rgba(255, 0, 0, 0.5);
     }
     75% {
         transform: scale(0.8) translateY(5px);
@@ -63,6 +95,6 @@
     100% {
         transform: scale(0.3) translateY(10px);
         opacity: 0;
-        background-color: #8B4513;
+        background-color: #ff0000;
     }
 }

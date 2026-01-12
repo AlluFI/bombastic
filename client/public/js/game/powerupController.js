@@ -135,10 +135,18 @@ export function renderPowerup(powerupData) {
     }
     
     // Position power-up on tile (centered)
+    const grid = document.getElementById('grid')
+    if (!grid) {
+        console.error('Grid element not found')
+        return
+    }
+    
     const tileRect = tileElement.getBoundingClientRect()
+    const gridRect = grid.getBoundingClientRect()
+    
     powerupElement.style.position = 'absolute'
-    powerupElement.style.left = `${tileRect.left + (tileRect.width / 2) - 10}px`
-    powerupElement.style.top = `${tileRect.top + (tileRect.height / 2) - 10}px`
+    powerupElement.style.left = `${(tileRect.left - gridRect.left) + (tileRect.width / 2) - 10}px`
+    powerupElement.style.top = `${(tileRect.top - gridRect.top) + (tileRect.height / 2) - 10}px`
     powerupElement.style.width = '20px'
     powerupElement.style.height = '20px'
     powerupElement.style.fontSize = '20px'
@@ -152,10 +160,7 @@ export function renderPowerup(powerupData) {
     powerupElement.style.justifyContent = 'center'
     
     // Add to grid
-    const grid = document.getElementById('grid')
-    if (grid) {
-        grid.appendChild(powerupElement)
-    }
+    grid.appendChild(powerupElement)
     
     // Track power-up
     activePowerups.set(posKey, { id, type, x, y, element: powerupElement })

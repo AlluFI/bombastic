@@ -5,7 +5,7 @@
     z-index: 3;
     transition: top 0.1s linear, left 0.1s linear;
     background-color: transparent;
-    transform: translate(15%, 8%);
+    transform: translate(6%, -2%);
 }
 
 .player svg {
@@ -66,18 +66,3 @@
     }
 }
 
-.player.facing-up svg {
-    transform: rotate(0deg);
-}
-
-.player.facing-down svg {
-    transform: rotate(0deg);
-}
-
-.player.facing-left svg {
-    transform: scaleX(-1);
-}
-
-.player.facing-right svg {
-    transform: scaleX(1);
-}

@@ -12,11 +12,18 @@ function getTilePosition(x, y) {
         return null
     }
 
+    const grid = document.getElementById('grid')
+    if (!grid) {
+        console.error('Grid element not found')
+        return null
+    }
+
     const tileRect = tile.getBoundingClientRect()
+    const gridRect = grid.getBoundingClientRect()
 
     return {
-        left: tileRect.left,
-        top: tileRect.top
+        left: tileRect.left - gridRect.left,
+        top: tileRect.top - gridRect.top
     }
 }
 
