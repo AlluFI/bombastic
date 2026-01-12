@@ -15,7 +15,6 @@ export let isPaused = false
 function resumeGame() {
     isPaused = false
     pauseOverlay.classList.add('hidden')
-    console.log('game resumed')
 }
 
 // Function to apply pause state from server
@@ -27,14 +26,12 @@ export function setPaused(paused, meta = {}) {
         if (isPaused) {
             pauseOverlay.classList.remove('hidden')
             pauseMessage.textContent = meta.name ? `Game paused by ${meta.name}` : 'Paused'
-            console.log('Game paused', meta.name ? `by ${meta.name}` : '')
             // Pause timer
             pauseTimer()
             // Play pause sound
             playSound('pause')
         } else {
             pauseOverlay.classList.add('hidden')
-            console.log('Game resumed')
             // Resume timer
             resumeTimer()
             // Play resume sound
@@ -89,7 +86,6 @@ function handleQuitClick() {
 }
 
 export function initializePauseMenu() {
-    console.log('pause menu initialized')
     document.addEventListener('keydown', handleEscapeKey)
     resumeButton.addEventListener('click', handleResumeClick)
     quitButton.addEventListener('click', handleQuitClick)

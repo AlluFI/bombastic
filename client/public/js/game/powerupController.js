@@ -44,16 +44,13 @@ export function addPowerupToPlayer(playerId, powerupType) {
     
     if (powerupType === POWERUP_TYPES.BOMB_RANGE) {
         stats.bombRange += 1 // Increase range by 1
-        console.log(`Player ${playerId} picked up bomb range power-up! New range: ${stats.bombRange}`)
     } else if (powerupType === POWERUP_TYPES.BOMB_COUNT) {
         stats.maxBombs += 1 // Increase max bombs by 1
-        console.log(`Player ${playerId} picked up bomb count power-up! Can now place ${stats.maxBombs} bombs`)
     } else if (powerupType === POWERUP_TYPES.IMMORTAL) {
         // Grant 15 seconds of immortality
         const IMMORTAL_DURATION = 15000
         stats.immortal = true
         stats.immortalEnd = Date.now() + IMMORTAL_DURATION
-        console.log(`Player ${playerId} gained immortality for 15 seconds!`)
         
         // Update visual indicator
         updateImmortalVisual(playerId, true)
@@ -64,7 +61,6 @@ export function addPowerupToPlayer(playerId, powerupType) {
                 stats.immortal = false
                 stats.immortalEnd = 0
                 updateImmortalVisual(playerId, false)
-                console.log(`Player ${playerId} immortality expired`)
             }
         }, IMMORTAL_DURATION)
     }
@@ -122,7 +118,6 @@ export function renderPowerup(powerupData) {
     
     // Check if power-up already exists at this position
     if (activePowerups.has(posKey)) {
-        console.warn(`Power-up already exists at (${x}, ${y})`)
         return
     }
     
@@ -187,7 +182,6 @@ export function renderPowerup(powerupData) {
     // Play power-up spawn sound
     playSound('powerupSpawn', { volume: 0.6 })
     
-    console.log(`Power-up rendered at (${x}, ${y}): ${type}`)
 }
 
 export function removePowerup(powerupId, x, y) {

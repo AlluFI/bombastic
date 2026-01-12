@@ -11,24 +11,19 @@ const destroyedBlocks = new Map()
 export function destroyBlock(x, y, emitToServer = true) {
     // Validate position
     if (!map[x] || map[x][y] === undefined) {
-        console.warn(`Invalid position for block destruction: (${x}, ${y})`)
         return false
     }
     
     // Check if tile is breakable
     if (map[x][y] !== 'breakable') {
-        console.log(`Tile at (${x}, ${y}) is not breakable (type: ${map[x][y]})`)
         return false
     }
     
     // Check if already destroyed
     const posKey = `${x}-${y}`
     if (destroyedBlocks.has(posKey)) {
-        console.log(`Block at (${x}, ${y}) already destroyed`)
         return false
     }
-    
-    console.log(`Destroying block at (${x}, ${y})`)
     
     // Mark as destroyed
     destroyedBlocks.set(posKey, Date.now())
@@ -48,8 +43,6 @@ export function destroyBlock(x, y, emitToServer = true) {
             // Update tile appearance
             tileElement.classList.remove('breakable', 'destroying')
             tileElement.classList.add('empty')
-            
-            console.log(`Block at (${x}, ${y}) destroyed - tile now empty`)
             
             
         }, DESTRUCTION_ANIMATION_DURATION)
@@ -91,22 +84,16 @@ export function destroyBlocksInTiles(tiles) {
         })
     }
     
-    console.log(`Destroyed ${destroyedPositions.length} blocks`)
-    
     return destroyedPositions
 }
 
 //handle remote block destruction
 export function destroyBlockRemote(x, y) {
-    console.log(`Remote block destruction at (${x}, ${y})`)
-    
     // Destroy without emitting back to server
     destroyBlock(x, y, false)
 }
 
 export function destroyBlocksRemote(blocks) {
-    console.log(`Remote block destruction: ${blocks.length} blocks`)
-    
     blocks.forEach(block => {
         destroyBlock(block.x, block.y, false)
     })
@@ -123,7 +110,6 @@ export function getDestroyedBlockCount() {
 
 //Clears destroyed block tracking (for game reset)
 export function clearDestroyedBlocks() {
-    console.log('Clearing destroyed blocks tracking')
     destroyedBlocks.clear()
 }
 

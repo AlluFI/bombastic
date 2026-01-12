@@ -22,7 +22,6 @@ function updateTimerDisplay() {
 export function startTimer() {
     if (isTimerRunning) return //timer is already running
 
-    console.log('Timer started')
     isTimerRunning = true
     startTime = Date.now() - (elapsedSeconds * 1000)
 
@@ -49,7 +48,6 @@ export function resumeTimer() {
 export function stopTimer() {
     if (!isTimerRunning) return // timer is already stopped
 
-    console.log('Timer stopped')
     isTimerRunning = false
 
     if (timerInterval) {
@@ -59,8 +57,6 @@ export function stopTimer() {
 }
 
 export function resetTimer() {
-    console.log('Timer reset')
-
     stopTimer()
 
     elapsedSeconds = 0
@@ -82,7 +78,5 @@ export function syncTimer(serverSeconds) {
 }
 
 export function initializeTimer() {
-    console.log('Timer initialized')
-
     updateTimerDisplay() //initial display set to 00:00
 }

@@ -141,7 +141,6 @@ function updateStartButton() {
 
 function handleStartGame() {
     if (!isHost) {
-        console.warn('Only host can start the game')
         return
     }
     
@@ -152,15 +151,12 @@ function handleStartGame() {
     
     // Play button click sound
     playSound('buttonClick') 
-    console.log('Starting game...')
     socket.emit('game:start', {
         roomCode: currentRoomCode
     })
 }
 
 function handleLeaveLobby() {
-    console.log('Leaving lobby...')
-    
     // Play button click sound
     playSound('buttonClick')
     
@@ -172,7 +168,6 @@ function handleLeaveLobby() {
 }
 
 export function initializeLobby() {
-    console.log('Initializing lobby UI...')
     
     if (startGameButton) {
         startGameButton.addEventListener('click', handleStartGame)

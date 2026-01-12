@@ -239,7 +239,6 @@ function handleJoinGame() {
 }
 
 function handleRestartGame() {
-    console.log('Back to Lobby button clicked')
     
     // Clear all players from the game view
     clearAllPlayers()

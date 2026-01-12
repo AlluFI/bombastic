@@ -38,11 +38,11 @@ export function resetPlayer() {
 
 // Socket event handlers
 socket.on('connect', () => {
-    console.log('✅ Socket connected with ID:', socket.id) 
+    // Socket connected
 })
 
 socket.on('disconnect', () => {
-    console.log('❌ Socket disconnected')
+    // Socket disconnected
 })
 
 socket.on('connect_error', (error) => {
@@ -80,7 +80,6 @@ socket.on('game:state', (state) => {
         
         // Only create local player if it doesn't exist yet
         if (myPlayer && !player) {
-            console.log('Creating player from game:state event:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
             player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
             // Pass gameMode from server state if available
             showGameScreen(null, state.gameMode)
@@ -101,13 +100,10 @@ socket.on('game:state', (state) => {
                 }
             }
         })
-    } else {
-        console.warn('game:state received with no players')
     }
 })
 
 socket.on('room:created', (state) => {
-    console.log('room:created received. Socket ID:', socket.id, 'Players in state:', state.players?.map(p => ({ id: p.id, name: p.name })))
     
     // Clear loading states
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
@@ -126,10 +122,8 @@ socket.on('room:created', (state) => {
     const myPlayer = state.players?.find(p => p.id === socket.id)
 
     if (myPlayer) {
-        console.log('Creating player from room:created:', myPlayer.id, myPlayer.name, `(${myPlayer.x}, ${myPlayer.y})`)
         player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color)
         initializePlayerStats(player.id)
-        console.log('Local player created:', player.id, player.name, `(${player.x}, ${player.y})`)
     } else {
         console.error('Could not find my player in room:created state. Available players:', state.players?.map(p => p.id))
     }
@@ -158,7 +152,6 @@ socket.on('room:created', (state) => {
             difficulties: playerData.difficulties
         })
         
-        console.log(`Single-player game started with ${playerData.npcCount} NPC(s) at difficulties:`, playerData.difficulties)
     } else {
         // Multiplayer: show lobby screen (game hasn't started yet)
         const hostId = state.hostId || state.players?.[0]?.id
@@ -169,7 +162,6 @@ socket.on('room:created', (state) => {
 })
 
 socket.on('room:updated', (state) => {
-    console.log("Room updated:", state.players);
     
     // Clear loading states (if any menu buttons were in loading state)
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
@@ -240,7 +232,6 @@ socket.on('room:updated', (state) => {
 
 // Handle NPC configuration confirmation
 socket.on('npcs-configured', (data) => {
-    console.log(`NPCs configured: ${data.count} NPC(s)`, data.npcs)
     // Timer will be synced via timer:sync events from server
     // Request room update to get NPCs in the players list
     // The server will emit room:updated with NPCs included
@@ -248,12 +239,11 @@ socket.on('npcs-configured', (data) => {
 
 // Handle game mode change confirmation
 socket.on('game-mode-changed', (data) => {
-    console.log(`Game mode changed to: ${data.mode}`)
+    // Game mode changed
 })
 
 // Handle game started (transition from lobby to game)
 socket.on('game:started', (data) => {
-    console.log('Game started!', data)
     
     // Play game start sound
     playSound('gameStart')

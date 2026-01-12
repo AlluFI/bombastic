@@ -8,7 +8,6 @@ function getTilePosition(x, y) {
     const tile = document.getElementById(`tile-${x}-${y}`)
 
     if (!tile) {
-        console.log(`Tile not found at ${x}-${y}`)
         return null
     }
 
@@ -107,15 +106,10 @@ function calculateExplosionTiles(centerX, centerY, range = DEFAULT_EXPLOSION_RAN
 }
 
 export function renderExplosion(centerX, centerY, range = DEFAULT_EXPLOSION_RANGE, onComplete = null) {
-    console.log(`Rendering explosion at (${centerX}, ${centerY}) with range ${range}`)
-    
     // Calculate which tiles should explode
     const explosionTiles = calculateExplosionTiles(centerX, centerY, range)
-    
-    console.log(`Explosion affects ${explosionTiles.length} tiles`)
 
     const breakableBlocks = filterBreakableBlocks(explosionTiles)
-    console.log(`Explosion hits ${breakableBlocks.length} breakable blocks`)
     
     // Create explosion elements
     const explosionElements = []
@@ -136,8 +130,6 @@ export function renderExplosion(centerX, centerY, range = DEFAULT_EXPLOSION_RANG
                 element.remove()
             }
         })
-        
-        console.log(`Explosion at (${centerX}, ${centerY}) cleared`)
 
         // Call completion callback with all parameters
         if (onComplete) {

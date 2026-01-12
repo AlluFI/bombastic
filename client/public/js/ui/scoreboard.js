@@ -28,8 +28,6 @@ function createPlayerEntryHTML(playerData, isLocal = false) {
 }
 
 export function renderScoreboard(players, localId) {
-    console.log('Rendering scoreboard for ', players.length, 'players')
-
     localPlayerId = localId
 
     scoreboardElement.innerHTML = ''
@@ -52,8 +50,6 @@ export function renderScoreboard(players, localId) {
 }
 
 export function addPlayerToScoreboard(playerData) {
-    console.log('Adding player to scorboards: ', playerData.name)
-
     const playerContainer = scoreboardElement.querySelector('.player-container')
     if(!playerContainer) {
         console.error('Player container not found')
@@ -62,7 +58,6 @@ export function addPlayerToScoreboard(playerData) {
 
     const existingEntry = playerContainer.querySelector(`[data-player-id="${playerData.id}"]`)
     if (existingEntry) {
-        console.log('Player already in scroeboard')
         return
     }
 
@@ -72,8 +67,6 @@ export function addPlayerToScoreboard(playerData) {
 }
 
 export function removePlayerFromScoreboard(playerId) {
-    console.log('Removing player from scoreboard: ', playerId)
-
     const playerEntry = scoreboardElement.querySelector(`[data-player-id="${playerId}"]`)
 
     if (playerEntry) {
@@ -83,15 +76,12 @@ export function removePlayerFromScoreboard(playerId) {
         setTimeout(() => {
             playerEntry.remove()
         }, 300);
-    } else {
-        console.log('Player entry not found')
     }
 }
 
 export function updatePlayerStats(playerId, stats) {
     const playerEntry = scoreboardElement.querySelector(`[data-player-id="${playerId}"]`)
     if (!playerEntry) {
-        console.log('Player ', playerId, ' not found in the scorebord')
         return
     }
 
@@ -121,7 +111,5 @@ export function updatePlayerStats(playerId, stats) {
  }
 
  export function initializeScoreboard() {
-    console.log('Scoreboard initialised')
-
     scoreboardElement.innerHTML = '<p class="no-player">Waiting for players...</p>'
  }

@@ -8,7 +8,6 @@ const noLobbiesMessage = document.getElementById('no-lobbies-message')
 let activeLobbies = new Map() // roomCode -> { roomCode, playerCount, maxPlayers }
 
 export function initializeLobbyBrowser() {
-    console.log('Initializing lobby browser...')
     
     // Request lobby list when menu is shown
     socket.on('connect', () => {
@@ -126,7 +125,5 @@ function joinLobby(roomCode) {
         roomId: roomCode,
         name: playerName
     })
-    
-    console.log(`Joining lobby ${roomCode} as ${playerName}`)
 }
 

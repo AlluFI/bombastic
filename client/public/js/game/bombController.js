@@ -185,21 +185,9 @@ export function tryPlaceBomb(player) {
 
     // Track bomb BEFORE rendering to prevent race conditions
     trackBomb(player.id, bombId, x, y)
-    console.log(`[Bomb] Placing bomb on client`, {
-        playerId: player.id,
-        bombId,
-        position: { x, y },
-        maxBombs,
-        bombCountAfterTracking: getPlayerBombCount(player.id)
-    })
 
     // Set timeout to remove bomb if not confirmed by server within 5 seconds
     const confirmationTimeout = setTimeout(() => {
-        console.warn(`[Bomb] Bomb ${bombId} not confirmed by server, removing`, {
-            playerId: player.id,
-            bombId,
-            position: { x, y }
-        })
         untrackBomb(player.id, bombId, x, y)
         removeBomb(bombId)
         pendingConfirmations.delete(bombId)
@@ -238,15 +226,6 @@ export function tryPlaceBomb(player) {
     })
 
     if (socket) {
-        console.log(`[Bomb] Sending bomb placement to server`, {
-            playerId: player.id,
-            bombId,
-            position: { x, y },
-            range: bombRange,
-            socketConnected: socket.connected,
-            socketId: socket.id
-        })
-        
         if (!socket.connected) {
             console.error(`[Bomb] Cannot send bomb placement - socket not connected`, {
                 playerId: player.id,
