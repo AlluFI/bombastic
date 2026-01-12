@@ -32,7 +32,7 @@ module.exports = {
   // Rate Limiting
   RATE_LIMITS: {
     MOVE: { max: 20, window: 1000 },      // 20 moves per second
-    BOMB: { max: 2, window: 3000 },       // 2 bombs per 3 seconds
+    BOMB: { max: 10, window: 1000 },     // 10 bombs per second (increased to allow rapid chain reactions)
     CHAT: { max: 5, window: 1000 },        // 5 messages per second
     POWERUP_PICKUP: { max: 10, window: 1000 }, // 10 pickups per second
   },

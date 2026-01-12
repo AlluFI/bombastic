@@ -21,6 +21,12 @@ const bombPositions = new Map()
 // Track last bomb placement time per player to prevent spam
 const lastBombPlacementTime = new Map()
 
+// Track pending bomb confirmations to remove rejected bombs
+const pendingConfirmations = new Map()
+
+// Track explosions that have been rendered to prevent double rendering
+const renderedExplosions = new Set()
+
 function generateBombId(playerId) {
     bombIdCounter++
     return `${playerId}-bomb-${bombIdCounter}-${Date.now()}`
@@ -122,11 +128,20 @@ function canPlaceBomb(playerId) {
 
 export function tryPlaceBomb(player) {
     if (!player) {
+        console.warn('[Bomb] Cannot place bomb: no player object')
         return false
     }
     
     // Check if player can place another bomb (includes cooldown check)
     if (!canPlaceBomb(player.id)) {
+        const maxBombs = getPlayerMaxBombs(player.id)
+        const bombCount = getPlayerBombCount(player.id)
+        console.warn(`[Bomb] Cannot place bomb: canPlaceBomb returned false`, {
+            playerId: player.id,
+            position: { x: player.x, y: player.y },
+            maxBombs,
+            bombCount
+        })
         return false
     }
 
@@ -136,25 +151,61 @@ export function tryPlaceBomb(player) {
 
     const validation = validateTile(x, y)
     if (!validation.valid) {
+        console.warn(`[Bomb] Cannot place bomb: invalid tile`, {
+            playerId: player.id,
+            position: { x, y },
+            reason: validation.reason
+        })
         return false
     }
     
     // Double-check bomb count AFTER validation to prevent race conditions
     // This ensures we don't place multiple bombs if called rapidly
     const maxBombs = getPlayerMaxBombs(player.id)
-    if (getPlayerBombCount(player.id) >= maxBombs) {
+    const bombCount = getPlayerBombCount(player.id)
+    if (bombCount >= maxBombs) {
+        console.warn(`[Bomb] Cannot place bomb: max bombs reached`, {
+            playerId: player.id,
+            position: { x, y },
+            maxBombs,
+            bombCount
+        })
         return false
     }
     
     // Check if bomb already exists at this position (additional safety check)
     const posKey = `${x}-${y}`
     if (bombPositions.has(posKey)) {
+        console.warn(`[Bomb] Cannot place bomb: bomb already exists at position`, {
+            playerId: player.id,
+            position: { x, y }
+        })
         return false
     }
 
     // Track bomb BEFORE rendering to prevent race conditions
     trackBomb(player.id, bombId, x, y)
-    
+    console.log(`[Bomb] Placing bomb on client`, {
+        playerId: player.id,
+        bombId,
+        position: { x, y },
+        maxBombs,
+        bombCountAfterTracking: getPlayerBombCount(player.id)
+    })
+
+    // Set timeout to remove bomb if not confirmed by server within 5 seconds
+    const confirmationTimeout = setTimeout(() => {
+        console.warn(`[Bomb] Bomb ${bombId} not confirmed by server, removing`, {
+            playerId: player.id,
+            bombId,
+            position: { x, y }
+        })
+        untrackBomb(player.id, bombId, x, y)
+        removeBomb(bombId)
+        pendingConfirmations.delete(bombId)
+    }, 5000)
+    pendingConfirmations.set(bombId, confirmationTimeout)
+
     // Update last placement time to enforce cooldown
     lastBombPlacementTime.set(player.id, Date.now())
     
@@ -165,38 +216,68 @@ export function tryPlaceBomb(player) {
     const bombRange = getPlayerBombRange(player.id)
     
     // Render bomb locally
+    // Client-side timeout will render explosion as fallback if server doesn't send bomb:exploded
+    // Server will send bomb:exploded for chain reactions, which will also render the explosion
     renderBomb(bombId, x, y, BOMB_DURATION, (explodedBombId, bombX, bombY) => {
-        // Play explosion sound
-        playSound('explosion')
+        // Always render explosion when client-side timeout fires
+        // Mark as rendered to prevent server-side handler from rendering again
+        const explosionKey = `${bombX}-${bombY}-${explodedBombId}`
+        if (!renderedExplosions.has(explosionKey)) {
+            renderedExplosions.add(explosionKey)
+            playSound('explosion')
+            renderExplosion(bombX, bombY, bombRange)
+            
+            // Clear the flag after explosion duration to allow re-rendering if needed
+            setTimeout(() => {
+                renderedExplosions.delete(explosionKey)
+            }, 500)
+        }
         
         // Untrack the bomb
         untrackBomb(player.id, explodedBombId, bombX, bombY)
-        
-        // Render explosion with player's bomb range (bomb exploded)
-        renderExplosion(bombX, bombY, bombRange, (centerX, centerY, affectedTiles, breakableBlocks) => {
-            // Destroy breakable blocks
-            if (breakableBlocks && breakableBlocks.length > 0) {
-                const destroyed = destroyBlocksInTiles(breakableBlocks)
-                // Play block destruction sound for each block
-                destroyed.forEach(() => {
-                    playSound('blockDestroy', { volume: 0.7 })
-                })
-            }
-            
-            // Note: Player damage is handled server-side via 'player:damaged' events
-            // No client-side damage calculation needed
-        })
     })
 
     if (socket) {
-        socket.emit('bomb:place', {
-            bombId: bombId,
+        console.log(`[Bomb] Sending bomb placement to server`, {
             playerId: player.id,
-            x: x,
-            y: y,
-            duration: BOMB_DURATION,
-            range: bombRange // Send range to server
+            bombId,
+            position: { x, y },
+            range: bombRange,
+            socketConnected: socket.connected,
+            socketId: socket.id
         })
+        
+        if (!socket.connected) {
+            console.error(`[Bomb] Cannot send bomb placement - socket not connected`, {
+                playerId: player.id,
+                bombId,
+                position: { x, y }
+            })
+            // Untrack the bomb since we can't send it
+            untrackBomb(player.id, bombId, x, y)
+            return false
+        }
+        
+        try {
+            socket.emit('bomb:place', {
+                bombId: bombId,
+                playerId: player.id,
+                x: x,
+                y: y,
+                duration: BOMB_DURATION,
+                range: bombRange // Send range to server
+            })
+        } catch (error) {
+            console.error(`[Bomb] Error sending bomb placement to server`, {
+                playerId: player.id,
+                bombId,
+                position: { x, y },
+                error: error.message
+            })
+            // Untrack the bomb since we can't send it
+            untrackBomb(player.id, bombId, x, y)
+            return false
+        }
     }
     
     return true
@@ -204,22 +285,21 @@ export function tryPlaceBomb(player) {
 
 export function placeRemoteBomb(bombData) {
     const { bombId, playerId, x, y, duration, range = 2 } = bombData
-    
+
     // Track this bomb (with x, y for position tracking)
     trackBomb(playerId, bombId, x, y)
-    
+
     // Render bomb
+    // Client-side timeout will render explosion as fallback if server doesn't send bomb:exploded
+    // Server will send bomb:exploded for chain reactions, which will also render the explosion
     renderBomb(bombId, x, y, duration, (explodedBombId, bombX, bombY) => {
-        untrackBomb(playerId, explodedBombId, bombX, bombY)
-        
-        // Play explosion sound for remote bomb
+        // Always render explosion when client-side timeout fires
+        // The server-side handler will check if it was already rendered to prevent duplicates
         playSound('explosion')
+        renderExplosion(bombX, bombY, range)
         
-        // Render explosion with the bomb's range
-        renderExplosion(bombX, bombY, range, (centerX, centerY, affectedTiles) => {
-            // Note: Player damage is handled server-side via 'player:damaged' events
-            // No client-side damage calculation needed
-        })
+        // Untrack the bomb
+        untrackBomb(playerId, explodedBombId, bombX, bombY)
     })
 }
 
@@ -229,11 +309,6 @@ export function placeRemoteBomb(bombData) {
  * (server already applies damage).
  */
 export function handleServerBombExplosion({ bombId, playerId, x, y, range = 2 }) {
-    // Check if bomb already exploded client-side (prevents double explosion rendering)
-    if (hasBombExploded(bombId)) {
-        return
-    }
-    
     // Mark as exploded before removing to prevent timeout callback from firing
     markBombAsExploded(bombId)
     
@@ -243,11 +318,23 @@ export function handleServerBombExplosion({ bombId, playerId, x, y, range = 2 })
     // Remove bomb element if it exists (this also clears timeouts)
     removeBomb(bombId)
 
-    // Play explosion sound
-    playSound('explosion')
+    // Check if explosion was already rendered by client-side timeout
+    const explosionKey = `${x}-${y}-${bombId}`
+    if (!renderedExplosions.has(explosionKey)) {
+        // Mark as rendered
+        renderedExplosions.add(explosionKey)
+        
+        // Play explosion sound
+        playSound('explosion')
 
-    // Render explosion visuals with the bomb's range
-    renderExplosion(x, y, range)
+        // Render explosion visuals with the bomb's range
+        renderExplosion(x, y, range)
+        
+        // Clear the flag after explosion duration
+        setTimeout(() => {
+            renderedExplosions.delete(explosionKey)
+        }, 500)
+    }
 }
 
 export function clearPlayerBombs(playerId) {
@@ -286,3 +373,5 @@ export function getBombPositions() {
     })
     return positions
 }
+
+export { pendingConfirmations }

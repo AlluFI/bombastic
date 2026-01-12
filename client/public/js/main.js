@@ -7,7 +7,7 @@ import { isPaused, initializePauseMenu, setPaused } from "./ui/pause.js";
 import { showGameScreen, showEndScreen, showMenuScreen } from "./ui/menu.js";
 import { initializeTimer, startTimer, stopTimer } from "./ui/timer.js";
 import { initializeScoreboard, renderScoreboard, addPlayerToScoreboard, removePlayerFromScoreboard, updatePlayerStats } from "./ui/scoreboard.js";
-import { placeRemoteBomb, clearPlayerBombs, clearAllBombs, handleServerBombExplosion } from "./game/bombController.js";
+import { placeRemoteBomb, clearPlayerBombs, clearAllBombs, handleServerBombExplosion, pendingConfirmations } from "./game/bombController.js";
 import { loadChatHistory, initializeChat } from "./ui/chat.js";
 import { destroyBlockRemote, destroyBlocksRemote, clearDestroyedBlocks } from "./game/blockController.js"
 import { initializeMap } from "./grid.js"
@@ -438,8 +438,12 @@ socket.on('game:pause', (payload) => {
 })
 
 socket.on('bomb:placed', (bombData) => {
-    // Don't place local player's bombs again - they already placed it locally
+    // Clear confirmation timeout for local bombs
     if (bombData.playerId === socket.id) {
+        if (pendingConfirmations.has(bombData.bombId)) {
+            clearTimeout(pendingConfirmations.get(bombData.bombId))
+            pendingConfirmations.delete(bombData.bombId)
+        }
         return
     }
     placeRemoteBomb(bombData)

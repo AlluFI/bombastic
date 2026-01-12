@@ -88,64 +88,213 @@ module.exports = function gameLoop(io, rooms) {
       const destroyedBlocks = [];
       const processedBombIds = new Set(); // Track bombs we've already processed in this cycle
       
-      // Process chain reactions: keep processing until no more bombs explode
-      let hasMoreExplosions = true;
-      while (hasMoreExplosions) {
-        hasMoreExplosions = false;
-        
-        // Find bombs that should explode (timer expired or triggered by chain reaction)
-        const bombsToExplode = [];
-        room.gameState.bombs.forEach(bomb => {
-          if (processedBombIds.has(bomb.id)) {
-            return; // Already processed this bomb
-          }
-          
-          const elapsed = now - bomb.placedAt;
-          if (elapsed >= bomb.duration) {
-            bombsToExplode.push(bomb);
-          }
-        });
-        
-        if (bombsToExplode.length === 0) {
-          break; // No more bombs to explode
+      // Process chain reactions: process all bombs that should explode in one pass
+      // Start with bombs that have expired timers
+      const bombsToExplode = [];
+      const bombsToExplodeIds = new Set();
+      
+      // Initial collection: find bombs with expired timers
+      room.gameState.bombs.forEach(bomb => {
+        if (processedBombIds.has(bomb.id)) {
+          return; // Already processed
         }
         
-        // Process each bomb that should explode
-        bombsToExplode.forEach(bomb => {
-          processedBombIds.add(bomb.id);
-          explodedBombs.push(bomb);
+        const elapsed = now - bomb.placedAt;
+        if (elapsed >= bomb.duration) {
+          bombsToExplode.push(bomb);
+          bombsToExplodeIds.add(bomb.id);
+          logGameEvent('Bomb timer expired - added to queue', {
+            roomId,
+            bombId: bomb.id,
+            position: { x: bomb.x, y: bomb.y },
+            elapsed,
+            duration: bomb.duration
+          });
+        }
+      });
+      
+      // Only log initial queue if there are bombs to process
+      if (bombsToExplode.length > 0) {
+        logGameEvent('Initial bomb queue', {
+          roomId,
+          queueSize: bombsToExplode.length,
+          queueIds: bombsToExplode.map(b => b.id),
+          totalBombs: room.gameState.bombs.length,
+          allBombsInRoom: room.gameState.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, placedAt: b.placedAt, duration: b.duration }))
+        });
+      }
+      
+      // Process bombs and trigger chain reactions
+      // Use index-based loop so we can add bombs during iteration
+      let bombIndex = 0;
+      while (bombIndex < bombsToExplode.length) {
+        const bomb = bombsToExplode[bombIndex];
+        bombIndex++;
+        
+        // Skip if already processed (safety check)
+        if (processedBombIds.has(bomb.id)) {
+          logGameEvent('Skipping already processed bomb', {
+            roomId,
+            bombId: bomb.id,
+            processedIds: Array.from(processedBombIds)
+          });
+          continue;
+        }
+        
+        logGameEvent('Processing bomb explosion', {
+          roomId,
+          bombId: bomb.id,
+          position: { x: bomb.x, y: bomb.y },
+          queueSize: bombsToExplode.length,
+          queueIndex: bombIndex - 1,
+          totalBombsInRoom: room.gameState.bombs.length
+        });
+        
+        // Mark as processed
+        processedBombIds.add(bomb.id);
+        explodedBombs.push(bomb);
+        
+        // Calculate explosion tiles for this bomb
+        const explosionTiles = calculateExplosionTiles(bomb, room.gameState.board);
+        const blocks = calculateExplosionBlocks(bomb, room.gameState.board);
+        destroyedBlocks.push(...blocks);
+        
+        // Check for chain reactions: find bombs in the explosion range
+        // Check ALL bombs in room.gameState.bombs to catch any bombs in range
+        // Iterate backwards to avoid issues if array is modified
+        logGameEvent('Checking for chain reactions', {
+          roomId,
+          bombId: bomb.id,
+          explosionTilesCount: explosionTiles.length,
+          totalBombsToCheck: room.gameState.bombs.length,
+          processedCount: processedBombIds.size,
+          queuedCount: bombsToExplodeIds.size
+        });
+        
+        // IMPORTANT: Check the LIVE array directly, not a snapshot
+        // This ensures we catch all bombs that are currently in the room,
+        // including any that might have been added during processing
+        // We need to check the live array because bombs can be added/removed
+        // during the game loop, and we want to catch all bombs that exist NOW
+        
+        // Log all bombs being checked for debugging
+        const allBombPositions = room.gameState.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, placedAt: b.placedAt }));
+        const explosionTilePositions = explosionTiles.map(t => ({ x: t.x, y: t.y }));
+        
+        logGameEvent('Checking bombs for chain reaction', {
+          roomId,
+          triggeringBomb: { id: bomb.id, x: bomb.x, y: bomb.y, range: bomb.range },
+          allBombsInRoom: allBombPositions,
+          allBombsCount: room.gameState.bombs.length,
+          explosionTiles: explosionTilePositions,
+          explosionTilesCount: explosionTiles.length,
+          processedIds: Array.from(processedBombIds),
+          queuedIds: Array.from(bombsToExplodeIds)
+        });
+        
+        // Iterate over the LIVE array directly, but iterate backwards to avoid issues
+        // if bombs are removed during iteration
+        // CRITICAL: We need to check ALL bombs in the room, including ones that might have been
+        // added during the chain reaction processing. The live array should contain all active bombs.
+        const bombsToCheck = Array.from(room.gameState.bombs); // Create a snapshot to iterate safely
+        logGameEvent('Iterating over bombs for chain reaction', {
+          roomId,
+          triggeringBomb: { id: bomb.id, x: bomb.x, y: bomb.y },
+          totalBombsInLiveArray: room.gameState.bombs.length,
+          bombsToCheckCount: bombsToCheck.length,
+          allBombPositions: bombsToCheck.map(b => ({ id: b.id, x: b.x, y: b.y, placedAt: b.placedAt }))
+        });
+        
+        for (let i = 0; i < bombsToCheck.length; i++) {
+          const otherBomb = bombsToCheck[i];
           
-          // Calculate explosion tiles for this bomb
-          const explosionTiles = calculateExplosionTiles(bomb, room.gameState.board);
-          const blocks = calculateExplosionBlocks(bomb, room.gameState.board);
-          destroyedBlocks.push(...blocks);
+          // Safety check: verify bomb still exists in live array (might have been removed)
+          if (!otherBomb) {
+            continue;
+          }
           
-          // Check for chain reactions: find bombs in the explosion range
-          room.gameState.bombs.forEach(otherBomb => {
-            // Skip if this is the same bomb, already processed, or already exploded
-            if (otherBomb.id === bomb.id || processedBombIds.has(otherBomb.id)) {
-              return;
-            }
-            
-            // Check if this bomb is within the explosion tiles
-            const isInExplosion = explosionTiles.some(tile => tile.x === otherBomb.x && tile.y === otherBomb.y);
-            
-            if (isInExplosion) {
-              // Trigger chain reaction: set bomb's timer to 0 so it explodes immediately
-              otherBomb.placedAt = now - otherBomb.duration; // Set elapsed time to duration (triggers explosion)
-              hasMoreExplosions = true; // Continue processing chain reactions
-              logGameEvent('Chain reaction triggered', {
+          // Verify bomb still exists in live array (double-check)
+          const bombStillExists = room.gameState.bombs.some(b => b.id === otherBomb.id);
+          if (!bombStillExists) {
+            logGameEvent('Bomb no longer exists in live array (skipped)', {
+              roomId,
+              bombId: otherBomb.id,
+              position: { x: otherBomb.x, y: otherBomb.y }
+            });
+            continue;
+          }
+          
+          // Skip if same bomb, already processed, or already queued
+          if (otherBomb.id === bomb.id || processedBombIds.has(otherBomb.id) || bombsToExplodeIds.has(otherBomb.id)) {
+            if (otherBomb && otherBomb.id !== bomb.id) {
+              logGameEvent('Bomb skipped in chain check', {
                 roomId,
-                triggeredBomb: { x: otherBomb.x, y: otherBomb.y },
-                triggeringBomb: { x: bomb.x, y: bomb.y }
+                bombId: otherBomb.id,
+                position: { x: otherBomb.x, y: otherBomb.y },
+                reason: !otherBomb ? 'null' : 
+                        otherBomb.id === bomb.id ? 'same bomb' :
+                        processedBombIds.has(otherBomb.id) ? 'already processed' :
+                        bombsToExplodeIds.has(otherBomb.id) ? 'already queued' : 'unknown'
               });
             }
-          });
-        });
+            continue;
+          }
+          
+          // Check if this bomb is within the explosion tiles
+          const isInExplosion = explosionTiles.some(tile => tile.x === otherBomb.x && tile.y === otherBomb.y);
+          
+          if (isInExplosion) {
+            // Trigger chain reaction: add to queue immediately
+            // Find the actual bomb object from room.gameState.bombs to ensure we have the latest reference
+            const liveBomb = room.gameState.bombs.find(b => b.id === otherBomb.id);
+            if (liveBomb) {
+              // Double-check: make sure this bomb isn't already processed or queued
+              if (!processedBombIds.has(liveBomb.id) && !bombsToExplodeIds.has(liveBomb.id)) {
+                bombsToExplode.push(liveBomb);
+                bombsToExplodeIds.add(liveBomb.id);
+                logGameEvent('Chain reaction triggered', {
+                  roomId,
+                  triggeredBomb: { id: liveBomb.id, x: liveBomb.x, y: liveBomb.y, range: liveBomb.range },
+                  triggeringBomb: { id: bomb.id, x: bomb.x, y: bomb.y, range: bomb.range },
+                  queueSize: bombsToExplode.length,
+                  queueIds: bombsToExplode.map(b => b.id),
+                  totalBombsInRoom: room.gameState.bombs.length,
+                  processedIds: Array.from(processedBombIds),
+                  queuedIds: Array.from(bombsToExplodeIds),
+                  distance: Math.abs(liveBomb.x - bomb.x) + Math.abs(liveBomb.y - bomb.y)
+                });
+              } else {
+                logGameEvent('Chain reaction skipped - bomb already processed/queued', {
+                  roomId,
+                  bombId: liveBomb.id,
+                  alreadyProcessed: processedBombIds.has(liveBomb.id),
+                  alreadyQueued: bombsToExplodeIds.has(liveBomb.id)
+                });
+              }
+            }
+          } else {
+            logGameEvent('Bomb not in explosion range', {
+              roomId,
+              bombId: otherBomb.id,
+              position: { x: otherBomb.x, y: otherBomb.y },
+              explosionTiles: explosionTilePositions
+            });
+          }
+        }
       }
       
       // Remove exploded bombs from active bombs list (after processing all chain reactions)
       room.gameState.bombs = room.gameState.bombs.filter(bomb => !processedBombIds.has(bomb.id));
+      
+      // Log all exploded bombs for debugging
+      if (explodedBombs.length > 0) {
+        logGameEvent('All bombs processed in chain', {
+          roomId,
+          totalExploded: explodedBombs.length,
+          explodedBombIds: explodedBombs.map(b => b.id),
+          explodedBombPositions: explodedBombs.map(b => ({ id: b.id, x: b.x, y: b.y }))
+        });
+      }
       
       // Process exploded bombs (damage, block destruction, etc.)
       if (explodedBombs.length > 0) {
