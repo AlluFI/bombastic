@@ -3,10 +3,10 @@ import { socket } from "../main.js";
 import { map } from "../grid.js";
 import { renderExplosion } from "../render/explosionRender.js";
 import { destroyBlocksInTiles } from './blockController.js'
-import { getPlayerBombRange } from './powerupController.js'
+import { getPlayerBombRange, getPlayerMaxBombs } from './powerupController.js'
 import { playSound } from '../audio/soundManager.js'
 
-const MAX_BOMBS_PER_PLAYER = 1
+// MAX_BOMBS_PER_PLAYER is now dynamic based on power-ups (default 1)
 const BOMB_DURATION = 3000
 const BOMB_PLACEMENT_COOLDOWN = 300 // milliseconds between bomb placements (prevents spam)
 
@@ -110,9 +110,10 @@ function canPlaceBomb(playerId) {
         return false
     }
     
-    // Check if player already has max bombs
+    // Check if player already has max bombs (dynamic based on power-ups)
+    const maxBombs = getPlayerMaxBombs(playerId)
     const bombCount = getPlayerBombCount(playerId)
-    if (bombCount >= MAX_BOMBS_PER_PLAYER) {
+    if (bombCount >= maxBombs) {
         return false
     }
     
@@ -140,7 +141,8 @@ export function tryPlaceBomb(player) {
     
     // Double-check bomb count AFTER validation to prevent race conditions
     // This ensures we don't place multiple bombs if called rapidly
-    if (getPlayerBombCount(player.id) >= MAX_BOMBS_PER_PLAYER) {
+    const maxBombs = getPlayerMaxBombs(player.id)
+    if (getPlayerBombCount(player.id) >= maxBombs) {
         return false
     }
     

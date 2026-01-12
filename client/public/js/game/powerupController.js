@@ -5,7 +5,8 @@ import { playSound } from '../audio/soundManager.js'
 
 const POWERUP_TYPES = {
     BOMB_RANGE: 'bomb_range',
-    IMMORTAL: 'immortal'
+    IMMORTAL: 'immortal',
+    BOMB_COUNT: 'bomb_count'
 }
 
 // Track active power-ups on the map
@@ -18,6 +19,7 @@ export function initializePlayerStats(playerId) {
     // Always reset player stats (important for new games)
     playerStats.set(playerId, {
         bombRange: 2, // Default range
+        maxBombs: 1, // Default max bombs (can be increased with power-ups)
         immortal: false,
         immortalEnd: 0
     })
@@ -28,13 +30,24 @@ export function getPlayerBombRange(playerId) {
     return stats ? stats.bombRange : 2
 }
 
+export function getPlayerMaxBombs(playerId) {
+    const stats = playerStats.get(playerId)
+    return stats ? stats.maxBombs : 1
+}
+
 export function addPowerupToPlayer(playerId, powerupType) {
-    initializePlayerStats(playerId)
+    // Only initialize if stats don't exist (don't reset existing stats!)
+    if (!playerStats.has(playerId)) {
+        initializePlayerStats(playerId)
+    }
     const stats = playerStats.get(playerId)
     
     if (powerupType === POWERUP_TYPES.BOMB_RANGE) {
         stats.bombRange += 1 // Increase range by 1
         console.log(`Player ${playerId} picked up bomb range power-up! New range: ${stats.bombRange}`)
+    } else if (powerupType === POWERUP_TYPES.BOMB_COUNT) {
+        stats.maxBombs += 1 // Increase max bombs by 1
+        console.log(`Player ${playerId} picked up bomb count power-up! Can now place ${stats.maxBombs} bombs`)
     } else if (powerupType === POWERUP_TYPES.IMMORTAL) {
         // Grant 15 seconds of immortality
         const IMMORTAL_DURATION = 15000
@@ -130,8 +143,14 @@ export function renderPowerup(powerupData) {
     
     // Add icon based on type
     if (type === POWERUP_TYPES.BOMB_RANGE) {
-        powerupElement.innerHTML = '💣'
+        powerupElement.innerHTML = '💥'
         powerupElement.title = 'Bomb Range +1'
+    } else if (type === POWERUP_TYPES.BOMB_COUNT) {
+        powerupElement.innerHTML = '💣'
+        powerupElement.title = 'Bomb Count +1'
+    } else if (type === POWERUP_TYPES.IMMORTAL) {
+        powerupElement.innerHTML = '✨'
+        powerupElement.title = 'Immortality (15s)'
     }
     
     // Position power-up on tile (centered)

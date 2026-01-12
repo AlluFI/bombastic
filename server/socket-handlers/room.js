@@ -63,6 +63,7 @@ module.exports = function roomHandlers(io, socket, rooms) {
       lives: CONSTANTS.DEFAULT_LIVES,
       alive: true,
       bombRange: 2,
+      maxBombs: 1, // Default max bombs (can be increased with power-ups)
       immortal: false,
       immortalEnd: 0
     }
@@ -163,6 +164,7 @@ module.exports = function roomHandlers(io, socket, rooms) {
       lives: CONSTANTS.DEFAULT_LIVES,
       alive: true,
       bombRange: 2,
+      maxBombs: 1, // Default max bombs (can be increased with power-ups)
       immortal: false,
       immortalEnd: 0
     })

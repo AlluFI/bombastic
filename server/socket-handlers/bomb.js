@@ -58,9 +58,10 @@ module.exports = function bombHandlers(io, socket, rooms) {
         room.gameState.bombs = [];
       }
       
-      // Check if player already has an active bomb (max 1 bomb per player/NPC)
+      // Check if player already has max bombs (dynamic based on power-ups)
+      const maxBombs = player.maxBombs || 1
       const existingBombs = room.gameState.bombs.filter(b => b.playerId === socket.id);
-      if (existingBombs.length > 0) {
+      if (existingBombs.length >= maxBombs) {
         // Silently ignore - this is expected behavior (bomb limit reached)
         return
       }

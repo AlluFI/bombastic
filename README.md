@@ -47,9 +47,20 @@ A real-time multiplayer Bomberman-style game built with vanilla JavaScript and N
 You can play with friends on the same WiFi network:
 
 1. **Find your computer's IP address:**
-   - **macOS/Linux**: Run `ifconfig` or `ip addr` in terminal, look for your WiFi adapter (usually `en0` or `wlan0`)
-   - **Windows**: Run `ipconfig` in Command Prompt, look for "IPv4 Address" under your WiFi adapter
-   - Example: `192.168.1.100`
+   
+   **Windows:**
+   - Open **Command Prompt** (Press `Win + R`, type `cmd`, press Enter)
+   - Type `ipconfig` and press Enter
+   - Look for your WiFi adapter (usually named "Wireless LAN adapter Wi-Fi" or "Wireless LAN adapter WLAN")
+   - Find the **"IPv4 Address"** line under that adapter
+   - Example: `IPv4 Address. . . . . . . . . . . : 192.168.1.100`
+   
+   **macOS/Linux:**
+   - Open Terminal
+   - Run `ifconfig` (macOS/Linux) or `ip addr` (Linux)
+   - Look for your WiFi adapter (usually `en0` on macOS or `wlan0` on Linux)
+   - Find the `inet` address (not `127.0.0.1`)
+   - Example: `inet 192.168.1.100`
 
 2. **Start the server** (if not already running):
    ```bash

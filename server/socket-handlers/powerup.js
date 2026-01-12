@@ -57,6 +57,9 @@ module.exports = function powerupHandlers(io, socket, rooms) {
     if (!player.bombRange) {
       player.bombRange = CONSTANTS.DEFAULT_BOMB_RANGE
     }
+    if (!player.maxBombs) {
+      player.maxBombs = 1
+    }
     
     if (powerup.type === 'bomb_range') {
       player.bombRange += 1
@@ -64,6 +67,32 @@ module.exports = function powerupHandlers(io, socket, rooms) {
         roomId: socket.roomCode,
         powerupType: powerup.type,
         newRange: player.bombRange,
+        position: { x: data.x, y: data.y }
+      })
+    } else if (powerup.type === 'bomb_count') {
+      player.maxBombs += 1
+      logPlayerAction(player.id, player.name, 'picked up bomb count power-up', {
+        roomId: socket.roomCode,
+        powerupType: powerup.type,
+        newMaxBombs: player.maxBombs,
+        position: { x: data.x, y: data.y }
+      })
+    } else if (powerup.type === 'immortal') {
+      // Initialize immortal state if not exists
+      if (player.immortal === undefined) {
+        player.immortal = false
+        player.immortalEnd = 0
+      }
+      
+      // Grant 15 seconds of immortality
+      const IMMORTAL_DURATION = 15000
+      player.immortal = true
+      player.immortalEnd = Date.now() + IMMORTAL_DURATION
+      
+      logPlayerAction(player.id, player.name, 'picked up immortal power-up', {
+        roomId: socket.roomCode,
+        powerupType: powerup.type,
+        duration: IMMORTAL_DURATION,
         position: { x: data.x, y: data.y }
       })
     }

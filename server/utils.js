@@ -363,9 +363,12 @@ function checkGameEnd(gameState, room) {
         // Remove powerup from game state
         room.gameState.powerups.splice(powerupIndex, 1);
         
-        // Update NPC stats (bombRange for now, can be extended for other powerup types)
+        // Update NPC stats (bombRange and maxBombs)
         if (!npcPlayer.bombRange) {
           npcPlayer.bombRange = CONSTANTS.DEFAULT_BOMB_RANGE
+        }
+        if (!npcPlayer.maxBombs) {
+          npcPlayer.maxBombs = 1
         }
         
         if (powerup.type === 'bomb_range') {
@@ -374,6 +377,32 @@ function checkGameEnd(gameState, room) {
             roomId,
             powerupType: powerup.type,
             newRange: npcPlayer.bombRange,
+            position: { x: newX, y: newY }
+          });
+        } else if (powerup.type === 'bomb_count') {
+          npcPlayer.maxBombs += 1;
+          logNPCAction(npcId, npc.name, 'picked up bomb count power-up', {
+            roomId,
+            powerupType: powerup.type,
+            newMaxBombs: npcPlayer.maxBombs,
+            position: { x: newX, y: newY }
+          });
+        } else if (powerup.type === 'immortal') {
+          // Initialize immortal state if not exists
+          if (npcPlayer.immortal === undefined) {
+            npcPlayer.immortal = false;
+            npcPlayer.immortalEnd = 0;
+          }
+          
+          // Grant 15 seconds of immortality
+          const IMMORTAL_DURATION = 15000;
+          npcPlayer.immortal = true;
+          npcPlayer.immortalEnd = Date.now() + IMMORTAL_DURATION;
+          
+          logNPCAction(npcId, npc.name, 'picked up immortal power-up', {
+            roomId,
+            powerupType: powerup.type,
+            duration: IMMORTAL_DURATION,
             position: { x: newX, y: newY }
           });
         }
@@ -403,16 +432,17 @@ function checkGameEnd(gameState, room) {
     // Place bomb for NPC (same as player bomb placement)
     const BOMB_DURATION = CONSTANTS.BOMB_TIMER_MS; // 3 seconds, matching client
     
-    // Check if NPC already has an active bomb (max 1 bomb per player/NPC)
+    // Get NPC's stats (from powerups)
+    const npcPlayer = room.players.get(npcId);
+    const maxBombs = npcPlayer?.maxBombs || 1
+    const bombRange = npcPlayer?.bombRange || CONSTANTS.DEFAULT_BOMB_RANGE
+    
+    // Check if NPC already has max bombs (dynamic based on power-ups)
     const existingBombs = (room.gameState.bombs || []).filter(b => b.playerId === npcId);
-    if (existingBombs.length > 0) {
-      // NPC already has a bomb, skip placement
+    if (existingBombs.length >= maxBombs) {
+      // NPC already has max bombs, skip placement
       return;
     }
-    
-    // Get NPC's bomb range (from powerups)
-    const npcPlayer = room.players.get(npcId);
-    const bombRange = npcPlayer?.bombRange || CONSTANTS.DEFAULT_BOMB_RANGE
     
     // Generate unique bomb ID for NPC
     const bombId = `${npcId}-bomb-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;

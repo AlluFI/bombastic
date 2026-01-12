@@ -101,9 +101,12 @@ function rateLimitMiddleware(action) {
  */
 function isRateLimited(socket, action) {
   if (!checkRateLimit(socket.id, action)) {
-    socket.emit('error', { 
-      message: `Rate limit exceeded for ${action}. Please slow down.` 
-    });
+    // Don't show error notification for BOMB rate limits (silently ignore)
+    if (action !== 'BOMB') {
+      socket.emit('error', { 
+        message: `Rate limit exceeded for ${action}. Please slow down.` 
+      });
+    }
     return true;
   }
   return false;

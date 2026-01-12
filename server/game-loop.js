@@ -384,9 +384,12 @@ module.exports = function gameLoop(io, rooms) {
               // Only spawn if we haven't exceeded the max and random chance succeeds
               if (currentPowerups < maxPowerups && Math.random() < CONSTANTS.POWERUP_SPAWN_CHANCE) {
                 const powerupId = `powerup-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                // Randomly choose power-up type: 50% bomb_range, 30% bomb_count, 20% immortal
+                const powerupTypes = ['bomb_range', 'bomb_range', 'bomb_range', 'bomb_range', 'bomb_range', 'bomb_count', 'bomb_count', 'bomb_count', 'immortal', 'immortal'];
+                const powerupType = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
                 const powerup = {
                   id: powerupId,
-                  type: 'bomb_range',
+                  type: powerupType,
                   x: block.x,
                   y: block.y
                 };
