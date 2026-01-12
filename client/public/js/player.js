@@ -148,12 +148,15 @@ class Player {
             return
         }
         
-        const tilePosition = tile.getBoundingClientRect()
+        const grid = document.getElementById('grid')
+        if (!grid) return
+        
+        const tileRect = tile.getBoundingClientRect()
+        const gridRect = grid.getBoundingClientRect()
 
-        //Align the player to the tile
-        // Only update if position actually changed to avoid style recalculation
-        const newLeft = tilePosition.left + 'px'
-        const newTop = tilePosition.top + 'px'
+        //Align the player to the tile - calculate position relative to grid container
+        const newLeft = (tileRect.left - gridRect.left) + 'px'
+        const newTop = (tileRect.top - gridRect.top) + 'px'
         
         if (this.element.style.left !== newLeft) {
             this.element.style.left = newLeft

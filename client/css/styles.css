@@ -991,14 +991,12 @@ button.loading::after {
     min-height: 100vh;
     height: 100vh;
     position: relative;
-    overflow: hidden;
 }
 
 #game-wrapper {
     display: flex;
     justify-content: center;
-    min-height: 100vh;
-    margin-top: 100px;
+    /* min-height: 100vh; */
     gap: 20px;
     padding: 20px;
 }

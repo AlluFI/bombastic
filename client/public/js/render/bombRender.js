@@ -11,9 +11,20 @@ function getTilePosition(x, y) {
         console.error(`Tile not found tile-${x}-${y}`)
         return {left:0, top:0}
     }
+    
+    const grid = document.getElementById('grid')
+    if (!grid) {
+        console.error('Grid not found')
+        return {left:0, top:0}
+    }
+    
     const tileRect = tile.getBoundingClientRect()
+    const gridRect = grid.getBoundingClientRect()
 
-    return {left: tileRect.left, top: tileRect.top}
+    return {
+        left: tileRect.left - gridRect.left,
+        top: tileRect.top - gridRect.top
+    }
 }
 
 function createBombElement(bombId, x, y, timer = 3) {

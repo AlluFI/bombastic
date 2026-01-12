@@ -9,11 +9,26 @@ export const keys = {
 window.addEventListener('keydown', (e) =>{
     if (e.repeat) return //avoid long press issues
 
-    if (e.key === 'ArrowUp') keys.up = true
-    if (e.key === 'ArrowDown') keys.down = true
-    if (e.key === 'ArrowLeft') keys.left = true
-    if (e.key === 'ArrowRight') keys.right = true
-    if (e.key === ' ') keys.space = true
+    if (e.key === 'ArrowUp') {
+        keys.up = true
+        e.preventDefault() // Prevent page scrolling
+    }
+    if (e.key === 'ArrowDown') {
+        keys.down = true
+        e.preventDefault() // Prevent page scrolling
+    }
+    if (e.key === 'ArrowLeft') {
+        keys.left = true
+        e.preventDefault() // Prevent page scrolling
+    }
+    if (e.key === 'ArrowRight') {
+        keys.right = true
+        e.preventDefault() // Prevent page scrolling
+    }
+    if (e.key === ' ') {
+        keys.space = true
+        e.preventDefault() // Prevent page scrolling when placing bombs
+    }
 })
 
 window.addEventListener('keyup', (e) => {
