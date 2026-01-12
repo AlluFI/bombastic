@@ -193,7 +193,7 @@ setInterval(() => {
 1. **Client**: Detects player stepping on power-up
 2. **Client**: Sends `powerup:pickup` event to server
 3. **Server**: Removes power-up from game state
-4. **Server**: Updates player stats (bombRange)
+4. **Server**: Updates player stats (bombRange, maxBombs, or immortal based on type)
 5. **Server**: Broadcasts `powerup:picked` to all clients
 6. **Client**: Removes power-up visual and updates player stats
 
@@ -240,7 +240,10 @@ setInterval(() => {
     lives: 3,
     alive: true,
     score: 0,
-    bombRange: 2,      // Default 2, increases with power-ups
+    bombRange: 2,      // Default 2, increases with bomb_range power-ups
+    maxBombs: 1,       // Default 1, increases with bomb_count power-ups
+    immortal: false,   // Temporary immortality from immortal power-up
+    immortalEnd: 0,    // Timestamp when immortality expires
     isNPC: false
 }
 ```
@@ -264,7 +267,7 @@ setInterval(() => {
 ```javascript
 {
     id: 'powerup-id',
-    type: 'bomb_range',
+    type: 'bomb_range' | 'bomb_count' | 'immortal',
     x: 5,
     y: 5
 }

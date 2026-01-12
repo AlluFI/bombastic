@@ -427,7 +427,7 @@ Power-up spawned on the map.
 {
     powerups: Array<{
         id: string,
-        type: string,  // 'bomb_range'
+        type: string,  // 'bomb_range' | 'bomb_count' | 'immortal'
         x: number,
         y: number
     }>
@@ -529,7 +529,10 @@ Active lobbies list updated.
     alive: boolean,       // Whether player is alive
     score: number,        // Player score
     lives: number,        // Remaining lives (1-3)
-    bombRange: number,    // Bomb explosion range (default 2)
+    bombRange: number,    // Bomb explosion range (default 2, can be increased)
+    maxBombs: number,     // Maximum bombs that can be placed simultaneously (default 1, can be increased)
+    immortal: boolean,    // Whether player has immortality (temporary)
+    immortalEnd: number,  // Timestamp when immortality expires
     isNPC: boolean        // Whether this is an NPC
 }
 ```
@@ -555,7 +558,7 @@ Active lobbies list updated.
 ```javascript
 {
     id: string,          // Unique power-up ID
-    type: string,        // 'bomb_range'
+    type: string,        // 'bomb_range' | 'bomb_count' | 'immortal'
     x: number,          // Grid row
     y: number           // Grid col
 }

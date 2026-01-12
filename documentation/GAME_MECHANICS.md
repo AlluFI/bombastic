@@ -24,7 +24,7 @@ This document describes the game mechanics, rules, and systems implemented in th
   - Bottom-right: (11, 13)
 - **Lives**: 3 lives per player
 - **Bomb Range**: Default 2 tiles
-- **Bomb Limit**: 1 bomb at a time (initially)
+- **Bomb Limit**: 1 bomb at a time (can be increased with power-ups)
 
 #### Movement
 - **Grid-based**: Players move one tile at a time
@@ -55,10 +55,10 @@ This document describes the game mechanics, rules, and systems implemented in th
 
 #### Explosion
 - **Shape**: Cross-shaped (up, down, left, right)
-- **Range**: Default 2 tiles in each direction
+- **Range**: Default 2 tiles in each direction (can be increased with power-ups)
 - **Expansion**: Stops at indestructible walls
 - **Block Destruction**: Destroys destructible blocks
-- **Chain Reactions**: Explosions can trigger other bombs
+- **Chain Reactions**: Explosions trigger other bombs in range (bombs explode immediately when hit by another bomb's explosion)
 
 #### Explosion Effects
 - **Player Damage**: Players in explosion area take damage
@@ -96,13 +96,30 @@ This document describes the game mechanics, rules, and systems implemented in th
 **Bomb Range** (`bomb_range`):
 - Increases explosion range by 1 tile
 - Stacks (can collect multiple)
+- Duration: Permanent (lasts entire game)
+- Visual: 💥 emoji
+
+**Bomb Count** (`bomb_count`):
+- Increases maximum number of bombs you can place simultaneously by 1
+- Stacks (can collect multiple)
+- Duration: Permanent (lasts entire game)
 - Visual: 💣 emoji
+
+**Immortal** (`immortal`):
+- Grants immunity to bomb damage
+- Duration: 15 seconds (temporary)
+- Visual: ✨ emoji
+- Can be collected from map or granted as reward for hitting players/NPCs
 
 #### Power-up Spawning
 - **Chance**: 30% per destroyed block
 - **Max Power-ups**: `players × 4` (prevents overcrowding)
 - **Position**: Spawns at destroyed block location
 - **Visual**: Floating animation
+- **Type Distribution**: 
+  - 50% Bomb Range (`bomb_range`)
+  - 30% Bomb Count (`bomb_count`)
+  - 20% Immortal (`immortal`)
 
 #### Power-up Collection
 - **Automatic**: Collected when player steps on it
@@ -114,7 +131,7 @@ This document describes the game mechanics, rules, and systems implemented in th
 #### NPC Power-up Collection
 - NPCs detect power-ups when moving
 - Server-side collection detection
-- NPCs upgrade bomb range same as players
+- NPCs can collect all power-up types (bomb range, bomb count, immortal)
 - NPCs prioritize power-ups based on difficulty
 
 ### Winning System
