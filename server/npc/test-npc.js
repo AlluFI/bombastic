@@ -23,7 +23,7 @@ function createMockGameState() {
       // { id: 'bomb-1', x: 3, y: 3, range: 2, timer: 2000 }, // Example bomb
     ],
     powerups: [
-      // { id: 'powerup-1', x: 4, y: 4, type: 'bomb_range' }, // Example powerup
+      // { id: 'powerup-1', x: 4, y: 4, type: 'bomb-range' }, // Example powerup
     ],
     board: createMockBoard(),
   };

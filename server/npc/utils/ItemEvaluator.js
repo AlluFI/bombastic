@@ -21,9 +21,11 @@ class ItemEvaluator {
 
     // Base value by powerup type
     const baseValues = {
-      'bomb_range': 8,    // Increases explosion range - very valuable
-      'bomb_count': 7,    // Increases max bombs - very valuable
-      'immortal': 6,       // Temporary invincibility - valuable but time-limited
+      'bomb-range': 8,
+      'bomb-count': 7,
+      'speed': 6,
+      'kick': 5,
+      'pierce': 4,
     };
 
     const baseValue = baseValues[powerup.type] || 1;

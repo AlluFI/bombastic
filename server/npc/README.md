@@ -84,6 +84,8 @@ server/npc/
   - **Aggressive**: High priority on attacking players, frequent bombs
   - **Defensive**: High priority on survival, avoids danger
   - **Balanced**: Mix of offensive and defensive play
+  - **Power-up Hunter**: Prioritizes collecting powerups
+  - **Trapper**: Strategic bomb placement to trap opponents
 
 - **Strategy Selection**:
   - Auto-selected based on difficulty (Easy→Defensive, Medium→Balanced, Hard→Aggressive)
@@ -206,7 +208,7 @@ NPCs expect `gameState` with:
     { id: 'bomb-1', x: 3, y: 3, range: 2, timer: 2000 }
   ],
   powerups: [
-    { id: 'powerup-1', x: 4, y: 4, type: 'bomb_range' }
+    { id: 'powerup-1', x: 4, y: 4, type: 'bomb-range' }
   ],
   board: [[0, 0, 0], [0, 1, 0], [0, 0, 0]], // 2D grid (0=walkable, 1=block, 2=wall)
   explosions: [] // Optional
