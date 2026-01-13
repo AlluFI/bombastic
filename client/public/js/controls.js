@@ -7,7 +7,7 @@ export const keys = {
 }
 
 window.addEventListener('keydown', (e) =>{
-    if (e.repeat) return //avoid long press issues
+    if (e.repeat) return 
 
     if (e.key === 'ArrowUp') {
         keys.up = true
@@ -15,19 +15,19 @@ window.addEventListener('keydown', (e) =>{
     }
     if (e.key === 'ArrowDown') {
         keys.down = true
-        e.preventDefault() // Prevent page scrolling
+        e.preventDefault() 
     }
     if (e.key === 'ArrowLeft') {
         keys.left = true
-        e.preventDefault() // Prevent page scrolling
+        e.preventDefault() 
     }
     if (e.key === 'ArrowRight') {
         keys.right = true
-        e.preventDefault() // Prevent page scrolling
+        e.preventDefault() 
     }
     if (e.key === ' ') {
         keys.space = true
-        e.preventDefault() // Prevent page scrolling when placing bombs
+        e.preventDefault() 
     }
 })
 
