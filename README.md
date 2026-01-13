@@ -9,7 +9,7 @@ A real-time multiplayer Bomberman-style game built with vanilla JavaScript and N
 - **Real-time Synchronization**: Smooth gameplay with Socket.io WebSocket connections
 - **DOM-based Rendering**: No canvas - pure HTML/CSS/JavaScript with 60 FPS animations
 - **Sound Effects**: Complete audio system with volume controls
-- **Power-ups**: Collect power-ups to upgrade bomb range
+- **Power-ups**: Collect power-ups to upgrade bomb range, increase bomb count, or gain temporary immortality
 - **Chat System**: In-game chat for multiplayer sessions
 - **Room System**: Create or join games with room codes
 
