@@ -7,7 +7,10 @@ export const keys = {
 }
 
 window.addEventListener('keydown', (e) =>{
-    if (e.repeat) return 
+    if (e.repeat) {
+        e.preventDefault()
+        return 
+    } 
 
     if (e.key === 'ArrowUp') {
         keys.up = true

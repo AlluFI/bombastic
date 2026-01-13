@@ -996,7 +996,7 @@ button.loading::after {
 #game-wrapper {
     display: flex;
     justify-content: center;
-    /* min-height: 100vh; */
+    min-height: 100vh;
     gap: 20px;
     padding: 20px;
 }
