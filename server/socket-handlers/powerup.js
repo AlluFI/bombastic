@@ -84,8 +84,8 @@ module.exports = function powerupHandlers(io, socket, rooms) {
         player.immortalEnd = 0
       }
       
-      // Grant 15 seconds of immortality
-      const IMMORTAL_DURATION = 15000
+      // Grant 5 seconds of immortality
+      const IMMORTAL_DURATION = 5000
       player.immortal = true
       player.immortalEnd = Date.now() + IMMORTAL_DURATION
       
