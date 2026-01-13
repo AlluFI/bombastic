@@ -1292,10 +1292,18 @@ class NPC {
             !DangerDetector.isInDanger(nextPos, this.dangerZones)) {
           this.state = 'moving';
           
-          // Commit to this direction for 4 seconds to prevent oscillation
-          // This makes NPCs move like humans: commit to a direction and continue until target reached or blocked
+          // Commit to this direction - longer for trappers with far-away targets
+          let commitmentDuration = 4000; // Default 4 seconds
+          if (this.strategy.name === 'trapper' && target && target.type === 'player') {
+            const distance = Pathfinder.manhattanDistance(this.position, target);
+            if (distance > 5) {
+              // Far-away target - commit longer to prevent oscillation
+              commitmentDuration = 8000; // 8 seconds for far targets
+            }
+          }
+          
           this.committedDirection = direction;
-          this.committedDirectionUntil = Date.now() + 4000; // 4 second commitment (increased to prevent oscillation)
+          this.committedDirectionUntil = Date.now() + commitmentDuration;
           
           return {
             type: 'MOVE',
@@ -1306,6 +1314,34 @@ class NPC {
         // Pathfinding failed - target might be unreachable due to blocks
         // If target is a player and we can't reach them, find a blocking block
         if (target.type === 'player' && !this._pathfindingRecursionDepth) {
+          // For trappers with far-away players, use intermediate block finding
+          if (this.strategy.name === 'trapper') {
+            const distance = Pathfinder.manhattanDistance(this.position, target);
+            const chaseDistance = this.strategy.chaseDistance || 3;
+            
+            if (distance > chaseDistance + 2) {
+              // Player is far away - find intermediate block
+              const player = this.gameState.players.find(p => 
+                p.id === target.playerId || 
+                (Math.abs(p.x - target.x) <= 1 && Math.abs(p.y - target.y) <= 1)
+              );
+              if (player) {
+                const intermediateBlock = this._findIntermediateBlockTowardPlayer(player);
+                if (intermediateBlock) {
+                  this.currentTarget = intermediateBlock;
+                  this.currentTarget.intermediateForPlayer = player.id;
+                  // Don't reset lastTargetSwitch - we're still pursuing the same player
+                  // Try moving toward the intermediate block
+                  this._pathfindingRecursionDepth = 1;
+                  const result = this._decideMovement();
+                  this._pathfindingRecursionDepth = 0;
+                  if (result) return result;
+                }
+              }
+            }
+          }
+          
+          // Fallback to normal blocking block finding
           const blockingBlock = this._findBlockingBlock(target);
           if (blockingBlock) {
             // Switch to targeting the blocking block
@@ -1434,6 +1470,106 @@ class NPC {
           return { x: x, y: y, type: 'block' };
         }
       }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Finds an intermediate block target in the direction toward a far-away player
+   * Used by trappers to create clear waypoints when player is far away
+   * @param {Object} player - Player object { x, y, id }
+   * @returns {Object|null} Intermediate block position { x, y, type } or null
+   */
+  _findIntermediateBlockTowardPlayer(player) {
+    if (!this.gameState.board || !player) return null;
+    
+    const dx = player.x - this.position.x;
+    const dy = player.y - this.position.y;
+    
+    // Find blocks in the general direction toward the player (within 4-6 tiles)
+    // This gives clear intermediate targets when player is far away
+    const searchRadius = 5; // Search up to 5 tiles in the direction toward player
+    const stepX = dx !== 0 ? dx / Math.abs(dx) : 0;
+    const stepY = dy !== 0 ? dy / Math.abs(dy) : 0;
+    
+    // Prioritize blocks that are closer to NPC but in the direction toward player
+    const candidates = [];
+    
+    for (let i = 2; i <= searchRadius; i++) {
+      const checkX = this.position.x + stepX * i;
+      const checkY = this.position.y + stepY * i;
+      
+      // Also check perpendicular directions (to find blocks that are "in the way")
+      const perpendicularOffsets = [
+        { x: 0, y: 0 },      // Direct path
+        { x: stepY, y: -stepX },  // Perpendicular 1
+        { x: -stepY, y: stepX },  // Perpendicular 2
+      ];
+      
+      for (const offset of perpendicularOffsets) {
+        const finalX = checkX + offset.x;
+        const finalY = checkY + offset.y;
+        
+        if (this._isValidPosition({ x: finalX, y: finalY })) {
+          if (this.gameState.board[finalX] && this.gameState.board[finalX][finalY] === 1) {
+            const distance = Pathfinder.manhattanDistance(this.position, { x: finalX, y: finalY });
+            const distanceToPlayer = Pathfinder.manhattanDistance({ x: finalX, y: finalY }, { x: player.x, y: player.y });
+            
+            // Prefer blocks that are:
+            // 1. Not too close (at least 2 tiles away)
+            // 2. Not too far (within 5 tiles)
+            // 3. Closer to the player (clearing path toward player)
+            if (distance >= 2 && distance <= 5) {
+              candidates.push({
+                x: finalX,
+                y: finalY,
+                type: 'block',
+                distance: distance,
+                distanceToPlayer: distanceToPlayer,
+                score: distanceToPlayer - distance * 0.5 // Prefer blocks that are closer to player
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    if (candidates.length === 0) {
+      // Fallback: find any nearby block in the general direction
+      for (let x = Math.max(0, this.position.x - 3); x <= Math.min(this.maxRows - 1, this.position.x + 3); x++) {
+        for (let y = Math.max(0, this.position.y - 3); y <= Math.min(this.maxCols - 1, this.position.y + 3); y++) {
+          if (this.gameState.board[x] && this.gameState.board[x][y] === 1) {
+            const blockDx = x - this.position.x;
+            const blockDy = y - this.position.y;
+            // Check if block is in the general direction toward player (dot product check)
+            const dotProduct = blockDx * dx + blockDy * dy;
+            if (dotProduct > 0) { // Block is in the forward direction
+              const distance = Pathfinder.manhattanDistance(this.position, { x, y });
+              if (distance >= 2 && distance <= 5) {
+                candidates.push({
+                  x: x,
+                  y: y,
+                  type: 'block',
+                  distance: distance,
+                  distanceToPlayer: Pathfinder.manhattanDistance({ x, y }, { x: player.x, y: player.y }),
+                  score: 0
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if (candidates.length > 0) {
+      // Sort by score (prefer blocks closer to player and in good position)
+      candidates.sort((a, b) => {
+        if (a.score !== b.score) return b.score - a.score;
+        return a.distance - b.distance; // If same score, prefer closer blocks
+      });
+      
+      return candidates[0];
     }
     
     return null;
@@ -1658,6 +1794,44 @@ class NPC {
       // IMPORTANT: For players, we check if the player still exists, not exact position
       // This prevents targets from changing every time players move
       if (this._isTargetValid(this.currentTarget)) {
+        // For trappers with far-away player targets, prioritize intermediate block targets
+        if (this.currentTarget.type === 'player' && this.strategy.name === 'trapper' && this.gameState.players) {
+          const player = this.gameState.players.find(p => 
+            p.id !== this.id && 
+            p.alive !== false && 
+            (p.id === this.currentTarget.playerId || 
+             (Math.abs(p.x - this.currentTarget.x) <= 2 && Math.abs(p.y - this.currentTarget.y) <= 2))
+          );
+          if (player) {
+            const distance = Pathfinder.manhattanDistance(this.position, { x: player.x, y: player.y });
+            const chaseDistance = this.strategy.chaseDistance || 3;
+            
+            // If player is far away, find intermediate block targets in the direction toward player
+            if (distance > chaseDistance + 2) {
+              const intermediateBlock = this._findIntermediateBlockTowardPlayer(player);
+              if (intermediateBlock) {
+                // Switch to intermediate block target (but don't reset lastTargetSwitch - we're still pursuing the same player)
+                this.currentTarget = intermediateBlock;
+                this.currentTarget.intermediateForPlayer = player.id; // Track that this is intermediate
+                return this.currentTarget;
+              }
+            }
+            
+            // Only update player position if they've moved significantly (more than 3 tiles)
+            // This prevents constant pathfinding recalculation
+            const distanceFromStoredPosition = Pathfinder.manhattanDistance(
+              { x: this.currentTarget.x, y: this.currentTarget.y },
+              { x: player.x, y: player.y }
+            );
+            if (distanceFromStoredPosition > 3) {
+              this.currentTarget.x = player.x;
+              this.currentTarget.y = player.y;
+            }
+            if (player.id) this.currentTarget.playerId = player.id;
+            return this.currentTarget;
+          }
+        }
+        
         // Update target position if it's a player (they move, but we keep targeting them)
         if (this.currentTarget.type === 'player' && this.gameState.players) {
           const player = this.gameState.players.find(p => 
@@ -1668,9 +1842,16 @@ class NPC {
              (Math.abs(p.x - this.currentTarget.x) <= 1 && Math.abs(p.y - this.currentTarget.y) <= 1))
           );
           if (player) {
-            // Update target position to current player position, but keep the same target
-            this.currentTarget.x = player.x;
-            this.currentTarget.y = player.y;
+            // Only update target position if player has moved significantly (more than 3 tiles)
+            // This prevents constant pathfinding recalculation
+            const distanceFromStoredPosition = Pathfinder.manhattanDistance(
+              { x: this.currentTarget.x, y: this.currentTarget.y },
+              { x: player.x, y: player.y }
+            );
+            if (distanceFromStoredPosition > 3) {
+              this.currentTarget.x = player.x;
+              this.currentTarget.y = player.y;
+            }
             if (player.id) this.currentTarget.playerId = player.id;
             return this.currentTarget;
           }
@@ -1870,6 +2051,41 @@ class NPC {
         return this.gameState.powerups && 
                this.gameState.powerups.some(p => p.x === target.x && p.y === target.y);
       case 'block':
+        // If this is an intermediate block for a player, check if player still exists
+        if (target.intermediateForPlayer) {
+          const player = this.gameState.players.find(p => p.id === target.intermediateForPlayer);
+          if (!player || player.alive === false) {
+            return false; // Player is gone, intermediate block is no longer valid
+          }
+          
+          // Check if block still exists
+          const blockExists = this.gameState.board && 
+                             this.gameState.board[target.x] && 
+                             this.gameState.board[target.x][target.y] === 1;
+          
+          if (!blockExists) {
+            // Block was destroyed - find next intermediate block toward player
+            // This prevents oscillation by immediately finding the next waypoint
+            const nextIntermediate = this._findIntermediateBlockTowardPlayer(player);
+            if (nextIntermediate) {
+              this.currentTarget = nextIntermediate;
+              this.currentTarget.intermediateForPlayer = player.id;
+              return true; // New intermediate target is valid
+            } else {
+              // No more intermediate blocks - switch back to player target
+              this.currentTarget = {
+                x: player.x,
+                y: player.y,
+                type: 'player',
+                playerId: player.id
+              };
+              return true; // Player target is valid
+            }
+          }
+          
+          // Block still exists and we're moving toward it
+          return true;
+        }
         return this.gameState.board && 
                this.gameState.board[target.x] && 
                // Grid is structured as grid[row][col], and x=row, y=col

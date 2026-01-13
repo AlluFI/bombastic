@@ -23,6 +23,11 @@ const singlePlayerSection = document.getElementById('single-player-section')
 const npcCountSelect = document.getElementById('npc-count')
 const npcDifficultiesSection = document.getElementById('npc-difficulties-section')
 const npcDifficultyList = document.getElementById('npc-difficulty-list')
+const npcCustomConfig = document.getElementById('npc-custom-config')
+const npcPresetConfig = document.getElementById('npc-preset-config')
+const customModeBtn = document.getElementById('custom-mode-btn')
+const presetModeBtn = document.getElementById('preset-mode-btn')
+const npcPresetList = document.getElementById('npc-preset-list')
 const startButton = document.getElementById('start-button')
 const joinButton = document.getElementById('join-button')
 const hostButton = document.getElementById('host-button')
@@ -37,8 +42,50 @@ export const playerData = {
     name: '',
     mode: 'multi', //multi player mode set to default
     difficulties: ['medium', 'medium'], //default difficulties for each NPC
-    npcCount: 2 //default number of NPCs for single-player
+    strategies: ['balanced', 'balanced'], //default strategies for each NPC
+    npcNames: ['Bot 1', 'Bot 2'], //default names for each NPC
+    npcCount: 2, //default number of NPCs for single-player
+    usePresets: false //whether to use preset configurations
 }
+
+// Preset NPC configurations
+const NPC_PRESETS = [
+    {
+        id: 'aggressor',
+        name: 'The Aggressor',
+        difficulty: 'hard',
+        strategy: 'aggressive',
+        description: 'High difficulty, aggressive playstyle'
+    },
+    {
+        id: 'defender',
+        name: 'The Defender',
+        difficulty: 'easy',
+        strategy: 'defensive',
+        description: 'Low difficulty, defensive playstyle'
+    },
+    {
+        id: 'collector',
+        name: 'The Collector',
+        difficulty: 'medium',
+        strategy: 'powerup-hunter',
+        description: 'Medium difficulty, prioritizes powerups'
+    },
+    {
+        id: 'trapper',
+        name: 'The Trapper',
+        difficulty: 'hard',
+        strategy: 'trapper',
+        description: 'High difficulty, strategic bomb placement'
+    },
+    {
+        id: 'balanced',
+        name: 'The Balanced',
+        difficulty: 'medium',
+        strategy: 'balanced',
+        description: 'Medium difficulty, balanced playstyle'
+    }
+]
 
 
 
@@ -102,14 +149,61 @@ function handleStartGame() {
     playerData.mode = modeSelect.value
     playerData.npcCount = parseInt(npcCountSelect.value, 10)
     
-    // Collect individual difficulties from selectors
-    playerData.difficulties = []
-    for (let i = 0; i < playerData.npcCount; i++) {
-        const select = document.getElementById(`npc-difficulty-${i}`)
-        if (select) {
-            playerData.difficulties.push(select.value)
-        } else {
-            playerData.difficulties.push('medium') // fallback
+    if (playerData.usePresets) {
+        // Collect preset selections
+        playerData.difficulties = []
+        playerData.strategies = []
+        playerData.npcNames = []
+        
+        for (let i = 0; i < playerData.npcCount; i++) {
+            const presetSelect = document.getElementById(`npc-preset-${i}`)
+            if (presetSelect && presetSelect.value) {
+                const preset = NPC_PRESETS.find(p => p.id === presetSelect.value)
+                if (preset) {
+                    playerData.difficulties.push(preset.difficulty)
+                    playerData.strategies.push(preset.strategy)
+                    playerData.npcNames.push(preset.name)
+                } else {
+                    // Fallback
+                    playerData.difficulties.push('medium')
+                    playerData.strategies.push('balanced')
+                    playerData.npcNames.push(`Bot ${i + 1}`)
+                }
+            } else {
+                playerData.difficulties.push('medium')
+                playerData.strategies.push('balanced')
+                playerData.npcNames.push(`Bot ${i + 1}`)
+            }
+        }
+    } else {
+        // Collect individual customizations
+        playerData.difficulties = []
+        playerData.strategies = []
+        playerData.npcNames = []
+        
+        for (let i = 0; i < playerData.npcCount; i++) {
+            const difficultySelect = document.getElementById(`npc-difficulty-${i}`)
+            const strategySelect = document.getElementById(`npc-strategy-${i}`)
+            const nameInput = document.getElementById(`npc-name-${i}`)
+            
+            if (difficultySelect) {
+                playerData.difficulties.push(difficultySelect.value)
+            } else {
+                playerData.difficulties.push('medium')
+            }
+            
+            if (strategySelect) {
+                playerData.strategies.push(strategySelect.value)
+            } else {
+                playerData.strategies.push('balanced')
+            }
+            
+            if (nameInput) {
+                const name = nameInput.value.trim() || `Bot ${i + 1}`
+                playerData.npcNames.push(name)
+            } else {
+                playerData.npcNames.push(`Bot ${i + 1}`)
+            }
         }
     }
 
@@ -150,61 +244,258 @@ function updateNPCDifficultySelectors() {
     const count = parseInt(npcCountSelect.value, 10)
     playerData.npcCount = count
     
-    // Ensure difficulties array matches count
+    // Ensure arrays match count
     while (playerData.difficulties.length < count) {
         playerData.difficulties.push('medium')
     }
     playerData.difficulties = playerData.difficulties.slice(0, count)
     
-    // Clear existing selectors
+    while (playerData.strategies.length < count) {
+        playerData.strategies.push('balanced')
+    }
+    playerData.strategies = playerData.strategies.slice(0, count)
+    
+    while (playerData.npcNames.length < count) {
+        playerData.npcNames.push(`Bot ${playerData.npcNames.length + 1}`)
+    }
+    playerData.npcNames = playerData.npcNames.slice(0, count)
+    
+    // Update based on current mode
+    if (playerData.usePresets) {
+        updatePresetSelectors()
+    } else {
+        updateCustomSelectors()
+    }
+}
+
+function updateCustomSelectors() {
+    const count = playerData.npcCount
     npcDifficultyList.innerHTML = ''
     
-    // Create a difficulty selector for each NPC
     for (let i = 0; i < count; i++) {
         const container = document.createElement('div')
         container.className = 'npc-difficulty-item'
-        container.style.marginBottom = '10px'
+        container.style.marginBottom = '15px'
+        container.style.padding = '12px'
+        container.style.backgroundColor = 'rgba(0, 119, 182, 0.1)'
+        container.style.borderRadius = '6px'
+        container.style.border = '1px solid rgba(0, 191, 255, 0.2)'
         
-        const label = document.createElement('label')
-        label.textContent = `Bot ${i + 1} Difficulty:`
-        label.style.display = 'block'
-        label.style.marginBottom = '5px'
-        label.style.color = '#00bfff'
+        // Bot header
+        const botHeader = document.createElement('div')
+        botHeader.textContent = `Bot ${i + 1}`
+        botHeader.style.fontWeight = 'bold'
+        botHeader.style.color = '#00bfff'
+        botHeader.style.marginBottom = '10px'
+        botHeader.style.fontSize = '14px'
+        container.appendChild(botHeader)
         
-        const select = document.createElement('select')
-        select.id = `npc-difficulty-${i}`
-        select.style.width = '100%'
-        select.style.padding = '8px'
-        select.style.fontSize = '16px'
-        select.style.backgroundColor = 'rgba(0, 119, 182, 0.2)'
-        select.style.color = '#00bfff'
-        select.style.border = '2px solid #0077b6'
-        select.style.borderRadius = '4px'
+        // Name input
+        const nameLabel = document.createElement('label')
+        nameLabel.textContent = 'Name:'
+        nameLabel.style.display = 'block'
+        nameLabel.style.marginBottom = '5px'
+        nameLabel.style.color = '#00bfff'
+        nameLabel.style.fontSize = '13px'
         
-        const options = [
+        const nameInput = document.createElement('input')
+        nameInput.type = 'text'
+        nameInput.id = `npc-name-${i}`
+        nameInput.value = playerData.npcNames[i] || `Bot ${i + 1}`
+        nameInput.style.width = '100%'
+        nameInput.style.padding = '6px'
+        nameInput.style.fontSize = '14px'
+        nameInput.style.backgroundColor = 'rgba(0, 119, 182, 0.2)'
+        nameInput.style.color = '#00bfff'
+        nameInput.style.border = '2px solid #0077b6'
+        nameInput.style.borderRadius = '4px'
+        nameInput.style.marginBottom = '8px'
+        nameInput.maxLength = 15
+        
+        nameInput.addEventListener('input', () => {
+            playerData.npcNames[i] = nameInput.value.trim() || `Bot ${i + 1}`
+        })
+        
+        // Difficulty selector
+        const difficultyLabel = document.createElement('label')
+        difficultyLabel.textContent = 'Difficulty:'
+        difficultyLabel.style.display = 'block'
+        difficultyLabel.style.marginBottom = '5px'
+        difficultyLabel.style.color = '#00bfff'
+        difficultyLabel.style.fontSize = '13px'
+        
+        const difficultySelect = document.createElement('select')
+        difficultySelect.id = `npc-difficulty-${i}`
+        difficultySelect.style.width = '100%'
+        difficultySelect.style.padding = '6px'
+        difficultySelect.style.fontSize = '14px'
+        difficultySelect.style.backgroundColor = 'rgba(0, 119, 182, 0.2)'
+        difficultySelect.style.color = '#00bfff'
+        difficultySelect.style.border = '2px solid #0077b6'
+        difficultySelect.style.borderRadius = '4px'
+        difficultySelect.style.marginBottom = '8px'
+        
+        const difficultyOptions = [
             { value: 'easy', text: 'Easy' },
             { value: 'medium', text: 'Medium' },
             { value: 'hard', text: 'Hard' }
         ]
         
-        options.forEach(opt => {
+        difficultyOptions.forEach(opt => {
             const option = document.createElement('option')
             option.value = opt.value
             option.textContent = opt.text
-            if (opt.value === playerData.difficulties[i]) {
+            if (opt.value === (playerData.difficulties[i] || 'medium')) {
                 option.selected = true
             }
+            difficultySelect.appendChild(option)
+        })
+        
+        difficultySelect.addEventListener('change', () => {
+            playerData.difficulties[i] = difficultySelect.value
+        })
+        
+        // Strategy selector
+        const strategyLabel = document.createElement('label')
+        strategyLabel.textContent = 'Strategy:'
+        strategyLabel.style.display = 'block'
+        strategyLabel.style.marginBottom = '5px'
+        strategyLabel.style.color = '#00bfff'
+        strategyLabel.style.fontSize = '13px'
+        
+        const strategySelect = document.createElement('select')
+        strategySelect.id = `npc-strategy-${i}`
+        strategySelect.style.width = '100%'
+        strategySelect.style.padding = '6px'
+        strategySelect.style.fontSize = '14px'
+        strategySelect.style.backgroundColor = 'rgba(0, 119, 182, 0.2)'
+        strategySelect.style.color = '#00bfff'
+        strategySelect.style.border = '2px solid #0077b6'
+        strategySelect.style.borderRadius = '4px'
+        
+        const strategyOptions = [
+            { value: 'balanced', text: 'Balanced' },
+            { value: 'aggressive', text: 'Aggressive' },
+            { value: 'defensive', text: 'Defensive' },
+            { value: 'powerup-hunter', text: 'Power-up Hunter' },
+            { value: 'trapper', text: 'Trapper' }
+        ]
+        
+        strategyOptions.forEach(opt => {
+            const option = document.createElement('option')
+            option.value = opt.value
+            option.textContent = opt.text
+            if (opt.value === (playerData.strategies[i] || 'balanced')) {
+                option.selected = true
+            }
+            strategySelect.appendChild(option)
+        })
+        
+        strategySelect.addEventListener('change', () => {
+            playerData.strategies[i] = strategySelect.value
+        })
+        
+        container.appendChild(nameLabel)
+        container.appendChild(nameInput)
+        container.appendChild(difficultyLabel)
+        container.appendChild(difficultySelect)
+        container.appendChild(strategyLabel)
+        container.appendChild(strategySelect)
+        npcDifficultyList.appendChild(container)
+    }
+}
+
+function updatePresetSelectors() {
+    const count = playerData.npcCount
+    npcPresetList.innerHTML = ''
+    
+    for (let i = 0; i < count; i++) {
+        const container = document.createElement('div')
+        container.className = 'npc-preset-item'
+        container.style.marginBottom = '15px'
+        container.style.padding = '12px'
+        container.style.backgroundColor = 'rgba(0, 119, 182, 0.1)'
+        container.style.borderRadius = '6px'
+        container.style.border = '1px solid rgba(0, 191, 255, 0.2)'
+        
+        const label = document.createElement('label')
+        label.textContent = `Bot ${i + 1} Preset:`
+        label.style.display = 'block'
+        label.style.marginBottom = '8px'
+        label.style.color = '#00bfff'
+        label.style.fontWeight = 'bold'
+        label.style.fontSize = '14px'
+        
+        const select = document.createElement('select')
+        select.id = `npc-preset-${i}`
+        select.style.width = '100%'
+        select.style.padding = '8px'
+        select.style.fontSize = '14px'
+        select.style.backgroundColor = 'rgba(0, 119, 182, 0.2)'
+        select.style.color = '#00bfff'
+        select.style.border = '2px solid #0077b6'
+        select.style.borderRadius = '4px'
+        
+        // Add "None" option
+        const noneOption = document.createElement('option')
+        noneOption.value = ''
+        noneOption.textContent = '-- Select Preset --'
+        select.appendChild(noneOption)
+        
+        NPC_PRESETS.forEach(preset => {
+            const option = document.createElement('option')
+            option.value = preset.id
+            option.textContent = `${preset.name} (${preset.description})`
             select.appendChild(option)
         })
         
-        // Update playerData when selector changes
+        // Show preset details when selected
+        const detailsDiv = document.createElement('div')
+        detailsDiv.id = `preset-details-${i}`
+        detailsDiv.style.marginTop = '8px'
+        detailsDiv.style.padding = '8px'
+        detailsDiv.style.backgroundColor = 'rgba(0, 191, 255, 0.1)'
+        detailsDiv.style.borderRadius = '4px'
+        detailsDiv.style.fontSize = '12px'
+        detailsDiv.style.color = '#cceeff'
+        detailsDiv.className = 'hidden'
+        
         select.addEventListener('change', () => {
-            playerData.difficulties[i] = select.value
+            const preset = NPC_PRESETS.find(p => p.id === select.value)
+            if (preset) {
+                detailsDiv.textContent = `Difficulty: ${preset.difficulty.charAt(0).toUpperCase() + preset.difficulty.slice(1)} | Strategy: ${preset.strategy.charAt(0).toUpperCase() + preset.strategy.slice(1).replace('-', ' ')}`
+                detailsDiv.classList.remove('hidden')
+            } else {
+                detailsDiv.classList.add('hidden')
+            }
         })
         
         container.appendChild(label)
         container.appendChild(select)
-        npcDifficultyList.appendChild(container)
+        container.appendChild(detailsDiv)
+        npcPresetList.appendChild(container)
+    }
+}
+
+function handleModeToggle(usePresets) {
+    playerData.usePresets = usePresets
+    
+    if (usePresets) {
+        customModeBtn.classList.remove('active')
+        presetModeBtn.classList.add('active')
+        customModeBtn.style.background = 'rgba(0, 119, 182, 0.1)'
+        presetModeBtn.style.background = 'rgba(0, 191, 255, 0.2)'
+        npcCustomConfig.classList.add('hidden')
+        npcPresetConfig.classList.remove('hidden')
+        updatePresetSelectors()
+    } else {
+        customModeBtn.classList.add('active')
+        presetModeBtn.classList.remove('active')
+        customModeBtn.style.background = 'rgba(0, 191, 255, 0.2)'
+        presetModeBtn.style.background = 'rgba(0, 119, 182, 0.1)'
+        npcCustomConfig.classList.remove('hidden')
+        npcPresetConfig.classList.add('hidden')
+        updateCustomSelectors()
     }
 }
 
@@ -299,6 +590,23 @@ export function initializeMenu() {
 
     modeSelect.addEventListener('change', handleModeChange)
     npcCountSelect.addEventListener('change', handleNPCCountChange)
+    
+    // Mode toggle buttons
+    customModeBtn.addEventListener('click', () => {
+        playSound('buttonClick')
+        handleModeToggle(false)
+    })
+    
+    presetModeBtn.addEventListener('click', () => {
+        playSound('buttonClick')
+        handleModeToggle(true)
+    })
+    
+    // Initialize mode toggle button styles
+    if (customModeBtn && presetModeBtn) {
+        customModeBtn.style.background = 'rgba(0, 191, 255, 0.2)'
+        presetModeBtn.style.background = 'rgba(0, 119, 182, 0.1)'
+    }
     
     // Initialize NPC difficulty selectors on page load
     updateNPCDifficultySelectors()

@@ -89,7 +89,8 @@ server/npc/
 
 - **Strategy Selection**:
   - Auto-selected based on difficulty (Easy→Defensive, Medium→Balanced, Hard→Aggressive)
-  - Can be overridden via NPC config
+  - Can be customized per NPC via UI (Custom mode) or preset configurations (Preset mode)
+  - Available strategies: `balanced`, `aggressive`, `defensive`, `powerup-hunter`, `trapper`
 
 #### `index.js`
 **Module entry point** - Exports all NPC classes and utilities.
@@ -180,8 +181,13 @@ const { NPC } = require('./npc');
 const { ENABLE_NPC } = require('../config');
 
 if (ENABLE_NPC) {
-  // Create an NPC
+  // Create an NPC with default strategy (based on difficulty)
   const npc = new NPC('npc-1', 'Bot Alice', 'medium');
+  
+  // Or create an NPC with custom strategy
+  const npcWithStrategy = new NPC('npc-2', 'Bot Bob', 'hard', { 
+    strategy: 'trapper' 
+  });
   
   // Update NPC with game state
   npc.updateWorldState(gameState);
@@ -227,31 +233,107 @@ NPCs return actions:
 ## 🎮 Difficulty Levels
 
 ### Easy
-- **Strategy**: Defensive
+- **Default Strategy**: Defensive
 - **Speed**: 70% of normal
-- **Decision Interval**: 300ms
+- **Decision Interval**: 500ms
 - **Aggression**: 30%
 - **Bomb Placement Rate**: 20%
 - **Mistake Rate**: 30%
 - **Avoidance Success**: 85%
 
 ### Medium
-- **Strategy**: Balanced
+- **Default Strategy**: Balanced
 - **Speed**: 100% of normal
-- **Decision Interval**: 200ms
+- **Decision Interval**: 400ms
 - **Aggression**: 60%
 - **Bomb Placement Rate**: 50%
 - **Mistake Rate**: 15%
 - **Avoidance Success**: 95%
 
 ### Hard
-- **Strategy**: Aggressive
+- **Default Strategy**: Aggressive
 - **Speed**: 130% of normal
-- **Decision Interval**: 100ms
+- **Decision Interval**: 300ms
 - **Aggression**: 90%
 - **Bomb Placement Rate**: 80%
 - **Mistake Rate**: 5%
 - **Avoidance Success**: 98%
+
+---
+
+## 🎯 Behavior Strategies
+
+Players can customize each NPC's strategy independently of difficulty level, creating unique gameplay experiences.
+
+### Available Strategies
+
+#### **Balanced** (Default for Medium)
+- Mix of offensive and defensive play
+- Moderate priority on players (0.6), powerups (0.6), and blocks (0.5)
+- Bomb placement chance: 0.8
+- Chase distance: 4 tiles
+
+#### **Aggressive** (Default for Hard)
+- High priority on attacking players (0.9)
+- Frequent bomb placement (chance: 0.7)
+- Actively chases players from far away (6 tiles)
+- Takes calculated risks
+
+#### **Defensive** (Default for Easy)
+- High priority on survival
+- Low priority on players (0.2)
+- Rarely places bombs (chance: 0.2)
+- Keeps distance from players (2 tiles)
+- Often wanders to avoid conflict
+
+#### **Power-up Hunter**
+- Very high priority on collecting powerups (0.95)
+- Moderate priority on players (0.4)
+- Strategic bomb placement to clear paths to powerups (chance: 0.6)
+- Willing to take risks for powerups
+- Chase distance: 5 tiles
+
+#### **Trapper**
+- Focuses on strategic bomb placement (chance: 0.8)
+- High priority on blocks (0.8) for strategic placement
+- Tries to trap players in corners
+- Uses bombs to control areas
+- Close-range trapping (3 tiles)
+- Special logic for far-away players (finds intermediate block waypoints)
+
+### Strategy Customization
+
+In single-player mode, players can customize NPCs in two ways:
+
+#### **Custom Mode**
+- **Name**: Custom name for each NPC (max 15 characters)
+- **Difficulty**: Easy, Medium, or Hard (affects execution quality)
+- **Strategy**: Balanced, Aggressive, Defensive, Power-up Hunter, or Trapper (affects behavioral focus)
+
+#### **Preset Mode**
+- Pre-configured NPC combinations:
+  - **The Aggressor**: Hard + Aggressive
+  - **The Defender**: Easy + Defensive
+  - **The Collector**: Medium + Power-up Hunter
+  - **The Trapper**: Hard + Trapper
+  - **The Balanced**: Medium + Balanced
+
+### How Difficulty and Strategy Interact
+
+**Difficulty** controls execution quality (HOW WELL):
+- Movement speed, decision-making speed, mistake rates, bomb placement frequency
+
+**Strategy** controls behavioral focus (WHAT TO DO):
+- Target priorities, bomb placement tendency, chase distance, wander behavior
+
+**Key Interaction**: Final bomb placement chance = `strategy.bombPlacementChance × difficulty.bombPlacementRate`
+
+**Example Combinations**:
+- **Easy + Aggressive**: Wants to attack but makes mistakes (30%) and is slow (500ms decisions)
+- **Hard + Defensive**: Wants to survive but executes perfectly (5% mistakes, 300ms decisions)
+- **Medium + Trapper**: Wants to trap with moderate execution (15% mistakes, 400ms decisions)
+
+Each of the 15 possible combinations (3 difficulties × 5 strategies) produces distinct, meaningful gameplay differences.
 
 ---
 

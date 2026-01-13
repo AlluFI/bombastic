@@ -75,9 +75,20 @@
                     </select>
                 </div>
                 <div id="npc-difficulties-section" class="menue-section">
-                    <h2>Bot Difficulties</h2>
-                    <div id="npc-difficulty-list">
-                        <!-- Dynamically generated per-NPC difficulty selectors -->
+                    <h2>Bot Configuration</h2>
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                        <button id="custom-mode-btn" class="mode-toggle-btn active" style="flex: 1; padding: 8px; background: rgba(0, 191, 255, 0.2); border: 2px solid #0077b6; border-radius: 4px; color: #00bfff; cursor: pointer;">Custom</button>
+                        <button id="preset-mode-btn" class="mode-toggle-btn" style="flex: 1; padding: 8px; background: rgba(0, 119, 182, 0.1); border: 2px solid #0077b6; border-radius: 4px; color: #00bfff; cursor: pointer;">Presets</button>
+                    </div>
+                    <div id="npc-custom-config">
+                        <div id="npc-difficulty-list">
+                            <!-- Dynamically generated per-NPC configuration -->
+                        </div>
+                    </div>
+                    <div id="npc-preset-config" class="hidden">
+                        <div id="npc-preset-list">
+                            <!-- Dynamically generated preset selectors -->
+                        </div>
                     </div>
                 </div>
                 <button id="start-button" class="menue-section">Start Single-Player Game</button>

@@ -62,8 +62,8 @@ module.exports = function npcHandlers(io, socket, rooms) {
     room.npcs.clear();
     
     // Support two formats:
-    // 1. Simple format: { count: number, difficulties: string[] }
-    // 2. Advanced format: { npcs: [{ id, name, difficulty, ... }] }
+    // 1. Simple format: { count: number, difficulties: string[], strategies: string[], names: string[] }
+    // 2. Advanced format: { npcs: [{ id, name, difficulty, strategy, ... }] }
     
     let npcsToCreate = [];
     
@@ -71,15 +71,18 @@ module.exports = function npcHandlers(io, socket, rooms) {
       // Advanced format: individual NPC configs
       npcsToCreate = data.npcs.slice(0, 3); // Max 3 NPCs
     } else {
-      // Simple format: count + difficulties array
+      // Simple format: count + arrays for customization
       const count = Math.min(data.count || 1, 3); // Max 3 NPCs
       const difficulties = data.difficulties || Array(count).fill('medium');
+      const strategies = data.strategies || Array(count).fill('balanced');
+      const names = data.names || Array(count).fill(null).map((_, i) => `Bot ${i + 1}`);
       
       for (let i = 0; i < count; i++) {
         npcsToCreate.push({
           id: `npc-${i + 1}`,
-          name: `Bot ${i + 1}`,
+          name: names[i] || `Bot ${i + 1}`,
           difficulty: difficulties[i] || 'medium',
+          strategy: strategies[i] || 'balanced',
         });
       }
     }
@@ -92,8 +95,10 @@ module.exports = function npcHandlers(io, socket, rooms) {
       const npcId = npcConfig.id || `npc-${index + 1}`;
       const npcName = npcConfig.name || `Bot ${index + 1}`;
       const difficulty = npcConfig.difficulty || 'medium';
+      const strategy = npcConfig.strategy || 'balanced';
       
-      const npc = new NPC(npcId, npcName, difficulty);
+      // Create NPC with custom strategy in config
+      const npc = new NPC(npcId, npcName, difficulty, { strategy: strategy });
       
       // Set NPC initial position (before adding to room)
       // Calculate position index: human players + this NPC's index

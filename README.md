@@ -144,7 +144,9 @@ multi-player/
 1. Select "Single" mode on the main menu
 2. Enter your name
 3. Choose number of bots (1-3)
-4. Select difficulty (Easy/Medium/Hard)
+4. Choose configuration mode:
+   - **Custom Mode**: Select name, difficulty (Easy/Medium/Hard), and strategy (Balanced/Aggressive/Defensive/Power-up Hunter/Trapper) for each NPC
+   - **Preset Mode**: Choose from pre-configured NPC combinations
 5. Click "Start Single-Player Game"
 
 ### Controls

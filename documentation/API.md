@@ -187,11 +187,38 @@ Configure NPCs for single-player mode.
 ```javascript
 {
     count: number,              // Number of NPCs (1-3)
-    difficulties: string[]     // Array of difficulty levels
+    difficulties: string[],     // Array of difficulty levels ['easy'|'medium'|'hard']
+    strategies: string[],       // Array of strategies ['balanced'|'aggressive'|'defensive'|'powerup-hunter'|'trapper']
+    names: string[]             // Array of custom names (optional, defaults to 'Bot 1', 'Bot 2', etc.)
+}
+```
+
+**Example (Custom Mode):**
+```javascript
+{
+    count: 2,
+    difficulties: ['easy', 'hard'],
+    strategies: ['defensive', 'trapper'],
+    names: ['Guardian', 'The Trap Master']
+}
+```
+
+**Example (Preset Mode):**
+```javascript
+{
+    count: 2,
+    difficulties: ['hard', 'medium'],
+    strategies: ['aggressive', 'powerup-hunter'],
+    names: ['The Aggressor', 'The Collector']
 }
 ```
 
 **Response:** `npcs-configured` event
+
+**Note:** 
+- If `strategies` is not provided, NPCs use default strategies based on difficulty (Easy→Defensive, Medium→Balanced, Hard→Aggressive)
+- If `names` is not provided, NPCs are named 'Bot 1', 'Bot 2', etc.
+- Difficulty and strategy work together: difficulty affects execution quality (speed, mistakes), while strategy affects behavioral focus (target priorities, bomb frequency)
 
 ---
 

@@ -149,10 +149,12 @@ socket.on('room:created', (state) => {
             mode: 'single-player'
         })
         
-        // Configure NPCs with individual difficulties
+        // Configure NPCs with individual customizations
         socket.emit('configure-npcs', {
             count: playerData.npcCount,
-            difficulties: playerData.difficulties
+            difficulties: playerData.difficulties,
+            strategies: playerData.strategies,
+            names: playerData.npcNames
         })
         
     } else {
