@@ -5,6 +5,7 @@ module.exports = function lobbyHandlers(io, socket, rooms) {
 	 // Handle lobby list request
   socket.on('lobby:list-request', () => {
     const activeLobbies = getActiveLobbies(rooms)
+    logRoomEvent('LOBBY', 'List requested', { totalRooms: rooms.size, activeLobbies: activeLobbies.length, socketId: socket.id })
     socket.emit('lobby:list', activeLobbies)
   })
 
