@@ -128,7 +128,7 @@ function canPlaceBomb(playerId) {
 
 export function tryPlaceBomb(player) {
     if (!player) {
-        console.warn('[Bomb] Cannot place bomb: no player object')
+        // console.warn('[Bomb] Cannot place bomb: no player object')
         return false
     }
     
@@ -136,12 +136,12 @@ export function tryPlaceBomb(player) {
     if (!canPlaceBomb(player.id)) {
         const maxBombs = getPlayerMaxBombs(player.id)
         const bombCount = getPlayerBombCount(player.id)
-        console.warn(`[Bomb] Cannot place bomb: canPlaceBomb returned false`, {
-            playerId: player.id,
-            position: { x: player.x, y: player.y },
-            maxBombs,
-            bombCount
-        })
+        // console.warn(`[Bomb] Cannot place bomb: canPlaceBomb returned false`, {
+        //     playerId: player.id,
+        //     position: { x: player.x, y: player.y },
+        //     maxBombs,
+        //     bombCount
+        // })
         return false
     }
 
@@ -151,11 +151,11 @@ export function tryPlaceBomb(player) {
 
     const validation = validateTile(x, y)
     if (!validation.valid) {
-        console.warn(`[Bomb] Cannot place bomb: invalid tile`, {
-            playerId: player.id,
-            position: { x, y },
-            reason: validation.reason
-        })
+        // console.warn(`[Bomb] Cannot place bomb: invalid tile`, {
+        //     playerId: player.id,
+        //     position: { x, y },
+        //     reason: validation.reason
+        // })
         return false
     }
     
@@ -164,22 +164,22 @@ export function tryPlaceBomb(player) {
     const maxBombs = getPlayerMaxBombs(player.id)
     const bombCount = getPlayerBombCount(player.id)
     if (bombCount >= maxBombs) {
-        console.warn(`[Bomb] Cannot place bomb: max bombs reached`, {
-            playerId: player.id,
-            position: { x, y },
-            maxBombs,
-            bombCount
-        })
+        // console.warn(`[Bomb] Cannot place bomb: max bombs reached`, {
+        //     playerId: player.id,
+        //     position: { x, y },
+        //     maxBombs,
+        //     bombCount
+        // })
         return false
     }
     
     // Check if bomb already exists at this position (additional safety check)
     const posKey = `${x}-${y}`
     if (bombPositions.has(posKey)) {
-        console.warn(`[Bomb] Cannot place bomb: bomb already exists at position`, {
-            playerId: player.id,
-            position: { x, y }
-        })
+        // console.warn(`[Bomb] Cannot place bomb: bomb already exists at position`, {
+        //     playerId: player.id,
+        //     position: { x, y }
+        // })
         return false
     }
 
@@ -227,11 +227,11 @@ export function tryPlaceBomb(player) {
 
     if (socket) {
         if (!socket.connected) {
-            console.error(`[Bomb] Cannot send bomb placement - socket not connected`, {
-                playerId: player.id,
-                bombId,
-                position: { x, y }
-            })
+            // console.error(`[Bomb] Cannot send bomb placement - socket not connected`, {
+            //     playerId: player.id,
+            //     bombId,
+            //     position: { x, y }
+            // })
             // Untrack the bomb since we can't send it
             untrackBomb(player.id, bombId, x, y)
             return false
