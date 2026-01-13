@@ -140,11 +140,11 @@ module.exports = function playerHandlers(io, socket, rooms) {
         player.lives = data.lives
         player.alive = !data.died
         
-        logPlayerAction(player.id, player.name, 'took damage', {
-          roomId: socket.roomCode,
-          lives: player.lives,
-          alive: player.alive
-        })
+        // logPlayerAction(player.id, player.name, 'took damage', {
+        //   roomId: socket.roomCode,
+        //   lives: player.lives,
+        //   alive: player.alive
+        // })
         
         // Sync game state
         syncRoomGameState(room)

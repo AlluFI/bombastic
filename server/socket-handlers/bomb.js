@@ -11,46 +11,46 @@ module.exports = function bombHandlers(io, socket, rooms) {
      //========================
     socket.on('bomb:place', (bombData) => {
       // Log ALL bomb placement attempts for debugging
-      logGameEvent('Bomb placement attempt received', {
-        roomId: socket.roomCode,
-        playerId: socket.id,
-        bombId: bombData?.bombId,
-        position: bombData ? { x: bombData.x, y: bombData.y } : null,
-        hasBombData: !!bombData
-      });
+      // logGameEvent('Bomb placement attempt received', {
+      //   roomId: socket.roomCode,
+      //   playerId: socket.id,
+      //   bombId: bombData?.bombId,
+      //   position: bombData ? { x: bombData.x, y: bombData.y } : null,
+      //   hasBombData: !!bombData
+      // });
       
       // Rate limiting
       if (isRateLimited(socket, 'BOMB')) {
-        logGameEvent('Bomb placement rejected - rate limited', {
-          roomId: socket.roomCode,
-          playerId: socket.id,
-          bombId: bombData?.bombId,
-          position: bombData ? { x: bombData.x, y: bombData.y } : null
-        });
+        // logGameEvent('Bomb placement rejected - rate limited', {
+        //   roomId: socket.roomCode,
+        //   playerId: socket.id,
+        //   bombId: bombData?.bombId,
+        //   position: bombData ? { x: bombData.x, y: bombData.y } : null
+        // });
         return
       }
       
       // Validate input
       if (!validateBombPlacement(bombData)) {
-        logGameEvent('Bomb placement rejected - invalid data', {
-          roomId: socket.roomCode,
-          playerId: socket.id,
-          bombId: bombData?.bombId,
-          position: bombData ? { x: bombData.x, y: bombData.y } : null
-        });
+        // logGameEvent('Bomb placement rejected - invalid data', {
+        //   roomId: socket.roomCode,
+        //   playerId: socket.id,
+        //   bombId: bombData?.bombId,
+        //   position: bombData ? { x: bombData.x, y: bombData.y } : null
+        // });
         emitError(socket, 'Invalid bomb placement data', 'INVALID_BOMB_DATA')
         return
       }
       
       // Validate that the bomb is for the correct player
       if (bombData.playerId !== socket.id) {
-        logGameEvent('Bomb placement rejected - invalid player', {
-          roomId: socket.roomCode,
-          playerId: socket.id,
-          bombDataPlayerId: bombData.playerId,
-          bombId: bombData.bombId,
-          position: { x: bombData.x, y: bombData.y }
-        });
+        // logGameEvent('Bomb placement rejected - invalid player', {
+        //   roomId: socket.roomCode,
+        //   playerId: socket.id,
+        //   bombDataPlayerId: bombData.playerId,
+        //   bombId: bombData.bombId,
+        //   position: { x: bombData.x, y: bombData.y }
+        // });
         emitError(socket, 'Cannot place bomb for another player', 'INVALID_PLAYER')
         return
       }
@@ -58,48 +58,48 @@ module.exports = function bombHandlers(io, socket, rooms) {
       // Validate room and player
       const room = validateRoom(socket, socket.roomCode, rooms)
       if (!room) {
-        logGameEvent('Bomb placement rejected - invalid room', {
-          roomId: socket.roomCode,
-          playerId: socket.id,
-          bombId: bombData.bombId,
-          position: { x: bombData.x, y: bombData.y }
-        });
+        // logGameEvent('Bomb placement rejected - invalid room', {
+        //   roomId: socket.roomCode,
+        //   playerId: socket.id,
+        //   bombId: bombData.bombId,
+        //   position: { x: bombData.x, y: bombData.y }
+        // });
         return
       }
       
       const player = validatePlayer(socket, room)
       if (!player) {
-        logGameEvent('Bomb placement rejected - invalid player object', {
-          roomId: socket.roomCode,
-          playerId: socket.id,
-          bombId: bombData.bombId,
-          position: { x: bombData.x, y: bombData.y }
-        });
+        // logGameEvent('Bomb placement rejected - invalid player object', {
+        //   roomId: socket.roomCode,
+        //   playerId: socket.id,
+        //   bombId: bombData.bombId,
+        //   position: { x: bombData.x, y: bombData.y }
+        // });
         return
       }
       
       // Validate bomb position is walkable
       if (!room.gameState.board || room.gameState.board[bombData.x][bombData.y] !== 0) {
-        logGameEvent('Bomb placement rejected - non-walkable tile', {
-          roomId: socket.roomCode,
-          playerId: socket.id,
-          bombId: bombData.bombId,
-          position: { x: bombData.x, y: bombData.y },
-          tileType: room.gameState.board ? room.gameState.board[bombData.x]?.[bombData.y] : 'no board'
-        });
+        // logGameEvent('Bomb placement rejected - non-walkable tile', {
+        //   roomId: socket.roomCode,
+        //   playerId: socket.id,
+        //   bombId: bombData.bombId,
+        //   position: { x: bombData.x, y: bombData.y },
+        //   tileType: room.gameState.board ? room.gameState.board[bombData.x]?.[bombData.y] : 'no board'
+        // });
         emitError(socket, 'Cannot place bomb on non-walkable tile', 'INVALID_BOMB_POSITION')
         return
       }
       
       // Check if there's already a bomb at this position
       if (room.gameState.bombs && room.gameState.bombs.some(b => b.x === bombData.x && b.y === bombData.y)) {
-        logGameEvent('Bomb placement rejected - bomb already exists at position', {
-          roomId: socket.roomCode,
-          playerId: socket.id,
-          bombId: bombData.bombId,
-          position: { x: bombData.x, y: bombData.y },
-          existingBombsAtPosition: room.gameState.bombs.filter(b => b.x === bombData.x && b.y === bombData.y).map(b => ({ id: b.id, playerId: b.playerId }))
-        });
+        // logGameEvent('Bomb placement rejected - bomb already exists at position', {
+        //   roomId: socket.roomCode,
+        //   playerId: socket.id,
+        //   bombId: bombData.bombId,
+        //   position: { x: bombData.x, y: bombData.y },
+        //   existingBombsAtPosition: room.gameState.bombs.filter(b => b.x === bombData.x && b.y === bombData.y).map(b => ({ id: b.id, playerId: b.playerId }))
+        // });
         emitError(socket, 'Bomb already exists at this position', 'BOMB_EXISTS')
         return
       }
@@ -116,28 +116,28 @@ module.exports = function bombHandlers(io, socket, rooms) {
       const existingBombs = room.gameState.bombs.filter(b => b.playerId === socket.id);
       if (existingBombs.length >= maxBombs) {
         // Silently ignore - this is expected behavior (bomb limit reached)
-        logGameEvent('Bomb placement rejected - max bombs reached', {
-          roomId: socket.roomCode,
-          playerId: socket.id,
-          playerName: player.name,
-          existingBombsCount: existingBombs.length,
-          maxBombs: maxBombs,
-          attemptedPosition: { x: bombData.x, y: bombData.y },
-          attemptedBombId: bombData.bombId,
-          existingBombPositions: existingBombs.map(b => ({ id: b.id, x: b.x, y: b.y }))
-        });
+        // logGameEvent('Bomb placement rejected - max bombs reached', {
+        //   roomId: socket.roomCode,
+        //   playerId: socket.id,
+        //   playerName: player.name,
+        //   existingBombsCount: existingBombs.length,
+        //   maxBombs: maxBombs,
+        //   attemptedPosition: { x: bombData.x, y: bombData.y },
+        //   attemptedBombId: bombData.bombId,
+        //   existingBombPositions: existingBombs.map(b => ({ id: b.id, x: b.x, y: b.y }))
+        // });
         return
       }
       
       // Log successful bomb placement AFTER validation
-      logPlayerAction(socket.id, player.name, 'placed bomb', {
-        roomId: socket.roomCode,
-        position: { x: bombData.x, y: bombData.y },
-        bombId: bombData.bombId,
-        maxBombs: maxBombs,
-        existingBombsCount: existingBombs.length,
-        totalBombsInRoom: room.gameState.bombs.length
-      })
+      // logPlayerAction(socket.id, player.name, 'placed bomb', {
+      //   roomId: socket.roomCode,
+      //   position: { x: bombData.x, y: bombData.y },
+      //   bombId: bombData.bombId,
+      //   maxBombs: maxBombs,
+      //   existingBombsCount: existingBombs.length,
+      //   totalBombsInRoom: room.gameState.bombs.length
+      // })
       
       // Get player's bomb range (default 2, can be upgraded via power-ups)
       // Use range from client if provided, otherwise use player's stored range
@@ -186,10 +186,10 @@ module.exports = function bombHandlers(io, socket, rooms) {
             // Update server board state (mark as walkable for NPCs)
             if (room.gameState.board[data.x] && room.gameState.board[data.x][data.y] === 1) {
                 room.gameState.board[data.x][data.y] = 0 // 0 = walkable
-                logGameEvent('Block destroyed', {
-                  roomId: socket.roomCode,
-                  position: { x: data.x, y: data.y }
-                })
+                // logGameEvent('Block destroyed', {
+                //   roomId: socket.roomCode,
+                //   position: { x: data.x, y: data.y }
+                // })
             }
         }
         
@@ -230,10 +230,10 @@ module.exports = function bombHandlers(io, socket, rooms) {
                     room.gameState.board[block.x][block.y] = 0 // 0 = walkable
                 }
             })
-            logGameEvent('Blocks destroyed', {
-              roomId: socket.roomCode,
-              blockCount: data.blocks.length
-            })
+            // logGameEvent('Blocks destroyed', {
+            //   roomId: socket.roomCode,
+            //   blockCount: data.blocks.length
+            // })
         }
         
         // Broadcast to other players in the same room

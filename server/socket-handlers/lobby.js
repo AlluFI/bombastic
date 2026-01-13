@@ -34,7 +34,7 @@ module.exports = function lobbyHandlers(io, socket, rooms) {
     const player = room.players.get(socket.id)
     if (!player) return
     
-    logPlayerAction(socket.id, player.name, 'leaving lobby', { roomId: socket.roomCode })
+    // logPlayerAction(socket.id, player.name, 'leaving lobby', { roomId: socket.roomCode })
     
     // Remove player from room
     room.players.delete(socket.id)
@@ -53,7 +53,7 @@ module.exports = function lobbyHandlers(io, socket, rooms) {
     if (room.players.size === 0) {
       // Delete empty room
       rooms.delete(roomCode)
-      logRoomEvent(roomCode, 'Room deleted (empty after lobby leave)')
+      // logRoomEvent(roomCode, 'Room deleted (empty after lobby leave)')
       // Broadcast lobby update (room removed)
       broadcastLobbyUpdate(io, rooms)
       return
@@ -63,7 +63,7 @@ module.exports = function lobbyHandlers(io, socket, rooms) {
     if (room.host === socket.id) {
       const nextHost = room.players.keys().next().value
       room.host = nextHost
-      logRoomEvent(roomCode, 'Host transferred', { newHostId: nextHost, previousHostId: socket.id })
+      // logRoomEvent(roomCode, 'Host transferred', { newHostId: nextHost, previousHostId: socket.id })
     }
     
     // Sync game state after player leaves

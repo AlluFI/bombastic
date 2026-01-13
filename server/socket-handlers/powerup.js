@@ -2,7 +2,7 @@ const {validateRoom, validatePlayer, emitError} = require('../errorHandler.js')
 const {isRateLimited} = require('../rateLimiter.js')
 const {validatePowerupPickup} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
-const { logPlayerAction } = require('../logger')
+// const { logPlayerAction } = require('../logger')
 
 module.exports = function powerupHandlers(io, socket, rooms) {
     // Handle power-up pickup
@@ -63,20 +63,20 @@ module.exports = function powerupHandlers(io, socket, rooms) {
     
     if (powerup.type === 'bomb_range') {
       player.bombRange += 1
-      logPlayerAction(player.id, player.name, 'picked up bomb range power-up', {
-        roomId: socket.roomCode,
-        powerupType: powerup.type,
-        newRange: player.bombRange,
-        position: { x: data.x, y: data.y }
-      })
+      // logPlayerAction(player.id, player.name, 'picked up bomb range power-up', {
+      //   roomId: socket.roomCode,
+      //   powerupType: powerup.type,
+      //   newRange: player.bombRange,
+      //   position: { x: data.x, y: data.y }
+      // })
     } else if (powerup.type === 'bomb_count') {
       player.maxBombs += 1
-      logPlayerAction(player.id, player.name, 'picked up bomb count power-up', {
-        roomId: socket.roomCode,
-        powerupType: powerup.type,
-        newMaxBombs: player.maxBombs,
-        position: { x: data.x, y: data.y }
-      })
+      // logPlayerAction(player.id, player.name, 'picked up bomb count power-up', {
+      //   roomId: socket.roomCode,
+      //   powerupType: powerup.type,
+      //   newMaxBombs: player.maxBombs,
+      //   position: { x: data.x, y: data.y }
+      // })
     } else if (powerup.type === 'immortal') {
       // Initialize immortal state if not exists
       if (player.immortal === undefined) {
@@ -89,12 +89,12 @@ module.exports = function powerupHandlers(io, socket, rooms) {
       player.immortal = true
       player.immortalEnd = Date.now() + IMMORTAL_DURATION
       
-      logPlayerAction(player.id, player.name, 'picked up immortal power-up', {
-        roomId: socket.roomCode,
-        powerupType: powerup.type,
-        duration: IMMORTAL_DURATION,
-        position: { x: data.x, y: data.y }
-      })
+    //   logPlayerAction(player.id, player.name, 'picked up immortal power-up', {
+    //     roomId: socket.roomCode,
+    //     powerupType: powerup.type,
+    //     duration: IMMORTAL_DURATION,
+    //     position: { x: data.x, y: data.y }
+    //   })
     }
     
     // Broadcast power-up pickup to all clients in the room (including sender for sync)

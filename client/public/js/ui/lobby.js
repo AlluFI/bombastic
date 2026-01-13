@@ -163,7 +163,9 @@ function handleLeaveLobby() {
     // Emit leave event
     socket.emit('lobby:leave')
     
-    // Reload page to ensure fresh state (especially for grid rendering)
+      // Return to menu
+    hideLobbyScreen()
+    showMenuScreen()
     window.location.reload()
 }
 
