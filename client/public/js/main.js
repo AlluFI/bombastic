@@ -17,7 +17,16 @@ import { initializeSoundManager, playSound } from "./audio/soundManager.js"
 import "./ui/audio-toggle.js"
 
 
-const socket = io()
+const socket = io({
+  transports: ['websocket', 'polling'],
+  upgrade: true,
+  rememberUpgrade: true,
+  timeout: 20000,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000
+})
 export { socket };
 
 initializeMenu()

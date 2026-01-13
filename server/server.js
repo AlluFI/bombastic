@@ -9,6 +9,10 @@ const gameLoop = require('./game-loop')
 
 //socket.io setup
 const app = express()
+
+// Trust proxy for Fly.io
+app.set('trust proxy', true)
+
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
@@ -19,7 +23,11 @@ const io = new Server(server, {
   allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000,
-  cookie: false
+  cookie: false,
+  allowUpgrades: true,
+  upgradeTimeout: 10000,
+  maxHttpBufferSize: 1e8,
+  perMessageDeflate: false
 })
 
 // Serve all static files from the client folder

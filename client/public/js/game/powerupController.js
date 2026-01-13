@@ -1,6 +1,5 @@
-import { map } from '../grid.js'
+
 import { socket } from '../main.js'
-import { getLocalPlayer } from '../player.js'
 import { playSound } from '../audio/soundManager.js'
 
 const POWERUP_TYPES = {
