@@ -1292,10 +1292,10 @@ class NPC {
             !DangerDetector.isInDanger(nextPos, this.dangerZones)) {
           this.state = 'moving';
           
-          // Commit to this direction for 4 seconds to prevent oscillation
+          // Commit to this direction for 6 seconds to prevent oscillation
           // This makes NPCs move like humans: commit to a direction and continue until target reached or blocked
           this.committedDirection = direction;
-          this.committedDirectionUntil = Date.now() + 4000; // 4 second commitment (increased to prevent oscillation)
+          this.committedDirectionUntil = Date.now() + 6000; // 6 second commitment (increased to prevent oscillation)
           
           return {
             type: 'MOVE',
@@ -1328,7 +1328,7 @@ class NPC {
               this.state = 'moving';
               // Commit to this direction to prevent oscillation
               this.committedDirection = direction;
-              this.committedDirectionUntil = Date.now() + 4000;
+              this.committedDirectionUntil = Date.now() + 6000;
               return {
                 type: 'MOVE',
                 direction: direction,
@@ -1511,7 +1511,7 @@ class NPC {
         this.state = 'moving';
         // Commit to this exploration direction to prevent oscillation
         this.committedDirection = dir;
-        this.committedDirectionUntil = Date.now() + 3000; // 3 second commitment for exploration
+        this.committedDirectionUntil = Date.now() + 5000; // 5 second commitment for exploration
         return {
           type: 'MOVE',
           direction: dir,
@@ -1703,10 +1703,10 @@ class NPC {
     }
 
     const currentTime = Date.now();
-    // Commit to targets for a LONG time to prevent oscillation
+    // Commit to targets for a VERY LONG time to prevent oscillation
     // NPCs should stick to their targets even when players move
     const timeSinceSwitch = currentTime - this.lastTargetSwitch;
-    const minTimeToSwitch = 30000; // 30 seconds - strong commitment to prevent oscillation
+    const minTimeToSwitch = 60000; // 60 seconds - very strong commitment to prevent oscillation
     const shouldSwitchTarget = timeSinceSwitch > minTimeToSwitch || this.currentTarget === null;
 
     if (!shouldSwitchTarget && this.currentTarget) {
@@ -1714,7 +1714,8 @@ class NPC {
       // IMPORTANT: For players, we check if the player still exists, not exact position
       // This prevents targets from changing every time players move
       if (this._isTargetValid(this.currentTarget)) {
-        // Update target position if it's a player (they move, but we keep targeting them)
+        // For players, only update position if player has moved significantly (more than 3 tiles)
+        // This prevents constant pathfinding recalculation that causes oscillation
         if (this.currentTarget.type === 'player' && this.gameState.players) {
           const player = this.gameState.players.find(p => 
             p.id !== this.id && 
@@ -1724,9 +1725,17 @@ class NPC {
              (Math.abs(p.x - this.currentTarget.x) <= 1 && Math.abs(p.y - this.currentTarget.y) <= 1))
           );
           if (player) {
-            // Update target position to current player position, but keep the same target
-            this.currentTarget.x = player.x;
-            this.currentTarget.y = player.y;
+            // Only update target position if player has moved significantly (more than 3 tiles away)
+            // This prevents constant pathfinding recalculation
+            const distanceFromStoredPosition = Pathfinder.manhattanDistance(
+              { x: this.currentTarget.x, y: this.currentTarget.y },
+              { x: player.x, y: player.y }
+            );
+            if (distanceFromStoredPosition > 3) {
+              // Player has moved significantly - update position but keep the same target
+              this.currentTarget.x = player.x;
+              this.currentTarget.y = player.y;
+            }
             if (player.id) this.currentTarget.playerId = player.id;
             return this.currentTarget;
           }
