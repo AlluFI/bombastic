@@ -23,17 +23,20 @@ A real-time multiplayer Bomberman-style game built with vanilla JavaScript and N
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd multi-player
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Start the server**
+
    ```bash
    npm start
    ```
@@ -42,20 +45,28 @@ A real-time multiplayer Bomberman-style game built with vanilla JavaScript and N
    - **Local play**: Navigate to `http://localhost:3000`
    - **Network play**: Navigate to `http://[YOUR_IP]:3000` (see below)
 
+### 🌍 Play Online
+
+**Live Demo**: The game is deployed and ready to play at **[bombastic.fly.dev](https://bombastic.fly.dev/)**
+
+No installation required - just open the link and start playing with friends anywhere in the world!
+
 ### 🌐 Playing on Local Network (WiFi)
 
 You can play with friends on the same WiFi network:
 
 1. **Find your computer's IP address:**
-   
+
    **Windows:**
+
    - Open **Command Prompt** (Press `Win + R`, type `cmd`, press Enter)
    - Type `ipconfig` and press Enter
    - Look for your WiFi adapter (usually named "Wireless LAN adapter Wi-Fi" or "Wireless LAN adapter WLAN")
    - Find the **"IPv4 Address"** line under that adapter
    - Example: `IPv4 Address. . . . . . . . . . . : 192.168.1.100`
-   
+
    **macOS/Linux:**
+
    - Open Terminal
    - Run `ifconfig` (macOS/Linux) or `ip addr` (Linux)
    - Look for your WiFi adapter (usually `en0` on macOS or `wlan0` on Linux)
@@ -63,6 +74,7 @@ You can play with friends on the same WiFi network:
    - Example: `inet 192.168.1.100`
 
 2. **Start the server** (if not already running):
+
    ```bash
    npm start
    ```
@@ -70,6 +82,7 @@ You can play with friends on the same WiFi network:
 3. **On the host computer**: Open `http://localhost:3000` or `http://[YOUR_IP]:3000`
 
 4. **On other devices** (phones, tablets, other computers on same WiFi):
+
    - Open `http://[YOUR_IP]:3000` in a web browser
    - Replace `[YOUR_IP]` with the IP address from step 1
    - Example: `http://192.168.1.100:3000`
@@ -113,6 +126,7 @@ multi-player/
 ### Multiplayer Mode
 
 1. **Host a Game**:
+
    - Enter your name (min 2 characters)
    - Click "Create Lobby"
    - Share the room code with friends
@@ -192,15 +206,18 @@ Edit `server/config.js` to enable/disable features:
 ## 📚 Documentation
 
 ### Core Documentation
+
 - **[Architecture](ARCHITECTURE.md)**: System architecture and design patterns
 - **[API Reference](API.md)**: Complete Socket.io event protocol
 - **[Game Mechanics](GAME_MECHANICS.md)**: Game rules, systems, and mechanics
 
 ### Module Documentation
+
 - **[NPC System](server/npc/README.md)**: Complete NPC AI documentation
 - **[Sound Manager](client/public/js/audio/README.md)**: Audio system documentation
 
 ### Planning & Development
+
 - **[Project Plan](PROJECT_PLAN.md)**: Detailed project plan and implementation status
 - **[Developer Notes](documentation/)**: Individual developer documentation
 
@@ -227,6 +244,7 @@ npm run test:npc
 ### Test Coverage
 
 The test suite includes:
+
 - **Validation Tests**: Input sanitization, coordinate validation, room code validation
 - **Rate Limiter Tests**: Rate limiting enforcement, time windows, cleanup
 - **Error Handler Tests**: Error creation, socket error emission, validation helpers
