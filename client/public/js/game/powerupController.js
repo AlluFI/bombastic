@@ -47,8 +47,8 @@ export function addPowerupToPlayer(playerId, powerupType) {
     } else if (powerupType === POWERUP_TYPES.BOMB_COUNT) {
         stats.maxBombs += 1 // Increase max bombs by 1
     } else if (powerupType === POWERUP_TYPES.IMMORTAL) {
-        // Grant 15 seconds of immortality
-        const IMMORTAL_DURATION = 15000
+        // Grant 5 seconds of immortality
+        const IMMORTAL_DURATION = 5000
         stats.immortal = true
         stats.immortalEnd = Date.now() + IMMORTAL_DURATION
         
