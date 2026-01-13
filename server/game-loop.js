@@ -1,7 +1,7 @@
 const {syncRoomGameState, calculateExplosionBlocks, calculateExplosionTiles, handleNPCAction, checkGameEnd} = require('./utils')
 const {ENABLE_NPC} = require('./config')
 const CONSTANTS = require('./constants')
-const { logRoomEvent, logPlayerAction, logNPCAction, logGameEvent, logger } = require('./logger')
+// const { logRoomEvent, logPlayerAction, logNPCAction, logGameEvent, logger } = require('./logger')
 
 module.exports = function gameLoop(io, rooms) {
     // Room cleanup loop (runs every minute)
@@ -32,7 +32,7 @@ module.exports = function gameLoop(io, rooms) {
       
       // Delete empty rooms
       roomsToDelete.forEach(roomId => {
-        logRoomEvent(roomId, 'Cleaning up empty room');
+        // logRoomEvent(roomId, 'Cleaning up empty room');
         rooms.delete(roomId);
       });
     }, 60 * 1000); // Check every minute
@@ -49,7 +49,7 @@ module.exports = function gameLoop(io, rooms) {
       if (player.immortal && player.immortalEnd && now >= player.immortalEnd) {
         player.immortal = false;
         player.immortalEnd = 0;
-        logPlayerAction(playerId, player.name, 'immortality expired', { roomId, type: 'immortal' });
+        // logPlayerAction(playerId, player.name, 'immortality expired', { roomId, type: 'immortal' });
         // Broadcast expiration to clients
         io.to(roomId).emit('powerup:expired', {
           playerId: playerId,
@@ -103,25 +103,25 @@ module.exports = function gameLoop(io, rooms) {
         if (elapsed >= bomb.duration) {
           bombsToExplode.push(bomb);
           bombsToExplodeIds.add(bomb.id);
-          logGameEvent('Bomb timer expired - added to queue', {
-            roomId,
-            bombId: bomb.id,
-            position: { x: bomb.x, y: bomb.y },
-            elapsed,
-            duration: bomb.duration
-          });
+          // logGameEvent('Bomb timer expired - added to queue', {
+          //   roomId,
+          //   bombId: bomb.id,
+          //   position: { x: bomb.x, y: bomb.y },
+          //   elapsed,
+          //   duration: bomb.duration
+          // });
         }
       });
       
       // Only log initial queue if there are bombs to process
       if (bombsToExplode.length > 0) {
-        logGameEvent('Initial bomb queue', {
-          roomId,
-          queueSize: bombsToExplode.length,
-          queueIds: bombsToExplode.map(b => b.id),
-          totalBombs: room.gameState.bombs.length,
-          allBombsInRoom: room.gameState.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, placedAt: b.placedAt, duration: b.duration }))
-        });
+        // logGameEvent('Initial bomb queue', {
+        //   roomId,
+        //   queueSize: bombsToExplode.length,
+        //   queueIds: bombsToExplode.map(b => b.id),
+        //   totalBombs: room.gameState.bombs.length,
+        //   allBombsInRoom: room.gameState.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, placedAt: b.placedAt, duration: b.duration }))
+        // });
       }
       
       // Process bombs and trigger chain reactions
@@ -133,22 +133,22 @@ module.exports = function gameLoop(io, rooms) {
         
         // Skip if already processed (safety check)
         if (processedBombIds.has(bomb.id)) {
-          logGameEvent('Skipping already processed bomb', {
-            roomId,
-            bombId: bomb.id,
-            processedIds: Array.from(processedBombIds)
-          });
+          // logGameEvent('Skipping already processed bomb', {
+          //   roomId,
+          //   bombId: bomb.id,
+          //   processedIds: Array.from(processedBombIds)
+          // });
           continue;
         }
         
-        logGameEvent('Processing bomb explosion', {
-          roomId,
-          bombId: bomb.id,
-          position: { x: bomb.x, y: bomb.y },
-          queueSize: bombsToExplode.length,
-          queueIndex: bombIndex - 1,
-          totalBombsInRoom: room.gameState.bombs.length
-        });
+        // logGameEvent('Processing bomb explosion', {
+        //   roomId,
+        //   bombId: bomb.id,
+        //   position: { x: bomb.x, y: bomb.y },
+        //   queueSize: bombsToExplode.length,
+        //   queueIndex: bombIndex - 1,
+        //   totalBombsInRoom: room.gameState.bombs.length
+        // });
         
         // Mark as processed
         processedBombIds.add(bomb.id);
@@ -162,14 +162,14 @@ module.exports = function gameLoop(io, rooms) {
         // Check for chain reactions: find bombs in the explosion range
         // Check ALL bombs in room.gameState.bombs to catch any bombs in range
         // Iterate backwards to avoid issues if array is modified
-        logGameEvent('Checking for chain reactions', {
-          roomId,
-          bombId: bomb.id,
-          explosionTilesCount: explosionTiles.length,
-          totalBombsToCheck: room.gameState.bombs.length,
-          processedCount: processedBombIds.size,
-          queuedCount: bombsToExplodeIds.size
-        });
+        // logGameEvent('Checking for chain reactions', {
+        //   roomId,
+        //   bombId: bomb.id,
+        //   explosionTilesCount: explosionTiles.length,
+        //   totalBombsToCheck: room.gameState.bombs.length,
+        //   processedCount: processedBombIds.size,
+        //   queuedCount: bombsToExplodeIds.size
+        // });
         
         // IMPORTANT: Check the LIVE array directly, not a snapshot
         // This ensures we catch all bombs that are currently in the room,
@@ -177,33 +177,21 @@ module.exports = function gameLoop(io, rooms) {
         // We need to check the live array because bombs can be added/removed
         // during the game loop, and we want to catch all bombs that exist NOW
         
-        // Log all bombs being checked for debugging
-        const allBombPositions = room.gameState.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, placedAt: b.placedAt }));
         const explosionTilePositions = explosionTiles.map(t => ({ x: t.x, y: t.y }));
-        
-        logGameEvent('Checking bombs for chain reaction', {
-          roomId,
-          triggeringBomb: { id: bomb.id, x: bomb.x, y: bomb.y, range: bomb.range },
-          allBombsInRoom: allBombPositions,
-          allBombsCount: room.gameState.bombs.length,
-          explosionTiles: explosionTilePositions,
-          explosionTilesCount: explosionTiles.length,
-          processedIds: Array.from(processedBombIds),
-          queuedIds: Array.from(bombsToExplodeIds)
-        });
+     
         
         // Iterate over the LIVE array directly, but iterate backwards to avoid issues
         // if bombs are removed during iteration
         // CRITICAL: We need to check ALL bombs in the room, including ones that might have been
         // added during the chain reaction processing. The live array should contain all active bombs.
         const bombsToCheck = Array.from(room.gameState.bombs); // Create a snapshot to iterate safely
-        logGameEvent('Iterating over bombs for chain reaction', {
-          roomId,
-          triggeringBomb: { id: bomb.id, x: bomb.x, y: bomb.y },
-          totalBombsInLiveArray: room.gameState.bombs.length,
-          bombsToCheckCount: bombsToCheck.length,
-          allBombPositions: bombsToCheck.map(b => ({ id: b.id, x: b.x, y: b.y, placedAt: b.placedAt }))
-        });
+        // logGameEvent('Iterating over bombs for chain reaction', {
+        //   roomId,
+        //   triggeringBomb: { id: bomb.id, x: bomb.x, y: bomb.y },
+        //   totalBombsInLiveArray: room.gameState.bombs.length,
+        //   bombsToCheckCount: bombsToCheck.length,
+        //   allBombPositions: bombsToCheck.map(b => ({ id: b.id, x: b.x, y: b.y, placedAt: b.placedAt }))
+        // });
         
         for (let i = 0; i < bombsToCheck.length; i++) {
           const otherBomb = bombsToCheck[i];
@@ -216,27 +204,27 @@ module.exports = function gameLoop(io, rooms) {
           // Verify bomb still exists in live array (double-check)
           const bombStillExists = room.gameState.bombs.some(b => b.id === otherBomb.id);
           if (!bombStillExists) {
-            logGameEvent('Bomb no longer exists in live array (skipped)', {
-              roomId,
-              bombId: otherBomb.id,
-              position: { x: otherBomb.x, y: otherBomb.y }
-            });
+            // logGameEvent('Bomb no longer exists in live array (skipped)', {
+            //   roomId,
+            //   bombId: otherBomb.id,
+            //   position: { x: otherBomb.x, y: otherBomb.y }
+            // });
             continue;
           }
           
           // Skip if same bomb, already processed, or already queued
           if (otherBomb.id === bomb.id || processedBombIds.has(otherBomb.id) || bombsToExplodeIds.has(otherBomb.id)) {
-            if (otherBomb && otherBomb.id !== bomb.id) {
-              logGameEvent('Bomb skipped in chain check', {
-                roomId,
-                bombId: otherBomb.id,
-                position: { x: otherBomb.x, y: otherBomb.y },
-                reason: !otherBomb ? 'null' : 
-                        otherBomb.id === bomb.id ? 'same bomb' :
-                        processedBombIds.has(otherBomb.id) ? 'already processed' :
-                        bombsToExplodeIds.has(otherBomb.id) ? 'already queued' : 'unknown'
-              });
-            }
+            // if (otherBomb && otherBomb.id !== bomb.id) {
+            //   logGameEvent('Bomb skipped in chain check', {
+            //     roomId,
+            //     bombId: otherBomb.id,
+            //     position: { x: otherBomb.x, y: otherBomb.y },
+            //     reason: !otherBomb ? 'null' : 
+            //             otherBomb.id === bomb.id ? 'same bomb' :
+            //             processedBombIds.has(otherBomb.id) ? 'already processed' :
+            //             bombsToExplodeIds.has(otherBomb.id) ? 'already queued' : 'unknown'
+            //   });
+            // }
             continue;
           }
           
@@ -252,33 +240,33 @@ module.exports = function gameLoop(io, rooms) {
               if (!processedBombIds.has(liveBomb.id) && !bombsToExplodeIds.has(liveBomb.id)) {
                 bombsToExplode.push(liveBomb);
                 bombsToExplodeIds.add(liveBomb.id);
-                logGameEvent('Chain reaction triggered', {
-                  roomId,
-                  triggeredBomb: { id: liveBomb.id, x: liveBomb.x, y: liveBomb.y, range: liveBomb.range },
-                  triggeringBomb: { id: bomb.id, x: bomb.x, y: bomb.y, range: bomb.range },
-                  queueSize: bombsToExplode.length,
-                  queueIds: bombsToExplode.map(b => b.id),
-                  totalBombsInRoom: room.gameState.bombs.length,
-                  processedIds: Array.from(processedBombIds),
-                  queuedIds: Array.from(bombsToExplodeIds),
-                  distance: Math.abs(liveBomb.x - bomb.x) + Math.abs(liveBomb.y - bomb.y)
-                });
+                // logGameEvent('Chain reaction triggered', {
+                //   roomId,
+                //   triggeredBomb: { id: liveBomb.id, x: liveBomb.x, y: liveBomb.y, range: liveBomb.range },
+                //   triggeringBomb: { id: bomb.id, x: bomb.x, y: bomb.y, range: bomb.range },
+                //   queueSize: bombsToExplode.length,
+                //   queueIds: bombsToExplode.map(b => b.id),
+                //   totalBombsInRoom: room.gameState.bombs.length,
+                //   processedIds: Array.from(processedBombIds),
+                //   queuedIds: Array.from(bombsToExplodeIds),
+                //   distance: Math.abs(liveBomb.x - bomb.x) + Math.abs(liveBomb.y - bomb.y)
+                // });
               } else {
-                logGameEvent('Chain reaction skipped - bomb already processed/queued', {
-                  roomId,
-                  bombId: liveBomb.id,
-                  alreadyProcessed: processedBombIds.has(liveBomb.id),
-                  alreadyQueued: bombsToExplodeIds.has(liveBomb.id)
-                });
+                // logGameEvent('Chain reaction skipped - bomb already processed/queued', {
+                //   roomId,
+                //   bombId: liveBomb.id,
+                //   alreadyProcessed: processedBombIds.has(liveBomb.id),
+                //   alreadyQueued: bombsToExplodeIds.has(liveBomb.id)
+                // });
               }
             }
           } else {
-            logGameEvent('Bomb not in explosion range', {
-              roomId,
-              bombId: otherBomb.id,
-              position: { x: otherBomb.x, y: otherBomb.y },
-              explosionTiles: explosionTilePositions
-            });
+            // logGameEvent('Bomb not in explosion range', {
+            //   roomId,
+            //   bombId: otherBomb.id,
+            //   position: { x: otherBomb.x, y: otherBomb.y },
+            //   explosionTiles: explosionTilePositions
+            // });
           }
         }
       }
@@ -288,12 +276,12 @@ module.exports = function gameLoop(io, rooms) {
       
       // Log all exploded bombs for debugging
       if (explodedBombs.length > 0) {
-        logGameEvent('All bombs processed in chain', {
-          roomId,
-          totalExploded: explodedBombs.length,
-          explodedBombIds: explodedBombs.map(b => b.id),
-          explodedBombPositions: explodedBombs.map(b => ({ id: b.id, x: b.x, y: b.y }))
-        });
+        // logGameEvent('All bombs processed in chain', {
+        //   roomId,
+        //   totalExploded: explodedBombs.length,
+        //   explodedBombIds: explodedBombs.map(b => b.id),
+        //   explodedBombPositions: explodedBombs.map(b => ({ id: b.id, x: b.x, y: b.y }))
+        // });
       }
       
       // Process exploded bombs (damage, block destruction, etc.)
@@ -323,12 +311,12 @@ module.exports = function gameLoop(io, rooms) {
                   npc.lives = Math.max(0, npc.lives - 1);
                   npc.alive = npc.lives > 0;
                   
-                  logNPCAction(npcId, npc.name, 'caught in explosion', {
-                    roomId,
-                    position: { x: tile.x, y: tile.y },
-                    lives: npc.lives,
-                    alive: npc.alive
-                  });
+                  // logNPCAction(npcId, npc.name, 'caught in explosion', {
+                  //   roomId,
+                  //   position: { x: tile.x, y: tile.y },
+                  //   lives: npc.lives,
+                  //   alive: npc.alive
+                  // });
                   
                   // Track elimination order
                   if (wasAlive && !npc.alive) {
@@ -339,10 +327,10 @@ module.exports = function gameLoop(io, rooms) {
                     const npcPlayer = room.players.get(npcId);
                     if (npcPlayer && !room.eliminationOrder.includes(npcId)) {
                       room.eliminationOrder.push(npcId);
-                      logNPCAction(npcId, npc.name, 'eliminated', {
-                        roomId,
-                        eliminationOrder: room.eliminationOrder.length
-                      });
+                      // logNPCAction(npcId, npc.name, 'eliminated', {
+                      //   roomId,
+                      //   eliminationOrder: room.eliminationOrder.length
+                      // });
                     }
                   }
                   
@@ -369,12 +357,12 @@ module.exports = function gameLoop(io, rooms) {
                       bombOwner.immortal = true;
                       bombOwner.immortalEnd = Date.now() + IMMORTAL_DURATION;
                       
-                      logPlayerAction(bombOwner.id, bombOwner.name, 'gained immortality after hitting NPC', {
-                        roomId,
-                        target: npc.name,
-                        duration: IMMORTAL_DURATION,
-                        type: 'immortal'
-                      });
+                      // logPlayerAction(bombOwner.id, bombOwner.name, 'gained immortality after hitting NPC', {
+                      //   roomId,
+                      //   target: npc.name,
+                      //   duration: IMMORTAL_DURATION,
+                      //   type: 'immortal'
+                      // });
                       
                       // Broadcast immortal power-up to all clients
                       io.to(roomId).emit('powerup:granted', {
@@ -421,10 +409,10 @@ module.exports = function gameLoop(io, rooms) {
                   const isInvincible = playerObj.invincible && Date.now() < playerObj.invincibilityEnd;
                   
                   if (isImmortal) {
-                    logPlayerAction(playerObj.id, playerObj.name, 'damage blocked (immortal)', { roomId, position: { x: tile.x, y: tile.y } });
+                    // logPlayerAction(playerObj.id, playerObj.name, 'damage blocked (immortal)', { roomId, position: { x: tile.x, y: tile.y } });
                     // Skip damage but still grant immortal to bomb owner
                   } else if (isInvincible) {
-                    logPlayerAction(playerObj.id, playerObj.name, 'damage blocked (invincible)', { roomId, position: { x: tile.x, y: tile.y } });
+                    // logPlayerAction(playerObj.id, playerObj.name, 'damage blocked (invincible)', { roomId, position: { x: tile.x, y: tile.y } });
                     // Skip damage - player is still invincible from recent hit
                   } else {
                     const wasAlive = playerObj.alive;
@@ -435,12 +423,12 @@ module.exports = function gameLoop(io, rooms) {
                     playerObj.invincible = true;
                     playerObj.invincibilityEnd = Date.now() + 2000;
                     
-                    logPlayerAction(playerObj.id, playerObj.name, 'caught in explosion', {
-                      roomId,
-                      position: { x: tile.x, y: tile.y },
-                      lives: playerObj.lives,
-                      alive: playerObj.alive
-                    });
+                    // logPlayerAction(playerObj.id, playerObj.name, 'caught in explosion', {
+                    //   roomId,
+                    //   position: { x: tile.x, y: tile.y },
+                    //   lives: playerObj.lives,
+                    //   alive: playerObj.alive
+                    // });
                     
                     // Track elimination order
                     if (wasAlive && !playerObj.alive) {
@@ -450,10 +438,10 @@ module.exports = function gameLoop(io, rooms) {
                       }
                       if (!room.eliminationOrder.includes(playerObj.id)) {
                         room.eliminationOrder.push(playerObj.id);
-                        logPlayerAction(playerObj.id, playerObj.name, 'eliminated', {
-                          roomId,
-                          eliminationOrder: room.eliminationOrder.length
-                        });
+                        // logPlayerAction(playerObj.id, playerObj.name, 'eliminated', {
+                        //   roomId,
+                        //   eliminationOrder: room.eliminationOrder.length
+                        // });
                       }
                     }
                     
@@ -481,12 +469,12 @@ module.exports = function gameLoop(io, rooms) {
                       bombOwner.immortal = true;
                       bombOwner.immortalEnd = Date.now() + IMMORTAL_DURATION;
                       
-                      logPlayerAction(bombOwner.id, bombOwner.name, 'gained immortality after hitting player', {
-                        roomId,
-                        target: playerObj.name,
-                        duration: IMMORTAL_DURATION,
-                        type: 'immortal'
-                      });
+                      // logPlayerAction(bombOwner.id, bombOwner.name, 'gained immortality after hitting player', {
+                      //   roomId,
+                      //   target: playerObj.name,
+                      //   duration: IMMORTAL_DURATION,
+                      //   type: 'immortal'
+                      // });
                       
                       // Broadcast immortal power-up to all clients
                       io.to(roomId).emit('powerup:granted', {
@@ -549,12 +537,12 @@ module.exports = function gameLoop(io, rooms) {
                 room.gameState.powerups.push(powerup);
                 spawnedPowerups.push(powerup);
                 
-                logGameEvent('Power-up spawned', {
-                  roomId,
-                  powerupId: powerupId,
-                  type: powerup.type,
-                  position: { x: block.x, y: block.y }
-                });
+                // logGameEvent('Power-up spawned', {
+                //   roomId,
+                //   powerupId: powerupId,
+                //   type: powerup.type,
+                //   position: { x: block.x, y: block.y }
+                // });
               }
             }
           });
@@ -572,11 +560,11 @@ module.exports = function gameLoop(io, rooms) {
             });
           }
           
-          logGameEvent('Blocks destroyed by bomb explosions', {
-            roomId,
-            blockCount: destroyedBlocks.length,
-            powerupsSpawned: spawnedPowerups.length
-          });
+          // logGameEvent('Blocks destroyed by bomb explosions', {
+          //   roomId,
+          //   blockCount: destroyedBlocks.length,
+          //   powerupsSpawned: spawnedPowerups.length
+          // });
         }
       }
     }
@@ -610,14 +598,14 @@ module.exports = function gameLoop(io, rooms) {
         players: gameEndResult.allPlayers, // All players with final scores
       });
       
-      logRoomEvent(roomId, 'Game ended', {
-        isDraw: gameEndResult.isDraw,
-        winner: gameEndResult.isDraw ? null : {
-          id: gameEndResult.winner.id,
-          name: gameEndResult.winner.name
-        },
-        totalPlayers: gameEndResult.allPlayers?.length || 0
-      });
+      // logRoomEvent(roomId, 'Game ended', {
+      //   isDraw: gameEndResult.isDraw,
+      //   winner: gameEndResult.isDraw ? null : {
+      //     id: gameEndResult.winner.id,
+      //     name: gameEndResult.winner.name
+      //   },
+      //   totalPlayers: gameEndResult.allPlayers?.length || 0
+      // });
     } else {
       // Broadcast updated game state to room
       io.to(roomId).emit('game:state', room.gameState);

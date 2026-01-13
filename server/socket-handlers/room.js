@@ -23,9 +23,9 @@ module.exports = function roomHandlers(io, socket, rooms) {
       return
     }
     
-    logSocketEvent(socket.id, 'room:host', { name: sanitizedName })
+    // logSocketEvent(socket.id, 'room:host', { name: sanitizedName })
     const roomId = generateRoomCode() 
-    logRoomEvent(roomId, 'Creating room for host', { socketId: socket.id, playerName: sanitizedName })
+    // logRoomEvent(roomId, 'Creating room for host', { socketId: socket.id, playerName: sanitizedName })
     
     // Create room data structure with a NEW Map for players
     const now = Date.now()
@@ -68,11 +68,11 @@ module.exports = function roomHandlers(io, socket, rooms) {
       immortalEnd: 0
     }
     room.players.set(socket.id, playerData)
-    logPlayerAction(socket.id, sanitizedName, 'added as host', { roomId, playerData: { x: playerData.x, y: playerData.y, color: playerData.color } })
+    // logPlayerAction(socket.id, sanitizedName, 'added as host', { roomId, playerData: { x: playerData.x, y: playerData.y, color: playerData.color } })
   
   // Sync game state after room creation
   syncRoomGameState(room)
-  logRoomEvent(roomId, 'Game state synced', { playerCount: room.gameState.players.length })
+  // logRoomEvent(roomId, 'Game state synced', { playerCount: room.gameState.players.length })
   
   //  JOIN THE SOCKET.IO ROOM
   socket.join(roomId)
@@ -89,7 +89,7 @@ module.exports = function roomHandlers(io, socket, rooms) {
     isRunning: room.gameState.isRunning,
     gameMode: room.gameState.gameMode
   }
-  logSocketEvent(socket.id, 'room:created', { roomId, playerCount: responseData.players.length })
+  // logSocketEvent(socket.id, 'room:created', { roomId, playerCount: responseData.players.length })
   socket.emit('room:created', responseData)
   
   // Broadcast lobby update to all clients

@@ -33,7 +33,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
       }
     }
 
-    logPlayerAction(socket.id, player.name, `${payload.paused ? 'paused' : 'resumed'} the game`, { roomId: socket.roomCode })
+    // logPlayerAction(socket.id, player.name, `${payload.paused ? 'paused' : 'resumed'} the game`, { roomId: socket.roomCode })
 
     // Broadcast to ALL clients (including sender) for sync
     io.to(socket.roomCode).emit('game:pause', {
@@ -50,7 +50,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     
     const player = room.players.get(socket.id)
     if (player) {
-      logPlayerAction(socket.id, player.name, 'quit game', { roomId: socket.roomCode })
+      // logPlayerAction(socket.id, player.name, 'quit game', { roomId: socket.roomCode })
       room.players.delete(socket.id)
       
       // Notify others
@@ -71,7 +71,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     const player = room.players.get(socket.id)
     
     if (player) {
-      logPlayerAction(socket.id, player.name, 'disconnected from room', { roomId: roomCode })
+      // logPlayerAction(socket.id, player.name, 'disconnected from room', { roomId: roomCode })
     }
     
     // Remove player from room
@@ -84,7 +84,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     if (room.players.size === 0) {
       // Delete empty room
       rooms.delete(roomCode)
-      logRoomEvent(roomCode, 'Room deleted (empty after disconnect)')
+      // logRoomEvent(roomCode, 'Room deleted (empty after disconnect)')
       // Broadcast lobby update (room removed)
       broadcastLobbyUpdate(io, rooms)
       return
@@ -94,7 +94,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     if (room.host === socket.id) {
       const nextHost = room.players.keys().next().value
       room.host = nextHost
-      logRoomEvent(roomCode, 'Host transferred', { newHostId: nextHost, previousHostId: socket.id })
+      // logRoomEvent(roomCode, 'Host transferred', { newHostId: nextHost, previousHostId: socket.id })
       // Clean up NPCs when host disconnects
       room.npcs.clear();
     }
@@ -206,7 +206,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     room.gameStartTime = Date.now() // Track when game started for timer synchronization
     syncRoomGameState(room)
     
-    logRoomEvent(socket.roomCode, 'Game started', { hostId: socket.id, playerCount, gameMode: room.gameState.gameMode })
+    // logRoomEvent(socket.roomCode, 'Game started', { hostId: socket.id, playerCount, gameMode: room.gameState.gameMode })
     
     // Broadcast game started event to all players in room
     io.to(socket.roomCode).emit('game:started', {

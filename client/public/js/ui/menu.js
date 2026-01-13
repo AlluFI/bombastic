@@ -243,9 +243,19 @@ function handleRestartGame() {
     // Clear all players from the game view
     clearAllPlayers()
     
-    // Reload page to ensure fresh state (especially for grid rendering)
-    // This ensures a clean slate when switching between game modes
-    window.location.reload()
+        // Check if this is single-player mode
+    if (playerData.mode === 'single') {
+        window.location.reload()
+        console.log('Single-player mode - returning to main menu')
+        showMenuScreen()
+        
+        // Optionally, you can reload to fully reset the state
+        // window.location.reload()
+    } else {
+        // Multiplayer: return to lobby
+        console.log('Multiplayer mode - returning to lobby')
+        returnToLobby()
+    }
 }
 
 export function initializeMenu() {
