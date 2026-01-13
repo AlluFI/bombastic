@@ -1304,18 +1304,51 @@ class NPC {
         }
       } else {
         // Pathfinding failed - target might be unreachable due to blocks
-        // If target is a player and we can't reach them, find a blocking block
-        if (target.type === 'player' && !this._pathfindingRecursionDepth) {
-          const blockingBlock = this._findBlockingBlock(target);
-          if (blockingBlock) {
-            // Switch to targeting the blocking block
-            this.currentTarget = blockingBlock;
-            this.lastTargetSwitch = Date.now();
-            // Try moving toward the block (limit recursion to prevent infinite loops)
-            this._pathfindingRecursionDepth = 1;
-            const result = this._decideMovement();
-            this._pathfindingRecursionDepth = 0;
-            if (result) return result;
+        // Instead of immediately falling back to random exploration, try to maintain direction toward target
+        // This prevents oscillation when targets are far away
+        if (target && !this._pathfindingRecursionDepth) {
+          // Calculate simple direction toward target (even if pathfinding failed)
+          const dx = target.x - this.position.x;
+          const dy = target.y - this.position.y;
+          
+          // Choose direction based on largest distance component
+          let direction = null;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            direction = dx > 0 ? 'DOWN' : 'UP';
+          } else if (dy !== 0) {
+            direction = dy > 0 ? 'RIGHT' : 'LEFT';
+          }
+          
+          if (direction) {
+            const nextPos = this._getNextPosition(this.position, direction);
+            // Only move if it's valid, walkable, and safe
+            if (this._isValidPosition(nextPos) && 
+                this._isWalkable(nextPos) &&
+                !DangerDetector.isInDanger(nextPos, this.dangerZones)) {
+              this.state = 'moving';
+              // Commit to this direction to prevent oscillation
+              this.committedDirection = direction;
+              this.committedDirectionUntil = Date.now() + 4000;
+              return {
+                type: 'MOVE',
+                direction: direction,
+              };
+            }
+          }
+          
+          // If simple direction also failed, try finding a blocking block
+          if (target.type === 'player' && !this._pathfindingRecursionDepth) {
+            const blockingBlock = this._findBlockingBlock(target);
+            if (blockingBlock) {
+              // Switch to targeting the blocking block
+              this.currentTarget = blockingBlock;
+              this.lastTargetSwitch = Date.now();
+              // Try moving toward the block (limit recursion to prevent infinite loops)
+              this._pathfindingRecursionDepth = 1;
+              const result = this._decideMovement();
+              this._pathfindingRecursionDepth = 0;
+              if (result) return result;
+            }
           }
         }
       }
@@ -1445,6 +1478,26 @@ class NPC {
    * @returns {Object|null} Action object or null
    */
   _decideSafeExploration() {
+    // If we have a committed direction and it's still valid, continue in that direction
+    // This prevents oscillation when exploring
+    const now = Date.now();
+    if (this.committedDirection && now < this.committedDirectionUntil) {
+      const committedNextPos = this._getNextPosition(this.position, this.committedDirection);
+      if (this._isValidPosition(committedNextPos) && 
+          this._isWalkable(committedNextPos) &&
+          !DangerDetector.isInDanger(committedNextPos, this.dangerZones)) {
+        this.state = 'moving';
+        return {
+          type: 'MOVE',
+          direction: this.committedDirection,
+        };
+      } else {
+        // Committed direction is blocked - clear it
+        this.committedDirection = null;
+        this.committedDirectionUntil = 0;
+      }
+    }
+    
     const directions = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
     const shuffled = directions.sort(() => Math.random() - 0.5);
 
@@ -1456,6 +1509,9 @@ class NPC {
           this._isWalkable(nextPos) &&
           !DangerDetector.isInDanger(nextPos, this.dangerZones)) {
         this.state = 'moving';
+        // Commit to this exploration direction to prevent oscillation
+        this.committedDirection = dir;
+        this.committedDirectionUntil = Date.now() + 3000; // 3 second commitment for exploration
         return {
           type: 'MOVE',
           direction: dir,

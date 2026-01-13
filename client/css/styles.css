@@ -522,6 +522,87 @@ button:active:not(:disabled) {
     flex-shrink: 0;
 }
 
+/* Instructions panel (used in game-screen) */
+#ins {
+    position: absolute;
+    top: 90px;
+    right: 20px;
+    width: 280px;
+    max-width: 320px;
+    background: linear-gradient(180deg, rgba(2,12,26,0.7), rgba(2,12,26,0.55));
+    border: 1px solid rgba(0, 191, 255, 0.12);
+    color: #dff6ff;
+    padding: 14px 16px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 18px rgba(0,191,255,0.04) inset;
+    font-size: 13.5px;
+    line-height: 1.45;
+    z-index: 1400;
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+}
+
+#ins p:first-child {
+    font-weight: 800;
+    color: #ffffff;
+    text-transform: uppercase;
+    font-size: 15.5px;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(0,191,255,0.35);
+}
+
+#ins p {
+    margin: 6px 0;
+    color: #cceeff;
+}
+
+#ins p:nth-of-type(6) {
+    margin-top: 10px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 6px rgba(0,191,255,0.18);
+}
+
+/* small screens: make the panel full-width and inline with other HUD */
+@media (max-width: 1100px) {
+    #ins {
+        right: 14px;
+        top: 80px;
+        width: 240px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 900px) {
+    #ins {
+        right: 12px;
+        top: 72px;
+        width: 220px;
+        font-size: 12.5px;
+    }
+}
+
+@media (max-width: 720px) {
+    #ins {
+        position: static;
+        width: 100%;
+        max-width: 100%;
+        margin: 12px 0 0 0;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    #ins {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+}
+
 .toast-message {
     flex: 1;
     line-height: 1.4;
