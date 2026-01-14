@@ -209,16 +209,17 @@ export function tryPlaceBomb(player) {
     renderBomb(bombId, x, y, BOMB_DURATION, (explodedBombId, bombX, bombY) => {
         // Always render explosion when client-side timeout fires
         // Mark as rendered to prevent server-side handler from rendering again
-        const explosionKey = `${bombX}-${bombY}-${explodedBombId}`
+        // Use position-based key (not bomb ID) to catch all explosions at same position
+        const explosionKey = `${bombX}-${bombY}`
         if (!renderedExplosions.has(explosionKey)) {
             renderedExplosions.add(explosionKey)
             playSound('explosion')
             renderExplosion(bombX, bombY, bombRange)
             
-            // Clear the flag after explosion duration to allow re-rendering if needed
+            // Clear the flag after a longer delay to ensure no double rendering
             setTimeout(() => {
                 renderedExplosions.delete(explosionKey)
-            }, 500)
+            }, 1000)
         }
         
         // Untrack the bomb
@@ -273,9 +274,17 @@ export function placeRemoteBomb(bombData) {
     // Server will send bomb:exploded for chain reactions, which will also render the explosion
     renderBomb(bombId, x, y, duration, (explodedBombId, bombX, bombY) => {
         // Always render explosion when client-side timeout fires
-        // The server-side handler will check if it was already rendered to prevent duplicates
-        playSound('explosion')
-        renderExplosion(bombX, bombY, range)
+        // Use position-based key to prevent double explosions
+        const explosionKey = `${bombX}-${bombY}`
+        if (!renderedExplosions.has(explosionKey)) {
+            renderedExplosions.add(explosionKey)
+            playSound('explosion')
+            renderExplosion(bombX, bombY, range)
+            
+            setTimeout(() => {
+                renderedExplosions.delete(explosionKey)
+            }, 1000)
+        }
         
         // Untrack the bomb
         untrackBomb(playerId, explodedBombId, bombX, bombY)
@@ -298,7 +307,8 @@ export function handleServerBombExplosion({ bombId, playerId, x, y, range = 2 })
     removeBomb(bombId)
 
     // Check if explosion was already rendered by client-side timeout
-    const explosionKey = `${x}-${y}-${bombId}`
+    // Use position-based key to catch all explosions at same position
+    const explosionKey = `${x}-${y}`
     if (!renderedExplosions.has(explosionKey)) {
         // Mark as rendered
         renderedExplosions.add(explosionKey)
@@ -309,10 +319,10 @@ export function handleServerBombExplosion({ bombId, playerId, x, y, range = 2 })
         // Render explosion visuals with the bomb's range
         renderExplosion(x, y, range)
         
-        // Clear the flag after explosion duration
+        // Clear the flag after a longer delay to ensure no double rendering
         setTimeout(() => {
             renderedExplosions.delete(explosionKey)
-        }, 500)
+        }, 1000)
     }
 }
 

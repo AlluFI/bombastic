@@ -432,8 +432,8 @@ function checkGameEnd(gameState, room) {
             npcPlayer.immortalEnd = 0;
           }
           
-          // Grant 15 seconds of immortality
-          const IMMORTAL_DURATION = 15000;
+          // Grant 5 seconds of immortality (matches human players)
+          const IMMORTAL_DURATION = 5000;
           npcPlayer.immortal = true;
           npcPlayer.immortalEnd = Date.now() + IMMORTAL_DURATION;
           
