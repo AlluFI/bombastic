@@ -866,9 +866,14 @@ class NPC {
       }
     
     // Check if there's another player or NPC at this position (players/NPCs block movement)
+    // IMPORTANT: Only check ALIVE players - dead players don't block movement
     if (this.gameState && this.gameState.players && this.gameState.players.length > 0) {
       const hasPlayer = this.gameState.players.some(p => 
-        p.alive && p.id !== this.id && p.x === pos.x && p.y === pos.y
+        p.id !== this.id && 
+        p.alive !== false && // Explicitly check for false (dead players have alive === false)
+        p.x === pos.x && 
+        p.y === pos.y &&
+        p.x >= 0 && p.y >= 0 // Also exclude off-board positions (-1, -1)
       );
       if (hasPlayer) {
         return false; // Another player/NPC blocks movement

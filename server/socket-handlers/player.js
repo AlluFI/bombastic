@@ -70,7 +70,11 @@ module.exports = function playerHandlers(io, socket, rooms) {
     // Check gameState.players first (includes synced NPCs)
     if (room.gameState.players && room.gameState.players.length > 0) {
       const hasPlayer = room.gameState.players.some(p => 
-        p.alive && p.id !== socket.id && p.x === newX && p.y === newY
+        p.id !== socket.id && 
+        p.alive !== false && // Explicitly check for false (dead players have alive === false)
+        p.x === newX && 
+        p.y === newY &&
+        p.x >= 0 && p.y >= 0 // Also exclude off-board positions (-1, -1)
       )
       if (hasPlayer) {
         emitAuthoritativePosition()
@@ -81,7 +85,10 @@ module.exports = function playerHandlers(io, socket, rooms) {
     // Also check NPCs directly to catch any that might not be synced yet
     if (room.npcs) {
       for (const [npcId, npc] of room.npcs.entries()) {
-        if (npc.alive && npc.position.x === newX && npc.position.y === newY) {
+        if (npc.alive && 
+            npc.position.x === newX && 
+            npc.position.y === newY &&
+            npc.position.x >= 0 && npc.position.y >= 0) { // Exclude off-board positions
           emitAuthoritativePosition()
           return
         }
@@ -91,7 +98,11 @@ module.exports = function playerHandlers(io, socket, rooms) {
     // Also check human players directly as defensive check
     if (room.players) {
       for (const [playerId, player] of room.players.entries()) {
-        if (playerId !== socket.id && player.alive && player.x === newX && player.y === newY) {
+        if (playerId !== socket.id && 
+            player.alive !== false && // Explicitly check for false
+            player.x === newX && 
+            player.y === newY &&
+            player.x >= 0 && player.y >= 0) { // Exclude off-board positions
           emitAuthoritativePosition()
           return
         }

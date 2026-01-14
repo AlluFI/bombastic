@@ -313,9 +313,14 @@ function checkGameEnd(gameState, room) {
     
     // Check if there's another player or NPC at the target position
     // Check both gameState.players and room.npcs to ensure we catch all entities
+    // IMPORTANT: Only check ALIVE players - dead players don't block movement
     if (room.gameState.players && room.gameState.players.length > 0) {
       const hasPlayer = room.gameState.players.some(p => 
-        p.alive && p.id !== npcId && p.x === newX && p.y === newY
+        p.id !== npcId && 
+        p.alive !== false && // Explicitly check for false (dead players have alive === false)
+        p.x === newX && 
+        p.y === newY &&
+        p.x >= 0 && p.y >= 0 // Also exclude off-board positions (-1, -1)
       );
       if (hasPlayer) {
         // Blocked by another player/NPC in gameState
@@ -324,9 +329,14 @@ function checkGameEnd(gameState, room) {
     }
     
     // Also check NPCs directly to catch any that might not be in gameState yet
+    // IMPORTANT: Only check ALIVE NPCs - dead NPCs don't block movement
     if (room.npcs) {
       for (const [otherNpcId, otherNpc] of room.npcs.entries()) {
-        if (otherNpcId !== npcId && otherNpc.alive && otherNpc.position.x === newX && otherNpc.position.y === newY) {
+        if (otherNpcId !== npcId && 
+            otherNpc.alive && 
+            otherNpc.position.x === newX && 
+            otherNpc.position.y === newY &&
+            otherNpc.position.x >= 0 && otherNpc.position.y >= 0) { // Exclude off-board positions
           // Blocked by another NPC
           return;
         }
@@ -334,10 +344,16 @@ function checkGameEnd(gameState, room) {
     }
     
     // Also check human players directly (exclude NPCs from this check)
+    // IMPORTANT: Only check ALIVE players - dead players don't block movement
     if (room.players) {
       for (const [playerId, player] of room.players.entries()) {
         // Skip NPCs (they're checked above) and the current NPC
-        if (playerId !== npcId && !player.isNPC && player.alive && player.x === newX && player.y === newY) {
+        if (playerId !== npcId && 
+            !player.isNPC && 
+            player.alive !== false && // Explicitly check for false
+            player.x === newX && 
+            player.y === newY &&
+            player.x >= 0 && player.y >= 0) { // Exclude off-board positions
           // Blocked by a human player
           return;
         }
