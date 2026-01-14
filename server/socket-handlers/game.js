@@ -77,21 +77,25 @@ module.exports = function gameHandlers(io, socket, rooms) {
     // Remove player from room
     room.players.delete(socket.id);
 
-    // Notify others that player left
-    socket.to(roomCode).emit('player:left', socket.id)
+   socket.to(roomCode).emit('player:left', socket.id)
     
-    // Check if room is now empty
-    if (room.players.size === 0) {
-      // Delete empty room
+    // Check if room should be deleted
+    // Delete if: empty OR single-player mode and host is leaving
+    const isHostLeaving = room.host === socket.id
+    const isSinglePlayerMode = room.gameState.gameMode === 'single-player'
+    const shouldDeleteRoom = room.players.size === 0 || (isSinglePlayerMode && isHostLeaving)
+    
+    if (shouldDeleteRoom) {
+      // Delete room
       rooms.delete(roomCode)
-      // logRoomEvent(roomCode, 'Room deleted (empty after disconnect)')
+      // logRoomEvent(roomCode, 'Room deleted (empty or single-player host left)')
       // Broadcast lobby update (room removed)
       broadcastLobbyUpdate(io, rooms)
       return
     }
     
     // If the host disconnected, transfer host to the next player
-    if (room.host === socket.id) {
+    if (isHostLeaving) {
       const nextHost = room.players.keys().next().value
       room.host = nextHost
       // logRoomEvent(roomCode, 'Host transferred', { newHostId: nextHost, previousHostId: socket.id })
