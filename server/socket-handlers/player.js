@@ -68,14 +68,22 @@ module.exports = function playerHandlers(io, socket, rooms) {
     
     // Check if there's another player or NPC at the target position
     // Check gameState.players first (includes synced NPCs)
+    // IMPORTANT: Only check ALIVE players - dead players/NPCs don't block movement
+    // Filter out dead players/NPCs first to avoid any edge cases
     if (room.gameState.players && room.gameState.players.length > 0) {
-      const hasPlayer = room.gameState.players.some(p => 
+      // Filter to only alive players/NPCs at valid on-board positions
+      const alivePlayers = room.gameState.players.filter(p => 
+        p.alive === true && 
+        p.x >= 0 && 
+        p.y >= 0
+      );
+      
+      const hasPlayer = alivePlayers.some(p => 
         p.id !== socket.id && 
-        p.alive !== false && // Explicitly check for false (dead players have alive === false)
         p.x === newX && 
-        p.y === newY &&
-        p.x >= 0 && p.y >= 0 // Also exclude off-board positions (-1, -1)
-      )
+        p.y === newY
+      );
+      
       if (hasPlayer) {
         emitAuthoritativePosition()
         return
@@ -83,9 +91,15 @@ module.exports = function playerHandlers(io, socket, rooms) {
     }
     
     // Also check NPCs directly to catch any that might not be synced yet
+    // IMPORTANT: Only check ALIVE NPCs - dead NPCs don't block movement
+    // This is a defensive check in case syncRoomGameState didn't catch them
+    // CRITICAL: Double-check that NPC is actually alive (not just truthy)
     if (room.npcs) {
       for (const [npcId, npc] of room.npcs.entries()) {
-        if (npc.alive && 
+        // Only block if NPC is explicitly alive AND at valid on-board position
+        // Also verify NPC has lives > 0 as additional safety check
+        const isAlive = npc.alive === true && (npc.lives === undefined || npc.lives > 0);
+        if (isAlive && 
             npc.position.x === newX && 
             npc.position.y === newY &&
             npc.position.x >= 0 && npc.position.y >= 0) { // Exclude off-board positions
@@ -99,7 +113,7 @@ module.exports = function playerHandlers(io, socket, rooms) {
     if (room.players) {
       for (const [playerId, player] of room.players.entries()) {
         if (playerId !== socket.id && 
-            player.alive !== false && // Explicitly check for false
+            player.alive === true && // Explicitly check for true (only alive players block)
             player.x === newX && 
             player.y === newY &&
             player.x >= 0 && player.y >= 0) { // Exclude off-board positions

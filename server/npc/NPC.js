@@ -870,7 +870,7 @@ class NPC {
     if (this.gameState && this.gameState.players && this.gameState.players.length > 0) {
       const hasPlayer = this.gameState.players.some(p => 
         p.id !== this.id && 
-        p.alive !== false && // Explicitly check for false (dead players have alive === false)
+        p.alive === true && // Explicitly check for true (only alive players block)
         p.x === pos.x && 
         p.y === pos.y &&
         p.x >= 0 && p.y >= 0 // Also exclude off-board positions (-1, -1)

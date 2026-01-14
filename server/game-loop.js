@@ -331,6 +331,13 @@ module.exports = function gameLoop(io, rooms) {
                   if (!npc.alive) {
                     npc.position.x = -1;
                     npc.position.y = -1;
+                    // Also update the NPC player object in room.players Map immediately
+                    const npcPlayerInMap = room.players.get(npcId);
+                    if (npcPlayerInMap) {
+                      npcPlayerInMap.x = -1;
+                      npcPlayerInMap.y = -1;
+                      npcPlayerInMap.alive = false;
+                    }
                   }
                     
                      // Track elimination order
@@ -427,6 +434,7 @@ module.exports = function gameLoop(io, rooms) {
                     if (!playerObj.alive) {
                       playerObj.x = -1;
                       playerObj.y = -1;
+                      // Position is already updated in room.players Map (playerObj is the same reference)
                     }
                     
                     // Start invincibility period (2 seconds)

@@ -146,12 +146,24 @@ function generateBoard() {
   // Add/update NPCs in the players array
   room.npcs.forEach((npc, npcId) => {
     const npcPlayer = room.gameState.players.find(p => p.id === npcId);
+    
+    // Determine the correct position - dead NPCs should be off-board
+    let npcX = npc.position.x;
+    let npcY = npc.position.y;
+    if (!npc.alive && (npcX >= 0 || npcY >= 0)) {
+      // NPC is dead but still on-board - move off-board
+      npcX = -1;
+      npcY = -1;
+      npc.position.x = -1;
+      npc.position.y = -1;
+    }
+    
     if (!npcPlayer) {
       room.gameState.players.push({
         id: npcId,
         name: npc.name,
-        x: npc.position.x,
-        y: npc.position.y,
+        x: npcX, // Use corrected position
+        y: npcY, // Use corrected position
         color: room.players.get(npcId)?.color || '#888888', // Get color from Map if available
         alive: npc.alive,
         lives: npc.lives || 1,
@@ -159,8 +171,10 @@ function generateBoard() {
       });
     } else {
       // Update existing NPC player
-      npcPlayer.x = npc.position.x;
-      npcPlayer.y = npc.position.y;
+      // IMPORTANT: Always sync position and alive status, even for dead NPCs
+      // Dead NPCs should have position at (-1, -1) to avoid blocking tiles
+      npcPlayer.x = npcX; // Use corrected position
+      npcPlayer.y = npcY; // Use corrected position
       npcPlayer.alive = npc.alive;
       npcPlayer.lives = npc.lives || 1;
       npcPlayer.isNPC = true; // Ensure flag is set
@@ -314,14 +328,21 @@ function checkGameEnd(gameState, room) {
     // Check if there's another player or NPC at the target position
     // Check both gameState.players and room.npcs to ensure we catch all entities
     // IMPORTANT: Only check ALIVE players - dead players don't block movement
+    // Filter out dead players/NPCs first to avoid any edge cases
     if (room.gameState.players && room.gameState.players.length > 0) {
-      const hasPlayer = room.gameState.players.some(p => 
-        p.id !== npcId && 
-        p.alive !== false && // Explicitly check for false (dead players have alive === false)
-        p.x === newX && 
-        p.y === newY &&
-        p.x >= 0 && p.y >= 0 // Also exclude off-board positions (-1, -1)
+      // Filter to only alive players/NPCs at valid on-board positions
+      const alivePlayers = room.gameState.players.filter(p => 
+        p.alive === true && 
+        p.x >= 0 && 
+        p.y >= 0
       );
+      
+      const hasPlayer = alivePlayers.some(p => 
+        p.id !== npcId && 
+        p.x === newX && 
+        p.y === newY
+      );
+      
       if (hasPlayer) {
         // Blocked by another player/NPC in gameState
         return;
@@ -332,8 +353,9 @@ function checkGameEnd(gameState, room) {
     // IMPORTANT: Only check ALIVE NPCs - dead NPCs don't block movement
     if (room.npcs) {
       for (const [otherNpcId, otherNpc] of room.npcs.entries()) {
+        // Only block if NPC is alive AND at valid on-board position
         if (otherNpcId !== npcId && 
-            otherNpc.alive && 
+            otherNpc.alive === true && 
             otherNpc.position.x === newX && 
             otherNpc.position.y === newY &&
             otherNpc.position.x >= 0 && otherNpc.position.y >= 0) { // Exclude off-board positions
@@ -350,7 +372,7 @@ function checkGameEnd(gameState, room) {
         // Skip NPCs (they're checked above) and the current NPC
         if (playerId !== npcId && 
             !player.isNPC && 
-            player.alive !== false && // Explicitly check for false
+            player.alive === true && // Explicitly check for true (only alive players block)
             player.x === newX && 
             player.y === newY &&
             player.x >= 0 && player.y >= 0) { // Exclude off-board positions
