@@ -488,6 +488,7 @@ class NPC {
     // Bomb placement strategy:
     // - If adjacent to a block (obstacle), bomb it to clear the path toward our goal
     // - If player is in range, bomb to attack
+    // - If targeting a block (even if not adjacent), be more aggressive about bombing
     // - Otherwise, use normal bomb placement chance
     if (!strategy) {
       return null;
@@ -495,11 +496,30 @@ class NPC {
     
     const { hasPlayerTarget, hasBlockTarget } = this._evaluateBombTargets();
     
+    // CRITICAL FIX: If we're targeting a block (even if not adjacent), prioritize bombing
+    // This prevents oscillation by ensuring NPCs clear blocking blocks aggressively
+    const isTargetingBlock = this.currentTarget?.type === 'block';
+    const distanceToBlockTarget = isTargetingBlock ? 
+      Pathfinder.manhattanDistance(this.position, this.currentTarget) : Infinity;
+    
     // If we're adjacent to a block (either blocking our path or a target block), bomb it
     if (hasBlockTarget) {
       const bombAction = this._decidePlaceBomb(hasBlockTarget, hasPlayerTarget);
       if (bombAction) {
         return bombAction; // Always try to bomb when adjacent to blocks
+      }
+    }
+    
+    // CRITICAL FIX: If we're targeting a block and close to it (within 2 tiles), 
+    // be more aggressive about bombing even if not adjacent
+    // This helps NPCs clear paths when they're approaching blocking blocks
+    if (isTargetingBlock && distanceToBlockTarget <= 2 && !hasBlockTarget) {
+      // We're close to our block target but not adjacent - check if we should bomb anyway
+      // This helps when blocks are blocking our path to players
+      const bombChance = 0.6; // 60% chance to bomb when close to block target
+      if (Math.random() < bombChance) {
+        const bombAction = this._decidePlaceBomb(true, hasPlayerTarget); // Treat as block target
+        if (bombAction) return bombAction;
       }
     }
     
@@ -1168,6 +1188,51 @@ class NPC {
       }
     }
 
+    // CRITICAL FIX: If we're targeting a block (even if not adjacent), consider it a block target
+    // This prevents oscillation when NPCs are moving toward blocking blocks
+    // NPCs should place bombs when they're close to their block target (within 2 tiles)
+    if (!hasBlockTarget && this.currentTarget?.type === 'block') {
+      const distanceToBlock = Pathfinder.manhattanDistance(this.position, this.currentTarget);
+      // If we're within 2 tiles of the block target, consider it a valid bomb target
+      // This allows NPCs to place bombs when approaching blocks, not just when adjacent
+      if (distanceToBlock <= 2) {
+        hasBlockTarget = true;
+      }
+    }
+
+    // ADDITIONAL FIX: If we're targeting a player but pathfinding failed (blocked by blocks),
+    // check for blocks that are blocking our path to the player
+    // This helps NPCs identify and bomb blocking blocks even when not directly targeting them
+    if (!hasBlockTarget && this.currentTarget?.type === 'player' && this.navigationGrid) {
+      const targetPlayer = this.gameState.players?.find(p => 
+        p.id === this.currentTarget.playerId || 
+        (Math.abs(p.x - this.currentTarget.x) <= 1 && Math.abs(p.y - this.currentTarget.y) <= 1)
+      );
+      
+      if (targetPlayer && targetPlayer.alive) {
+        // Check if there's a path to the player
+        const path = Pathfinder.findPath(
+          this.position,
+          { x: targetPlayer.x, y: targetPlayer.y },
+          this.navigationGrid,
+          this.maxRows,
+          this.maxCols
+        );
+        
+        // If no path exists, find blocking blocks in the direction toward the player
+        if (!path || path.length === 0) {
+          const blockingBlock = this._findBlockingBlock({ x: targetPlayer.x, y: targetPlayer.y, type: 'player' });
+          if (blockingBlock) {
+            const distanceToBlock = Pathfinder.manhattanDistance(this.position, blockingBlock);
+            // If blocking block is within 3 tiles, consider it a bomb target
+            if (distanceToBlock <= 3) {
+              hasBlockTarget = true;
+            }
+          }
+        }
+      }
+    }
+
     return { hasPlayerTarget, hasBlockTarget };
   }
 
@@ -1293,12 +1358,24 @@ class NPC {
           this.state = 'moving';
           
           // Commit to this direction - longer for trappers with far-away targets
+          // CRITICAL FIX: Also commit longer when targeting blocks to prevent oscillation
           let commitmentDuration = 4000; // Default 4 seconds
           if (this.strategy.name === 'trapper' && target && target.type === 'player') {
             const distance = Pathfinder.manhattanDistance(this.position, target);
             if (distance > 5) {
               // Far-away target - commit longer to prevent oscillation
               commitmentDuration = 8000; // 8 seconds for far targets
+            }
+          } else if (target && target.type === 'block') {
+            // When targeting blocks, commit longer to prevent oscillation
+            // NPCs should stick to clearing one block at a time
+            const distanceToBlock = Pathfinder.manhattanDistance(this.position, target);
+            if (distanceToBlock > 2) {
+              // Block is further away - commit longer
+              commitmentDuration = 6000; // 6 seconds for block targets
+            } else {
+              // Block is close - still commit but shorter
+              commitmentDuration = 5000; // 5 seconds for nearby blocks
             }
           }
           
@@ -1342,16 +1419,41 @@ class NPC {
           }
           
           // Fallback to normal blocking block finding
-          const blockingBlock = this._findBlockingBlock(target);
-          if (blockingBlock) {
-            // Switch to targeting the blocking block
-            this.currentTarget = blockingBlock;
-            this.lastTargetSwitch = Date.now();
-            // Try moving toward the block (limit recursion to prevent infinite loops)
-            this._pathfindingRecursionDepth = 1;
-            const result = this._decideMovement();
-            this._pathfindingRecursionDepth = 0;
-            if (result) return result;
+          // CRITICAL FIX: Only switch to blocking block if we don't already have a block target
+          // This prevents oscillation by committing to clearing one block at a time
+          if (this.currentTarget?.type !== 'block') {
+            const blockingBlock = this._findBlockingBlock(target);
+            if (blockingBlock) {
+              // Switch to targeting the blocking block
+              // BUT: Don't reset lastTargetSwitch immediately - give it a longer commitment
+              // This prevents rapid target switching when multiple blocks block the path
+              const timeSinceSwitch = Date.now() - this.lastTargetSwitch;
+              const minTimeToSwitchToBlock = 5000; // 5 seconds minimum commitment to block target
+              
+              // Only switch if we haven't switched targets recently, or if we're truly stuck
+              if (timeSinceSwitch > minTimeToSwitchToBlock || this.stuckCounter > 3) {
+                this.currentTarget = blockingBlock;
+                this.lastTargetSwitch = Date.now();
+                // Try moving toward the block (limit recursion to prevent infinite loops)
+                this._pathfindingRecursionDepth = 1;
+                const result = this._decideMovement();
+                this._pathfindingRecursionDepth = 0;
+                if (result) return result;
+              } else {
+                // We're committed to the current target - try to find a path-clearing approach
+                // Instead of switching targets, try to find a different route or wait
+                return null; // Wait and try again next cycle (path might clear)
+              }
+            }
+          } else {
+            // We already have a block target - commit to clearing it
+            // Don't switch back to player target until block is cleared or we're stuck
+            const distanceToBlock = Pathfinder.manhattanDistance(this.position, this.currentTarget);
+            if (distanceToBlock > 3) {
+              // Block is still far away - continue moving toward it
+              // Pathfinding will be retried next cycle
+              return null; // Wait and retry pathfinding
+            }
           }
         }
       }
@@ -1442,12 +1544,81 @@ class NPC {
   _findBlockingBlock(target) {
     if (!this.gameState.board || !target) return null;
     
-    // Find blocks that are in the direct path to the target
+    // IMPROVED: Use pathfinding to identify blocks that are actually blocking the path
+    // This is more accurate than just checking the direct line
+    if (this.navigationGrid) {
+      // Try to find a path to the target
+      const path = Pathfinder.findPath(
+        this.position,
+        { x: target.x, y: target.y },
+        this.navigationGrid,
+        this.maxRows,
+        this.maxCols
+      );
+      
+      // If path exists, no blocking blocks
+      if (path && path.length > 0) {
+        return null;
+      }
+      
+      // Path doesn't exist - find blocks that are blocking the path
+      // Check blocks in the general direction toward target (within 4 tiles)
+      const dx = target.x - this.position.x;
+      const dy = target.y - this.position.y;
+      
+      // Find blocks in the direction toward target, prioritizing closer blocks
+      const candidates = [];
+      const searchRadius = 4; // Search up to 4 tiles away
+      
+      for (let x = Math.max(0, this.position.x - searchRadius); 
+           x <= Math.min(this.maxRows - 1, this.position.x + searchRadius); x++) {
+        for (let y = Math.max(0, this.position.y - searchRadius); 
+             y <= Math.min(this.maxCols - 1, this.position.y + searchRadius); y++) {
+          
+          if (this.gameState.board[x] && this.gameState.board[x][y] === 1) {
+            const blockDx = x - this.position.x;
+            const blockDy = y - this.position.y;
+            
+            // Check if block is in the general direction toward target (dot product check)
+            const dotProduct = blockDx * dx + blockDy * dy;
+            const distance = Pathfinder.manhattanDistance(this.position, { x, y });
+            
+            // Prefer blocks that are:
+            // 1. In the forward direction toward target (dotProduct > 0)
+            // 2. Not too far (within searchRadius)
+            // 3. Closer to NPC (shorter distance)
+            if (dotProduct > 0 && distance <= searchRadius) {
+              candidates.push({
+                x: x,
+                y: y,
+                type: 'block',
+                distance: distance,
+                alignment: dotProduct / (distance + 1) // Higher = more aligned with target direction
+              });
+            }
+          }
+        }
+      }
+      
+      if (candidates.length > 0) {
+        // Sort by alignment (prefer blocks in direct path) and distance (prefer closer blocks)
+        candidates.sort((a, b) => {
+          if (Math.abs(a.alignment - b.alignment) > 0.1) {
+            return b.alignment - a.alignment; // Higher alignment first
+          }
+          return a.distance - b.distance; // Closer blocks first
+        });
+        
+        return candidates[0];
+      }
+    }
+    
+    // Fallback: Find blocks that are in the direct path to the target
     const dx = target.x - this.position.x;
     const dy = target.y - this.position.y;
     
-    // Check blocks in the direction toward target (within 2 tiles)
-    const checkDistance = Math.min(2, Math.max(Math.abs(dx), Math.abs(dy)));
+    // Check blocks in the direction toward target (within 3 tiles)
+    const checkDistance = Math.min(3, Math.max(Math.abs(dx), Math.abs(dy)));
     const stepX = dx !== 0 ? dx / Math.abs(dx) : 0;
     const stepY = dy !== 0 ? dy / Math.abs(dy) : 0;
     
@@ -1463,11 +1634,17 @@ class NPC {
       }
     }
     
-    // If no direct path block, find nearest block
-    for (let x = Math.max(0, this.position.x - 2); x <= Math.min(this.maxRows - 1, this.position.x + 2); x++) {
-      for (let y = Math.max(0, this.position.y - 2); y <= Math.min(this.maxCols - 1, this.position.y + 2); y++) {
+    // If no direct path block, find nearest block in general direction
+    for (let x = Math.max(0, this.position.x - 3); x <= Math.min(this.maxRows - 1, this.position.x + 3); x++) {
+      for (let y = Math.max(0, this.position.y - 3); y <= Math.min(this.maxCols - 1, this.position.y + 3); y++) {
         if (this.gameState.board[x] && this.gameState.board[x][y] === 1) {
-          return { x: x, y: y, type: 'block' };
+          const blockDx = x - this.position.x;
+          const blockDy = y - this.position.y;
+          // Check if block is in the general direction toward target
+          const dotProduct = blockDx * dx + blockDy * dy;
+          if (dotProduct > 0) { // Block is in forward direction
+            return { x: x, y: y, type: 'block' };
+          }
         }
       }
     }
