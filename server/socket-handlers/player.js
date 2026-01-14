@@ -40,9 +40,20 @@ module.exports = function playerHandlers(io, socket, rooms) {
       return
     }
     
+    // Sync game state FIRST to ensure we have current player positions, bombs, and NPCs
+    syncRoomGameState(room)
+    
+    const emitAuthoritativePosition = () => {
+      socket.emit('player:moved', {
+        id: socket.id,
+        x: player.x,
+        y: player.y
+      })
+    }
+
     // Check if tile is walkable (0 = walkable, 1 = block, 2 = wall)
     if (room.gameState.board[newX][newY] !== 0) {
-      // Silently ignore - this is expected behavior (blocked movement)
+      emitAuthoritativePosition()
       return
     }
     
@@ -50,13 +61,10 @@ module.exports = function playerHandlers(io, socket, rooms) {
     if (room.gameState.bombs && room.gameState.bombs.length > 0) {
       const hasBomb = room.gameState.bombs.some(bomb => bomb.x === newX && bomb.y === newY)
       if (hasBomb) {
-        // Silently ignore - this is expected behavior (blocked by bomb)
+        emitAuthoritativePosition()
         return
       }
     }
-    
-    // Sync game state BEFORE validation to ensure we have current player positions
-    syncRoomGameState(room)
     
     // Check if there's another player or NPC at the target position
     // Check gameState.players first (includes synced NPCs)
@@ -65,7 +73,7 @@ module.exports = function playerHandlers(io, socket, rooms) {
         p.alive && p.id !== socket.id && p.x === newX && p.y === newY
       )
       if (hasPlayer) {
-        // Silently ignore - this is expected behavior (blocked by player)
+        emitAuthoritativePosition()
         return
       }
     }
@@ -74,7 +82,7 @@ module.exports = function playerHandlers(io, socket, rooms) {
     if (room.npcs) {
       for (const [npcId, npc] of room.npcs.entries()) {
         if (npc.alive && npc.position.x === newX && npc.position.y === newY) {
-          // Blocked by an NPC
+          emitAuthoritativePosition()
           return
         }
       }
@@ -84,23 +92,24 @@ module.exports = function playerHandlers(io, socket, rooms) {
     if (room.players) {
       for (const [playerId, player] of room.players.entries()) {
         if (playerId !== socket.id && player.alive && player.x === newX && player.y === newY) {
-          // Blocked by another human player
+          emitAuthoritativePosition()
           return
         }
       }
     }
 
+    // Movement allowed - update server position
     player.x = newX
     player.y = newY
 
     // Sync game state after player moves to update gameState.players
     syncRoomGameState(room)
 
-    // Broadcast movement to players in the same room only
-    socket.to(socket.roomCode).emit('player:moved', {
+    // Broadcast movement to all players (including mover) using authoritative position
+    io.to(socket.roomCode).emit('player:moved', {
       id: socket.id,
-      x: moveData.x,
-      y: moveData.y
+      x: player.x,
+      y: player.y
     })
   })
     

@@ -306,40 +306,52 @@ module.exports = function gameLoop(io, rooms) {
                   hitNPCs.add(npcId);
                   hitPlayers.add(npcId); // Also add to hitPlayers to prevent double-checking
                   
-                  // Apply damage to NPC
-                  const wasAlive = npc.alive;
-                  npc.lives = Math.max(0, npc.lives - 1);
-                  npc.alive = npc.lives > 0;
+                  // Get NPC player object to check immortal state
+                  const npcPlayer = room.players.get(npcId);
                   
-                  // logNPCAction(npcId, npc.name, 'caught in explosion', {
-                  //   roomId,
-                  //   position: { x: tile.x, y: tile.y },
-                  //   lives: npc.lives,
-                  //   alive: npc.alive
-                  // });
-                  
-                  // Track elimination order
-                  if (wasAlive && !npc.alive) {
-                    // NPC was eliminated - track elimination order
-                    if (!room.eliminationOrder) {
-                      room.eliminationOrder = [];
-                    }
-                    const npcPlayer = room.players.get(npcId);
-                    if (npcPlayer && !room.eliminationOrder.includes(npcId)) {
-                      room.eliminationOrder.push(npcId);
-                      // logNPCAction(npcId, npc.name, 'eliminated', {
-                      //   roomId,
-                      //   eliminationOrder: room.eliminationOrder.length
-                      // });
-                    }
+                  // Initialize immortal state if not exists
+                  if (npcPlayer && npcPlayer.immortal === undefined) {
+                    npcPlayer.immortal = false;
+                    npcPlayer.immortalEnd = 0;
                   }
                   
-                  // Broadcast damage to all players in room
-                  io.to(roomId).emit('player:damaged', {
-                    playerId: npcId,
-                    lives: npc.lives,
-                    died: !npc.alive
-                  });
+                  // Check if NPC is immortal (power-up)
+                  const isImmortal = npcPlayer && npcPlayer.immortal && Date.now() < npcPlayer.immortalEnd;
+                  
+                  if (isImmortal) {
+                    // NPC is immortal - skip damage but still grant immortal to bomb owner
+                    // logNPCAction(npcId, npc.name, 'damage blocked (immortal)', { roomId, position: { x: tile.x, y: tile.y } });
+                  } else {
+                  // Apply damage to NPC
+                    const wasAlive = npc.alive;
+                    npc.lives = Math.max(0, npc.lives - 1);
+                    npc.alive = npc.lives > 0;
+
+                  // If NPC died, move them off-board to avoid blocking tiles
+                  if (!npc.alive) {
+                    npc.position.x = -1;
+                    npc.position.y = -1;
+                  }
+                    
+                     // Track elimination order
+                    if (wasAlive && !npc.alive) {
+                      // NPC was eliminated - track elimination order
+                      if (!room.eliminationOrder) {
+                        room.eliminationOrder = [];
+                      }
+                      if (npcPlayer && !room.eliminationOrder.includes(npcId)) {
+                        room.eliminationOrder.push(npcId);
+                        // logNPCAction(npcId, npc.name, 'eliminated', {
+                        }
+                    }
+                    
+                    // Broadcast damage to all players in room
+                    io.to(roomId).emit('player:damaged', {
+                      playerId: npcId,
+                      lives: npc.lives,
+                      died: !npc.alive
+                    });
+                  }
                   
                   // Grant immortal power-up to bomb owner when their bomb hits an NPC
                   // Only grant if bomb owner is different from hit NPC and bomb owner is alive
@@ -356,13 +368,6 @@ module.exports = function gameLoop(io, rooms) {
                       const IMMORTAL_DURATION = 15000;
                       bombOwner.immortal = true;
                       bombOwner.immortalEnd = Date.now() + IMMORTAL_DURATION;
-                      
-                      // logPlayerAction(bombOwner.id, bombOwner.name, 'gained immortality after hitting NPC', {
-                      //   roomId,
-                      //   target: npc.name,
-                      //   duration: IMMORTAL_DURATION,
-                      //   type: 'immortal'
-                      // });
                       
                       // Broadcast immortal power-up to all clients
                       io.to(roomId).emit('powerup:granted', {
@@ -418,6 +423,11 @@ module.exports = function gameLoop(io, rooms) {
                     const wasAlive = playerObj.alive;
                     playerObj.lives = Math.max(0, playerObj.lives - 1);
                     playerObj.alive = playerObj.lives > 0;
+                    // If player died, move them off-board to avoid blocking tiles
+                    if (!playerObj.alive) {
+                      playerObj.x = -1;
+                      playerObj.y = -1;
+                    }
                     
                     // Start invincibility period (2 seconds)
                     playerObj.invincible = true;

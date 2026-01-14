@@ -292,6 +292,14 @@ export function getPlayersAtPosition(x, y) {
 }
 
 export function updateRemotePlayer(playerId, x, y) {
+    // If this update is for the local player, update them directly (authoritative from server)
+    if (localPlayer && localPlayer.id === playerId) {
+        localPlayer.x = x
+        localPlayer.y = y
+        localPlayer.updatePosition()
+        return
+    }
+
     const player = remotePlayers.get(playerId)
     if (player) {
         player.x = x
