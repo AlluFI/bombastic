@@ -8,7 +8,6 @@
  */
 
 const NPC = require('./NPC');
-const { DifficultyProfiles, getDifficultyProfile, isValidDifficulty } = require('./DifficultyProfiles');
 const BehaviorStrategies = require('./BehaviorStrategies');
 const Pathfinder = require('./utils/Pathfinder');
 const DangerDetector = require('./utils/DangerDetector');
@@ -16,9 +15,6 @@ const ItemEvaluator = require('./utils/ItemEvaluator');
 
 module.exports = {
   NPC,
-  DifficultyProfiles,
-  getDifficultyProfile,
-  isValidDifficulty,
   BehaviorStrategies,
   Pathfinder,
   DangerDetector,

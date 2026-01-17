@@ -8,7 +8,6 @@
  */
 
 const NPC = require('./NPC');
-const { getDifficultyProfile } = require('./DifficultyProfiles');
 const DangerDetector = require('./utils/DangerDetector');
 const Pathfinder = require('./utils/Pathfinder');
 
@@ -82,28 +81,12 @@ function testNPCCreation() {
   console.log('✓ NPC created:', npc.name);
   console.log('  Difficulty:', npc.difficulty);
   console.log('  Profile:', {
-    speed: npc.profile.speed,
     decisionInterval: npc.profile.decisionInterval,
-    aggression: npc.profile.aggression,
+    bombPlacementRate: npc.profile.bombPlacementRate,
+    mistakeRate: npc.profile.mistakeRate,
   });
   
   return npc;
-}
-
-// Test difficulty profiles
-function testDifficultyProfiles() {
-  console.log('\n=== Test 2: Difficulty Profiles ===');
-  
-  const difficulties = ['easy', 'medium', 'hard'];
-  difficulties.forEach(diff => {
-    const profile = getDifficultyProfile(diff);
-    console.log(`\n${diff.toUpperCase()}:`);
-    console.log(`  Speed: ${profile.speed}x`);
-    console.log(`  Decision Interval: ${profile.decisionInterval}ms`);
-    console.log(`  Aggression: ${profile.aggression}`);
-    console.log(`  Mistake Rate: ${profile.mistakeRate * 100}%`);
-    console.log(`  Avoidance Success: ${profile.avoidanceSuccess * 100}%`);
-  });
 }
 
 // Test NPC decision-making
@@ -437,7 +420,6 @@ function runAllTests() {
   
   try {
     const npc = testNPCCreation();
-    testDifficultyProfiles();
     testNPCDecisions(npc);
     testDangerDetection();
     testPathfinding();

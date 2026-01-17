@@ -83,31 +83,22 @@ class NPC {
   _loadDifficultyProfile() {
     const baseProfiles = {
       easy: {
-        speed: 0.7,              // Slower movement
-        decisionInterval: 500,   // Slower decisions (500ms - humans think slower)
-        aggression: 0.3,         // Low aggression
-        bombPlacementRate: 0.2,  // Rarely places bombs
-        mistakeRate: 0.3,        // 30% chance of mistakes
-        powerupPriority: 0.4,    // Low powerup priority
-        avoidanceSuccess: 0.85,  // 85% success at avoiding bombs
-      },
+        decisionInterval: 500,   // Used at line 71 - Controls decision-making frequency
+        bombPlacementRate: 0.2,  // Used at line 495 - Multiplied with strategy bomb placement chance
+        mistakeRate: 0.3,        // Used at line 1052 - Converts to bombPlacementSuccess (1 - mistakeRate)
+        attackRange: 2,          // Used at line 1105 - Maximum distance to consider players as bomb targets
+       },
       medium: {
-        speed: 1.0,              // Normal speed
-        decisionInterval: 400,   // Normal decisions (400ms - more human-like)
-        aggression: 0.6,         // Moderate aggression
-        bombPlacementRate: 0.5,  // Moderate bomb placement
-        mistakeRate: 0.15,       // 15% chance of mistakes
-        powerupPriority: 0.7,    // Moderate powerup priority
-        avoidanceSuccess: 0.95,  // 95% success at avoiding bombs
+        decisionInterval: 400,   // Used at line 71 - Controls decision-making frequency
+        bombPlacementRate: 0.5,  // Used at line 495 - Multiplied with strategy bomb placement chance
+        mistakeRate: 0.15,       // Used at line 1052 - Converts to bombPlacementSuccess (1 - mistakeRate)
+        attackRange: 3,          // Used at line 1105 - Maximum distance to consider players as bomb targets
       },
       hard: {
-        speed: 1.3,              // Faster movement
-        decisionInterval: 300,   // Fast decisions (300ms - still human-like, not superhuman)
-        aggression: 0.9,         // High aggression
-        bombPlacementRate: 0.8,  // Frequent bomb placement
-        mistakeRate: 0.05,       // 5% chance of mistakes
-        powerupPriority: 0.95,   // High powerup priority
-        avoidanceSuccess: 0.98,  // 98% success at avoiding bombs
+        decisionInterval: 300,   // Used at line 71 - Controls decision-making frequency
+        bombPlacementRate: 0.8,  // Used at line 495 - Multiplied with strategy bomb placement chance
+        mistakeRate: 0.05,       // Used at line 1052 - Converts to bombPlacementSuccess (1 - mistakeRate)
+        attackRange: 4,          // Used at line 1105 - Maximum distance to consider players as bomb targets
       },
     };
 
