@@ -406,12 +406,5 @@ To integrate NPCs into the game server:
 4. Get actions: `const action = npc.getNextCommand(Date.now())`
 5. Process actions same as player actions
 
-See `MERGE_PLAN.md` in project root for detailed integration steps.
 
----
 
-## 📚 Additional Resources
-
-- **Quick Start**: See `QUICK_START.md` (if exists) for quick testing guide
-- **Testing Guide**: See `TESTING.md` (if exists) for detailed testing instructions
-- **Development Notes**: See `PHASE3_SUMMARY.md` and `PHASE3_BEHAVIOR_SUMMARY.md` for implementation details
