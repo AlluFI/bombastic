@@ -15,6 +15,7 @@ import { initializeLobby, showLobbyScreen, hideLobbyScreen, updateLobbyPlayers }
 import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, initializePlayerStats, addPowerupToPlayer } from "./game/powerupController.js"
 import { initializeSoundManager, playSound } from "./audio/soundManager.js"
 import { initializeConnectionStatus, updateConnectionStatus, setReconnectAttempts } from "./ui/connection-status.js"
+import { applyDeltaUpdate, resetCachedGameState } from "./delta-updates.js"
 import "./ui/audio-toggle.js"
 
 
@@ -122,12 +123,18 @@ socket.on('connect_error', (error) => {
     })
 })
 
-// Receive current game state (existing players)
-socket.on('game:state', (state) => {
+// Receive current game state (existing players) - now supports delta updates
+socket.on('game:state', (delta) => {
+    // Apply delta update to get complete state
+    const state = applyDeltaUpdate(delta)
+    
     // Initialize board from server if provided (authoritative source)
     // Only update map data, don't re-render (would clear player elements)
     if (state.board) {
-        initializeMap(state.board, false) // false = don't force re-render
+        // If delta contains full board or board changes, update map
+        if (delta.full || delta.board) {
+            initializeMap(state.board, false) // false = don't force re-render
+        }
     }
     
     // Timer will be synced via timer:sync events from server
@@ -149,18 +156,69 @@ socket.on('game:state', (state) => {
         }
         
         // Update/create remote players (including NPCs)
-        // Don't update local player position from server - client controls it
-        players.forEach(p => {
-            if (p.id !== socket.id) {
-                if (!remotePlayers.has(p.id)) {
-                    createRemotePlayer(p)
-                    // Only render scoreboard when a new player is added
-                    renderScoreboard(players, socket.id)
-                } else {
-                    updateRemotePlayer(p.id, p.x, p.y)
+        // Only process if delta contains player changes or it's a full update
+        if (delta.full || delta.players) {
+            // Don't update local player position from server - client controls it
+            players.forEach(p => {
+                if (p.id !== socket.id) {
+                    if (!remotePlayers.has(p.id)) {
+                        createRemotePlayer(p)
+                        // Only render scoreboard when a new player is added
+                        renderScoreboard(players, socket.id)
+                    } else {
+                        updateRemotePlayer(p.id, p.x, p.y)
+                    }
                 }
+            })
+        }
+    }
+    
+    // Handle bomb changes
+    if (delta.full || delta.bombs) {
+        if (delta.bombs) {
+            // Remove bombs that were removed
+            if (delta.bombs.removed) {
+                delta.bombs.removed.forEach(bombId => {
+                    clearPlayerBombs(bombId)
+                })
             }
-        })
+            // Add new bombs
+            if (delta.bombs.added) {
+                delta.bombs.added.forEach(bomb => {
+                    placeRemoteBomb(bomb)
+                })
+            }
+        } else if (delta.full && state.bombs) {
+            // Full update - clear all and add all bombs
+            clearAllBombs()
+            state.bombs.forEach(bomb => {
+                placeRemoteBomb(bomb)
+            })
+        }
+    }
+    
+    // Handle powerup changes
+    if (delta.full || delta.powerups) {
+        if (delta.powerups) {
+            // Remove powerups that were removed
+            if (delta.powerups.removed) {
+                delta.powerups.removed.forEach(powerupId => {
+                    removePowerup(powerupId)
+                })
+            }
+            // Add new powerups
+            if (delta.powerups.added) {
+                delta.powerups.added.forEach(powerup => {
+                    renderPowerup(powerup)
+                })
+            }
+        } else if (delta.full && state.powerups) {
+            // Full update - clear all and add all powerups
+            clearAllPowerups()
+            state.powerups.forEach(powerup => {
+                renderPowerup(powerup)
+            })
+        }
     }
 })
 
@@ -315,6 +373,9 @@ socket.on('game:started', (data) => {
     // Play game start sound
     playSound('gameStart')
     
+    // Reset cached game state for delta updates
+    resetCachedGameState()
+    
     // Clear previous game state
     clearAllPlayers()
     clearAllPowerups()
@@ -407,6 +468,9 @@ socket.on('timer:sync', (data) => {
 
 // Handle game end (winner detection)
 socket.on('game:end', (data) => {
+    // Reset cached game state for delta updates
+    resetCachedGameState()
+    
     // Stop the timer
     stopTimer()
     

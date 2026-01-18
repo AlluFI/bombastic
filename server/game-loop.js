@@ -1,4 +1,4 @@
-const {syncRoomGameState, calculateExplosionBlocks, calculateExplosionTiles, handleNPCAction, checkGameEnd} = require('./utils')
+const {syncRoomGameState, calculateExplosionBlocks, calculateExplosionTiles, handleNPCAction, checkGameEnd, calculateDelta} = require('./utils')
 const CONSTANTS = require('./constants')
 const metrics = require('./metrics')
 // const { logRoomEvent, logPlayerAction, logNPCAction, logGameEvent, logger } = require('./logger')
@@ -633,8 +633,15 @@ module.exports = function gameLoop(io, rooms) {
       //   totalPlayers: gameEndResult.allPlayers?.length || 0
       // });
     } else {
-      // Broadcast updated game state to room
-      io.to(roomId).emit('game:state', room.gameState);
+      // Calculate delta update to reduce network payload
+      const previousState = room.previousGameState || null
+      const delta = calculateDelta(previousState, room.gameState)
+      
+      // Store current state as previous for next iteration
+      room.previousGameState = JSON.parse(JSON.stringify(room.gameState))
+      
+      // Broadcast delta update to room
+      io.to(roomId).emit('game:state', delta)
     }
   });
 }, CONSTANTS.GAME_LOOP_INTERVAL_MS); // 60 FPS

@@ -10,6 +10,7 @@ const roomUtils = require('./room-utils')
 const boardUtils = require('./board-utils')
 const gameStateUtils = require('./game-state-utils')
 const npcUtils = require('./npc-utils')
+const deltaUpdates = require('./delta-updates')
 
 module.exports = {
   // Room utilities
@@ -22,5 +23,8 @@ module.exports = {
   ...gameStateUtils,
   
   // NPC utilities
-  ...npcUtils
+  ...npcUtils,
+  
+  // Delta update utilities
+  ...deltaUpdates
 }

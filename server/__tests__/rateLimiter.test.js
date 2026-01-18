@@ -38,21 +38,22 @@ describe('Rate Limiter', () => {
 
     test('should allow requests after time window expires', (done) => {
       const socketId = 'test-socket-1';
-      const action = 'BOMB'; // 2 per 3 seconds
+      const action = 'BOMB'; // 10 per 1000ms (1 second)
       
-      // Make 2 requests (at limit)
-      checkRateLimit(socketId, action);
-      checkRateLimit(socketId, action);
+      // Make 10 requests (at limit)
+      for (let i = 0; i < 10; i++) {
+        checkRateLimit(socketId, action);
+      }
       
-      // 3rd request should be blocked
+      // 11th request should be blocked
       expect(checkRateLimit(socketId, action)).toBe(false);
       
-      // Wait for time window to expire (3 seconds + buffer)
+      // Wait for time window to expire (1000ms + buffer)
       setTimeout(() => {
         // Should allow requests again
         expect(checkRateLimit(socketId, action)).toBe(true);
         done();
-      }, 3100);
+      }, 1100);
     });
 
     test('should track different actions separately', () => {

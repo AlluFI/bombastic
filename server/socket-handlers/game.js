@@ -208,6 +208,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     // Start the game
     room.gameState.isRunning = true
     room.gameStartTime = Date.now() // Track when game started for timer synchronization
+    room.previousGameState = null // Reset previous state for delta updates
     metrics.recordGameStart()
     syncRoomGameState(room)
     
