@@ -47,7 +47,7 @@ A real-time multiplayer Bomberman-style game built with vanilla JavaScript and N
 
 ### 🌍 Play Online
 
-**Live Demo**: The game is deployed and ready to play at **[bombastic.fly.dev](https://bombastic.fly.dev/)**
+**Live Demo**: The game is deployed and ready to play at **[bombastic-live.fly.dev](https://bombastic-live.fly.dev/)**
 
 No installation required - just open the link and start playing with friends anywhere in the world!
 
