@@ -138,16 +138,6 @@
             </div>
            
             <div id="game-wrapper">
-                <div id="ins" class="hidden">
-                    <p>How TO PLAY</p>
-                    <p>Desktop: Arrow keys to move, Space bar to place bomb</p>
-                    <p>Mobile: Drag on grid to move, Double tap to place bomb</p>
-                    <br>
-                    <p>Power Ups</p>
-                    <p>💥: Increases the range of the bombs you place</p>
-                    <p>💣: Increases the number of bombs you can place at once</p>
-                    <p>🌟: Grants you immunity to bomb damage for 5 seconds</p>
-                </div>
                 <div id="grid"></div>
                 <div id="hud">
                     <div id="room-code"></div>
@@ -169,6 +159,20 @@
             <h2 id="pause-message">Paused</h2>
             <button id="resume-id" aria-label="Resume the game">Resume</button>
             <button id="quit-button" aria-label="Quit the game">Quit</button>
+        </div>
+
+        <div id="instructions-overlay" class="hidden overlay">
+            <div id="ins">
+                <h2>How TO PLAY</h2>
+                <p>Desktop: Arrow keys to move, Space bar to place bomb</p>
+                <p>Mobile: Drag on grid to move, Double tap to place bomb</p>
+                <br>
+                <p><strong>Power Ups</strong></p>
+                <p>💥: Increases the range of the bombs you place</p>
+                <p>💣: Increases the number of bombs you can place at once</p>
+                <p>🌟: Grants you immunity to bomb damage for 5 seconds</p>
+                <button id="close-instructions" aria-label="Close instructions">Close</button>
+            </div>
         </div>
 
         <div id="end-screen" class="screen hidden">

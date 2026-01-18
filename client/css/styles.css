@@ -612,105 +612,62 @@ button:active:not(:disabled) {
     transform: scale(0.95);
 }
 
-/* Instructions panel (used in game-screen) */
-#ins {
-    position: absolute;
-    top: 60px;
-    right: 10px;
-    width: 260px;
-    max-width: 280px;
-    background: linear-gradient(180deg, rgba(2,12,26,0.7), rgba(2,12,26,0.55));
-    border: 1px solid rgba(0, 191, 255, 0.12);
+/* Instructions modal overlay */
+#instructions-overlay {
+    z-index: 10001; /* Above pause overlay */
+}
+
+#instructions-overlay #ins {
+    background: linear-gradient(180deg, rgba(2,12,26,0.95), rgba(2,12,26,0.85));
+    border: 3px solid rgba(0, 191, 255, 0.3);
     color: #dff6ff;
-    padding: 10px 12px;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 18px rgba(0,191,255,0.04) inset;
-    font-size: 12px;
-    line-height: 1.3;
-    z-index: 1400;
-    backdrop-filter: blur(6px) saturate(120%);
-    -webkit-backdrop-filter: blur(6px) saturate(120%);
-    height: auto;
-    max-height: 320px;
+    padding: 25px 30px;
+    border-radius: 15px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(0,191,255,0.1) inset;
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
     overflow-y: auto;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    text-align: left;
+    position: relative;
 }
 
-#ins:not(.hidden) {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-#ins.hidden {
-    opacity: 0;
-    transform: translateY(-10px);
-    pointer-events: none;
-}
-
-#ins p:first-child {
+#instructions-overlay #ins h2 {
     font-weight: 800;
     color: #ffffff;
     text-transform: uppercase;
-    font-size: 13px;
-    letter-spacing: 0.8px;
-    margin-bottom: 6px;
+    font-size: 24px;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
     text-align: center;
-    text-shadow: 0 0 8px rgba(0,191,255,0.35);
+    text-shadow: 0 0 10px rgba(0,191,255,0.5);
 }
 
-#ins p {
-    margin: 4px 0;
+#instructions-overlay #ins p {
+    margin: 10px 0;
     color: #cceeff;
+    font-size: 16px;
 }
 
-#ins p:nth-of-type(6) {
-    margin-top: 6px;
+#instructions-overlay #ins p strong {
     font-weight: 700;
     color: #fff;
-    text-shadow: 0 0 6px rgba(0,191,255,0.18);
+    text-shadow: 0 0 6px rgba(0,191,255,0.3);
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 8px;
 }
 
-/* small screens: make the panel full-width and inline with other HUD */
-@media (max-width: 1100px) {
-    #ins {
-        right: 14px;
-        top: 80px;
-        width: 240px;
-        font-size: 13px;
-        height: auto;
-    }
+#instructions-overlay #ins #close-instructions {
+    margin-top: 25px;
+    width: auto;
+    min-width: 150px;
+    align-self: center;
 }
 
-/* @media (max-width: 900px) {
-    #ins {
-        right: 12px;
-        top: 72px;
-        width: 220px;
-        font-size: 12.5px;
-        height: auto;
-    }
-} */
-
-@media (max-width: 720px) {
-    #ins {
-        position: static;
-        width: 100%;
-        max-width: 100%;
-        margin: 12px 0 0 0;
-        border-radius: 6px;
-        padding: 10px 12px;
-        font-size: 13px;
-        height: auto;
-    }
-}
-
-@media (max-width: 480px) {
-    #ins {
-        padding: 8px 10px;
-        font-size: 12px;
-        height: auto;
-    }
-}
+/* Old #ins styles removed - now using modal overlay */
 
 .toast-message {
     flex: 1;
@@ -1533,20 +1490,7 @@ button.loading::after {
         margin-right: 10px;
     }
     
-    #ins {
-        top: 45px;
-        right: 5px;
-        width: calc(100% - 10px);
-        max-width: calc(100% - 10px);
-        font-size: 10px;
-        padding: 6px 8px;
-        max-height: 200px;
-        overflow-y: auto;
-    }
-    
-    #ins p {
-        margin: 3px 0;
-    }
+    /* Instructions modal handled by overlay class */
     
     /* Adjust HUD elements for mobile - make more compact */
     #hud {
@@ -1577,10 +1521,7 @@ button.loading::after {
         font-size: 11px;
     }
     
-    /* Hide instructions by default on mobile - show via info icon */
-    #ins.hidden {
-        display: none !important;
-    }
+    /* Instructions modal handled by overlay class */
     
     /* Hide FPS counter on mobile to save space */
     #fps-counter {
@@ -1618,12 +1559,7 @@ button.loading::after {
         font-size: 16px;
     }
     
-    #ins {
-        top: 38px;
-        font-size: 9px;
-        padding: 4px 6px;
-        max-height: 150px;
-    }
+    /* Instructions modal handled by overlay class */
     
     #room-code {
         font-size: 12px;
@@ -1687,13 +1623,7 @@ button.loading::after {
         max-height: calc(100vh - 20px);
     }
     
-    #ins {
-        order: 3;
-        width: 100%;
-        max-height: 120px;
-        overflow-y: auto;
-        position: static;
-    }
+    /* Instructions modal handled by overlay class */
     
     #grid {
         order: 1;
@@ -1738,8 +1668,6 @@ button.loading::after {
         right: 5px;
     }
     
-    #ins {
-        top: 40px;
-    }
+    /* Instructions modal handled by overlay class */
 }
 
