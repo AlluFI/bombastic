@@ -19,10 +19,6 @@ export function initializeConnectionStatus() {
         connectionStatusElement = document.createElement('div')
         connectionStatusElement.id = 'connection-status'
         connectionStatusElement.className = 'connection-status'
-        connectionStatusElement.innerHTML = `
-            <span class="connection-indicator"></span>
-            <span class="connection-text">Connected</span>
-        `
         // Try to add to game-controls-header, fallback to body
         const gameControlsHeader = document.querySelector('.game-controls-header')
         if (gameControlsHeader) {
@@ -30,14 +26,14 @@ export function initializeConnectionStatus() {
         } else {
             document.body.appendChild(connectionStatusElement)
         }
-    } else {
-        // Element exists in HTML, ensure it has the right structure
-        if (!connectionStatusElement.querySelector('.connection-indicator')) {
-            connectionStatusElement.innerHTML = `
-                <span class="connection-indicator"></span>
-                <span class="connection-text">Connected</span>
-            `
-        }
+    }
+    
+    // Ensure element has the right structure
+    if (!connectionStatusElement.querySelector('.connection-indicator')) {
+        connectionStatusElement.innerHTML = `
+            <span class="connection-indicator"></span>
+            <span class="connection-text">Connected</span>
+        `
     }
     
     // Add CSS if not already present
