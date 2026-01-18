@@ -11,17 +11,34 @@ let reconnectAttempts = 0
  * Initialize connection status indicator
  */
 export function initializeConnectionStatus() {
-    // Create connection status element
-    connectionStatusElement = document.createElement('div')
-    connectionStatusElement.id = 'connection-status'
-    connectionStatusElement.className = 'connection-status'
-    connectionStatusElement.innerHTML = `
-        <span class="connection-indicator"></span>
-        <span class="connection-text">Connected</span>
-    `
+    // Get or create connection status element
+    connectionStatusElement = document.getElementById('connection-status')
     
-    // Add to body
-    document.body.appendChild(connectionStatusElement)
+    if (!connectionStatusElement) {
+        // Fallback: create if not in HTML
+        connectionStatusElement = document.createElement('div')
+        connectionStatusElement.id = 'connection-status'
+        connectionStatusElement.className = 'connection-status'
+        connectionStatusElement.innerHTML = `
+            <span class="connection-indicator"></span>
+            <span class="connection-text">Connected</span>
+        `
+        // Try to add to game-controls-header, fallback to body
+        const gameControlsHeader = document.querySelector('.game-controls-header')
+        if (gameControlsHeader) {
+            gameControlsHeader.insertBefore(connectionStatusElement, gameControlsHeader.firstChild)
+        } else {
+            document.body.appendChild(connectionStatusElement)
+        }
+    } else {
+        // Element exists in HTML, ensure it has the right structure
+        if (!connectionStatusElement.querySelector('.connection-indicator')) {
+            connectionStatusElement.innerHTML = `
+                <span class="connection-indicator"></span>
+                <span class="connection-text">Connected</span>
+            `
+        }
+    }
     
     // Add CSS if not already present
     if (!document.getElementById('connection-status-style')) {
@@ -29,29 +46,17 @@ export function initializeConnectionStatus() {
         style.id = 'connection-status-style'
         style.textContent = `
             .connection-status {
-                position: fixed;
-                top: 10px;
-                right: 10px;
-                padding: 8px 16px;
+                position: static;
+                padding: 6px 12px;
                 background: rgba(0, 0, 0, 0.7);
                 border-radius: 20px;
                 color: white;
-                font-size: 14px;
+                font-size: 12px;
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                z-index: 10000;
+                gap: 6px;
                 transition: all 0.3s ease;
-            }
-            
-            @media screen and (max-width: 768px) {
-                .connection-status {
-                    top: 10px;
-                    left: 10px;
-                    right: auto;
-                    font-size: 12px;
-                    padding: 6px 12px;
-                }
+                flex-shrink: 0;
             }
             
             .connection-status.disconnected {
