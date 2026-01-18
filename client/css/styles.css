@@ -1357,10 +1357,61 @@ button.loading::after {
         align-items: center;
         margin-top: 20px;
         padding: 10px;
+        gap: 10px;
     }
     
     #chat-container {
         min-width: 100%;
+        max-width: 100%;
+    }
+    
+    #hud {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    #grid {
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+    }
+    
+    /* Adjust tile size for mobile */
+    .tile {
+        width: calc((100vw - 40px) / 15);
+        height: calc((100vw - 40px) / 15);
+        max-width: 30px;
+        max-height: 30px;
+    }
+    
+    /* Make instructions panel more compact on mobile */
+    #ins {
+        width: 100%;
+        max-width: 100%;
+        font-size: 11px;
+        padding: 8px 10px;
+        margin-bottom: 10px;
+    }
+    
+    #ins p {
+        margin: 3px 0;
+    }
+    
+    /* Adjust HUD elements for mobile */
+    #room-code,
+    #timer {
+        font-size: 14px;
+        padding: 10px 15px;
+    }
+    
+    #timer {
+        font-size: 24px;
+        letter-spacing: 3px;
+    }
+    
+    /* Hide FPS counter on mobile to save space */
+    #fps-counter {
+        display: none;
     }
 }
 
@@ -1378,6 +1429,95 @@ button.loading::after {
     .menue-section input[type="text"],
     .menue-section select {
         font-size: 14px;
+    }
+    
+    /* Further mobile optimizations */
+    #game-wrapper {
+        padding: 5px;
+        gap: 8px;
+    }
+    
+    #ins {
+        font-size: 10px;
+        padding: 6px 8px;
+    }
+    
+    #room-code {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    
+    #timer {
+        font-size: 20px;
+        padding: 8px 12px;
+    }
+    
+    #chat-container {
+        padding: 10px;
+    }
+    
+    #chat-messages {
+        height: 150px;
+        font-size: 12px;
+    }
+    
+    #chat-input {
+        font-size: 12px;
+        padding: 8px;
+    }
+    
+    #chat-form button {
+        padding: 8px 15px;
+        font-size: 12px;
+    }
+    
+    /* Ensure grid fits on small screens */
+    .tile {
+        width: calc((100vw - 20px) / 15);
+        height: calc((100vw - 20px) / 15);
+        max-width: 25px;
+        max-height: 25px;
+    }
+}
+
+/* Prevent zoom on input focus on mobile */
+@media screen and (max-width: 768px) {
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* Landscape mobile optimizations */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    #game-wrapper {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    #ins {
+        order: 3;
+        width: 100%;
+        max-height: 120px;
+        overflow-y: auto;
+    }
+    
+    #grid {
+        order: 1;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    #hud {
+        order: 2;
+        flex: 0 0 auto;
+        min-width: 250px;
+    }
+    
+    #mobile-controls {
+        bottom: 5px;
     }
 }
 

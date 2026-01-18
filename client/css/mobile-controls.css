@@ -1,0 +1,185 @@
+/* Mobile Touch Controls Styles */
+
+#mobile-controls {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    z-index: 1500;
+    pointer-events: none;
+    gap: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Directional Pad */
+.mobile-dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+    width: 150px;
+    height: 150px;
+    pointer-events: all;
+}
+
+.dpad-btn {
+    background: rgba(0, 26, 51, 0.9);
+    border: 3px solid #0077b6;
+    color: #00bfff;
+    font-size: 32px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.1s ease;
+    box-shadow: 
+        0 0 10px rgba(0, 119, 182, 0.4),
+        inset 0 0 15px rgba(0, 191, 255, 0.1);
+    text-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+}
+
+.dpad-btn:active,
+.dpad-btn.active {
+    background: rgba(0, 119, 182, 0.4);
+    border-color: #00bfff;
+    box-shadow: 
+        0 0 20px rgba(0, 191, 255, 0.7),
+        inset 0 0 20px rgba(0, 191, 255, 0.3);
+    transform: scale(0.95);
+}
+
+.dpad-up {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.dpad-middle {
+    grid-column: 1 / 4;
+    grid-row: 2;
+    display: flex;
+    gap: 4px;
+}
+
+.dpad-left {
+    flex: 1;
+}
+
+.dpad-right {
+    flex: 1;
+}
+
+.dpad-down {
+    grid-column: 2;
+    grid-row: 3;
+}
+
+/* Bomb Button */
+.mobile-bomb-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 69, 0, 0.2);
+    border: 4px solid #ff4500;
+    color: #ff4500;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.1s ease;
+    box-shadow: 
+        0 0 15px rgba(255, 69, 0, 0.5),
+        inset 0 0 20px rgba(255, 69, 0, 0.1);
+    text-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
+    pointer-events: all;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+    max-width: none;
+}
+
+.mobile-bomb-btn:active,
+.mobile-bomb-btn.active {
+    background: rgba(255, 69, 0, 0.4);
+    border-color: #ff6900;
+    box-shadow: 
+        0 0 25px rgba(255, 69, 0, 0.8),
+        inset 0 0 25px rgba(255, 69, 0, 0.3);
+    transform: scale(0.9);
+}
+
+/* Hide mobile controls on desktop */
+@media (min-width: 769px) {
+    #mobile-controls {
+        display: none !important;
+    }
+}
+
+/* Responsive adjustments for smaller mobile screens */
+@media (max-width: 480px) {
+    #mobile-controls {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        gap: 15px;
+    }
+    
+    .mobile-dpad {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .dpad-btn {
+        font-size: 24px;
+        border-width: 2px;
+    }
+    
+    .mobile-bomb-btn {
+        width: 70px;
+        height: 70px;
+        font-size: 32px;
+        border-width: 3px;
+    }
+}
+
+/* Landscape orientation adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+    #mobile-controls {
+        bottom: 10px;
+        gap: 15px;
+    }
+    
+    .mobile-dpad {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .dpad-btn {
+        font-size: 20px;
+    }
+    
+    .mobile-bomb-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 28px;
+    }
+}

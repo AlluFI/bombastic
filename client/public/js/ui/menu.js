@@ -113,6 +113,11 @@ export function showGameScreen(roomCode, gameMode = null) {
         codeElement.textContent = `Room code: ${roomCode}`
     }
     
+    // Initialize mobile controls when game screen is shown
+    import('../ui/mobile-controls.js').then(({ initializeMobileControls }) => {
+        initializeMobileControls()
+    })
+    
     // Hide chat in single-player mode, show in multiplayer
     // Check both playerData.mode (client-side) and gameMode (server-side)
     import('./chat.js').then(({ setChatVisibility }) => {

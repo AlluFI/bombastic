@@ -18,6 +18,7 @@ import { initializeConnectionStatus, updateConnectionStatus, setReconnectAttempt
 import { applyDeltaUpdate, resetCachedGameState } from "./delta-updates.js"
 import { initializeErrorHandlers, getSocketErrorMessage } from "./error-handler.js"
 import { initializeKeyboardNavigation } from "./ui/keyboard-navigation.js"
+import { initializeMobileControls } from "./ui/mobile-controls.js"
 import "./ui/audio-toggle.js"
 
 
