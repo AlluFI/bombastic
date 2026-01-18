@@ -139,7 +139,13 @@ class BehaviorStrategies {
   static getStrategy(npc, gameState) {
     // If strategy is specified in config, use it
     if (npc.config && npc.config.strategy) {
-      const strategyName = npc.config.strategy.toLowerCase();
+      let strategyName = npc.config.strategy.toLowerCase();
+      
+      // Normalize alias: 'powerup' -> 'powerup-hunter'
+      if (strategyName === 'powerup') {
+        strategyName = 'powerup-hunter';
+      }
+      
       switch (strategyName) {
         case 'aggressive':
           return this.aggressive(npc, gameState);
@@ -148,7 +154,6 @@ class BehaviorStrategies {
         case 'balanced':
           return this.balanced(npc, gameState);
         case 'powerup-hunter':
-        case 'powerup':
           return this.powerupHunter(npc, gameState);
         case 'trapper':
           return this.trapper(npc, gameState);

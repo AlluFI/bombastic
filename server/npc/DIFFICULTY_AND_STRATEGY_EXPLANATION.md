@@ -1,12 +1,12 @@
-# Difficulty Profiles and Behavior Strategies in NPC.js
+# Difficulty Profiles and Behavior Strategies in the NPC System
 
-This document explains how difficulty profiles (loaded via `_loadDifficultyProfile()`) and behavior strategies work together to control NPC behavior throughout the decision-making system.
+This document explains how difficulty profiles (loaded from `config/DifficultyProfiles.js`) and behavior strategies work together to control NPC behavior throughout the decision-making system.
 
 ## Overview
 
 NPCs in this system use **two complementary systems** to determine their behavior:
 
-1. **Difficulty Profiles** (`_loadDifficultyProfile()`): Control **execution quality** (HOW WELL the NPC performs)
+1. **Difficulty Profiles** (`config/DifficultyProfiles.js`): Control **execution quality** (HOW WELL the NPC performs)
    - Speed, decision-making frequency
    - Mistake rates and success rates
    - Base multipliers for actions
@@ -20,10 +20,10 @@ NPCs in this system use **two complementary systems** to determine their behavio
 
 ---
 
-## 1. Difficulty Profiles (`_loadDifficultyProfile()`)
+## 1. Difficulty Profiles
 
 ### Location
-Defined directly in `NPC.js` at lines 83-114. The method returns a profile object that is stored in `this.profile` when the NPC is constructed.
+Defined in `config/DifficultyProfiles.js`. The profile is loaded via `DifficultyProfiles.loadDifficultyProfile()` during NPC construction and stored in `npc.profile`.
 
 ### Profile Values
 
@@ -31,15 +31,18 @@ Each difficulty level (easy, medium, hard) defines these values:
 
 | Value | Description | Usage |
 |-------|-------------|-------|
-| `decisionInterval` | Milliseconds between decision cycles | **Used at line 71** - Controls how often NPC makes decisions |
-| `bombPlacementRate` | Base bomb placement rate multiplier (0.2-0.8) | **Used at line 495** - Multiplied with strategy bomb chance |
-| `mistakeRate` | Chance of making mistakes (0.3-0.05) | **Used at line 1052** - Converts to `bombPlacementSuccess` |
-| `attackRange` | Maximum distance to consider players as bomb targets (2-4 tiles) | **Used at line 1105** - Determines combat range |
+| `decisionInterval` | Milliseconds between decision cycles | Used in `core/DecisionLoop.js` - Controls how often NPC makes decisions |
+| `bombPlacementRate` | Base bomb placement rate multiplier (0.2-0.8) | Used in `core/DecisionLoop.js` - Multiplied with strategy bomb chance |
+| `mistakeRate` | Chance of making mistakes (0.3-0.05) | Used in `behaviors/BombingHandler.js` - Converts to `bombPlacementSuccess` |
+| `attackRange` | Maximum distance to consider players as bomb targets (2-4 tiles) | Used in `behaviors/BombingHandler.js` - Determines combat range |
 
 ### Profile Loading Process
 
-```83:114:server/npc/NPC.js
-  _loadDifficultyProfile() {
+**Note**: The following code example shows the conceptual structure. The actual implementation is in `config/DifficultyProfiles.js`.
+
+```javascript
+// Example structure (implemented in config/DifficultyProfiles.js)
+loadDifficultyProfile(difficulty, config) {
     const baseProfiles = {
       easy: {
         decisionInterval: 500,   // Used at line 71 - Controls decision-making frequency
@@ -77,24 +80,20 @@ Each difficulty level (easy, medium, hard) defines these values:
 ```
 
 **Important Notes:**
-- The profile is loaded once during NPC construction and stored in `this.profile`
-- Custom config values can override base profile values (line 112: `...this.config`)
-- `bombPlacementSuccess` is calculated from `mistakeRate` (line 106)
-- Only the three values listed above are currently defined and used in the profile
+- The profile is loaded once during NPC construction and stored in `npc.profile`
+- Custom config values can override base profile values
+- `bombPlacementSuccess` is calculated from `mistakeRate` (1 - mistakeRate)
+- Implementation located in `config/DifficultyProfiles.js`
 
 ---
 
-## 2. How Profile Values Are Used in NPC.js
+## 2. How Profile Values Are Used
 
-### 2.1 Decision Interval (Line 71)
+### 2.1 Decision Interval
 
 **Usage**: Controls how frequently the NPC makes decisions.
 
-```71:71:server/npc/NPC.js
-    this.decisionInterval = this.profile.decisionInterval;
-```
-
-**Applied at**: Lines 224-226 in `getNextCommand()`
+**Location**: Used in `core/DecisionLoop.js` within `getNextCommand()`
 
 ```223:227:server/npc/NPC.js
   getNextCommand(currentTime) {
@@ -113,11 +112,14 @@ Each difficulty level (easy, medium, hard) defines these values:
 
 ---
 
-### 2.2 Bomb Placement Rate (Line 495)
+### 2.2 Bomb Placement Rate
 
 **Usage**: Combined with strategy bomb placement chance to determine final bomb placement probability.
 
-```494:503:server/npc/NPC.js
+**Location**: Used in `core/DecisionLoop.js`
+
+```javascript
+// Example usage (implemented in core/DecisionLoop.js)
     // Otherwise, check normal bomb placement chance for attacking players
     let bombChance = strategy.bombPlacementChance * this.profile.bombPlacementRate;
     if (hasPlayerTarget) {
@@ -152,11 +154,14 @@ Final Bomb Chance = strategy.bombPlacementChance × profile.bombPlacementRate
 
 ---
 
-### 2.3 Bomb Placement Success (Line 1052)
+### 2.3 Bomb Placement Success
 
 **Usage**: Determines if NPC actually executes a bomb placement decision (simulates mistakes).
 
-```1052:1060:server/npc/NPC.js
+**Location**: Used in `behaviors/BombingHandler.js`
+
+```javascript
+// Example usage (implemented in behaviors/BombingHandler.js)
     let successThreshold = this.profile.bombPlacementSuccess || (1 - (this.profile.mistakeRate || 0.15));
     if (!hasPlayerTarget && hasBlockTarget) {
       // Increase success rate when bombing blocks (reduce mistakes)
@@ -184,11 +189,14 @@ Final Bomb Chance = strategy.bombPlacementChance × profile.bombPlacementRate
 
 ---
 
-### 2.4 Attack Range (Line 1105)
+### 2.4 Attack Range
 
 **Usage**: Determines how close NPCs need to be to consider players as valid bomb targets.
 
-```1096:1140:server/npc/NPC.js
+**Location**: Used in `behaviors/BombingHandler.js`
+
+```javascript
+// Example usage (implemented in behaviors/BombingHandler.js)
   _evaluateBombTargets() {
     let hasPlayerTarget = false;
     let hasBlockTarget = false;

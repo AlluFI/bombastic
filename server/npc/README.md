@@ -16,21 +16,37 @@ To disable NPCs:
 
 ```
 server/npc/
-├── NPC.js                        # Main NPC class (core AI logic)
-├── DifficultyProfiles.js         # Easy/Medium/Hard difficulty configurations
+├── NPC.js                        # Main NPC class (orchestrator)
 ├── BehaviorStrategies.js         # AI behavior strategies (Aggressive, Defensive, etc.)
 ├── index.js                      # Module entry point (exports all classes)
 ├── test-npc.js                   # Standalone test suite for NPC framework
 ├── README.md                     # This file (module overview)
 │
+├── core/                         # Core NPC modules
+│   ├── NPCState.js              # State management (updateWorldState, reset)
+│   └── DecisionLoop.js          # Sense-Think-Act decision loop
+│
+├── behaviors/                    # Behavior handler modules
+│   ├── EscapeHandler.js         # Escape logic and danger detection
+│   ├── MovementHandler.js       # Movement decisions and pathfinding
+│   ├── BombingHandler.js        # Bomb placement decisions
+│   ├── TargetingHandler.js      # Target selection (players, powerups, blocks)
+│   ├── PowerupHandler.js        # Powerup collection logic
+│   └── PlanningHandler.js       # Multi-step planning system
+│
+├── config/                       # Configuration modules
+│   └── DifficultyProfiles.js    # Easy/Medium/Hard difficulty configurations
+│
 ├── utils/                        # Utility modules
 │   ├── Pathfinder.js            # Grid-based pathfinding (BFS algorithm)
 │   ├── DangerDetector.js        # Bomb danger zone calculation and detection
-│   └── ItemEvaluator.js        # Powerup evaluation and prioritization
+│   ├── ItemEvaluator.js         # Powerup evaluation and prioritization
+│   ├── PositionHelpers.js       # Position calculations and validation
+│   └── StuckDetector.js         # Loop detection and recovery
 │
 └── Documentation/                # Working documents (development notes)
-    ├── PHASE3_SUMMARY.md        # Phase 3 Part 2 summary (Pathfinding & Danger Detection)
-    └── PHASE3_BEHAVIOR_SUMMARY.md  # Phase 3 Part 3 summary (Behavior System)
+    ├── NPC_EXPLANATION.md       # Detailed NPC system explanation
+    └── DIFFICULTY_AND_STRATEGY_EXPLANATION.md  # Difficulty and strategy guide
 ```
 
 ---
@@ -40,41 +56,19 @@ server/npc/
 ### Core Files
 
 #### `NPC.js`
-**Main NPC class** - The heart of the AI system.
+**Main NPC class** - Orchestrates behavior modules.
 
-- **Purpose**: Implements the complete NPC decision-making system
+- **Purpose**: Provides the NPC class interface and delegates to behavior modules
 - **Key Features**:
-  - Sense-Think-Act loop (`_sense()`, `_think()`, `_act()`)
-  - Difficulty-based behavior profiles
-  - Behavior strategy system (Aggressive, Defensive, Balanced, etc.)
-  - Pathfinding integration
-  - Danger detection and escape logic
-  - Powerup collection decisions
-  - Bomb placement strategy
-  - Infinite loop prevention
-  - Target selection (players, powerups, blocks)
+  - Lightweight orchestrator (~107 lines)
+  - Initializes state in constructor
+  - Delegates to behavior modules for all logic
+  - Maintains the same public API as before refactoring
 
 - **Main Methods**:
-  - `updateWorldState(gameState)` - Updates NPC's internal world representation
-  - `getNextCommand(currentTime)` - Returns next action (MOVE or BOMB)
-
-#### `DifficultyProfiles.js`
-**Difficulty configurations** - Defines Easy, Medium, and Hard profiles.
-
-- **Purpose**: Provides base attributes for each difficulty level
-- **Attributes per difficulty**:
-  - Movement speed and delays
-  - Decision-making intervals
-  - Aggression levels
-  - Bomb placement rates
-  - Success rates (avoidance, bomb placement)
-  - Powerup priorities
-  - Strategy preferences
-
-- **Exports**:
-  - `DifficultyProfiles` - Object with easy/medium/hard profiles
-  - `getDifficultyProfile(difficulty)` - Get profile by name
-  - `isValidDifficulty(difficulty)` - Validate difficulty string
+  - `updateWorldState(gameState)` - Delegates to `NPCState.updateWorldState()`
+  - `getNextCommand(currentTime)` - Delegates to `DecisionLoop.getNextCommand()`
+  - `reset()` - Delegates to `NPCState.reset()`
 
 #### `BehaviorStrategies.js`
 **AI behavior strategies** - Defines different playstyles.
@@ -98,9 +92,99 @@ server/npc/
 - **Purpose**: Provides a single import point for the entire NPC module
 - **Exports**:
   - `NPC` - Main NPC class
-  - `DifficultyProfiles`, `getDifficultyProfile`, `isValidDifficulty`
-  - `BehaviorStrategies`
-  - `Pathfinder`, `DangerDetector`, `ItemEvaluator`
+  - `DifficultyProfiles` - Configuration module
+  - `BehaviorStrategies` - Strategy definitions
+  - `Pathfinder`, `DangerDetector`, `ItemEvaluator` - Utility modules
+
+### Core Modules (`core/`)
+
+#### `NPCState.js`
+**State management** - Handles NPC world state updates and reset.
+
+- **Purpose**: Manages NPC's internal representation of the game world
+- **Key Methods**:
+  - `updateWorldState(npc, gameState)` - Updates NPC state from game state
+  - `updateNavigationGrid(npc, gameState)` - Updates pathfinding grid
+  - `updatePositionHistory(npc)` - Tracks position for loop detection
+  - `reset(npc)` - Resets NPC to initial state
+
+#### `DecisionLoop.js`
+**Decision-making loop** - Implements Sense-Think-Act architecture.
+
+- **Purpose**: Coordinates behavior handlers to make decisions
+- **Key Methods**:
+  - `getNextCommand(npc, currentTime)` - Main entry point, orchestrates the loop
+  - `sense(npc)` - Collects information about the world
+  - `think(npc, currentTime, perception)` - Makes decisions based on perception
+  - `act(npc, decision)` - Executes and validates decisions
+
+### Behavior Modules (`behaviors/`)
+
+#### `EscapeHandler.js`
+**Escape behavior** - Handles danger detection and escape logic.
+
+- **Purpose**: Ensures NPCs escape from bomb explosions
+- **Key Methods**:
+  - `isInDanger(npc)` - Checks if NPC is in a danger zone
+  - `decideEscape(npc, preferredDirection, allowLessSafe)` - Determines escape action
+  - `getRandomSafeDirection(npc, preferredDirection, allowLessSafe)` - Fallback escape
+  - `hasEscapeRoute(npc)` - Checks if escape is possible
+
+#### `MovementHandler.js`
+**Movement behavior** - Handles movement decisions and pathfinding.
+
+- **Purpose**: Manages NPC movement toward targets and exploration
+- **Key Methods**:
+  - `decideMovement(npc)` - Main movement decision logic
+  - `decideSafeExploration(npc)` - Safe exploration when no target
+  - `decideWander(npc)` - Random wandering behavior
+
+#### `BombingHandler.js`
+**Bombing behavior** - Handles bomb placement decisions.
+
+- **Purpose**: Manages bomb placement strategy and safety checks
+- **Key Methods**:
+  - `decidePlaceBomb(npc, hasBlockTarget, hasPlayerTarget)` - Bomb placement decision
+  - `evaluateBombTargets(npc)` - Evaluates potential bomb targets
+
+#### `TargetingHandler.js`
+**Targeting behavior** - Handles target selection and validation.
+
+- **Purpose**: Selects and validates targets (players, powerups, blocks)
+- **Key Methods**:
+  - `selectTarget(npc)` - Main target selection logic
+  - `isTargetValid(npc, target)` - Validates if target is still valid
+  - `hasRouteToTarget(npc, target)` - Checks pathfinding availability
+  - `findBlockingBlock(npc, target)` - Finds blocks blocking path to target
+  - `findIntermediateBlockTowardPlayer(npc, player)` - Finds waypoint blocks
+
+#### `PowerupHandler.js`
+**Powerup behavior** - Handles powerup collection.
+
+- **Purpose**: Manages powerup detection and collection
+- **Key Methods**:
+  - `decideCollectPowerup(npc)` - Powerup collection decision
+  - `hasNearbyPowerups(npc)` - Checks for nearby powerups
+
+#### `PlanningHandler.js`
+**Planning behavior** - Handles multi-step planning.
+
+- **Purpose**: Manages human-like commitment to movement plans
+- **Key Methods**:
+  - `isPlanValid(npc, plan)` - Validates current plan
+  - `executePlanStep(npc, plan)` - Executes one step of plan
+  - `calculatePlanSteps(npc, decision, perception)` - Calculates plan length
+
+### Configuration Modules (`config/`)
+
+#### `DifficultyProfiles.js`
+**Difficulty configurations** - Defines Easy, Medium, and Hard profiles.
+
+- **Purpose**: Provides base attributes for each difficulty level
+- **Key Methods**:
+  - `loadDifficultyProfile(difficulty, config)` - Loads profile with overrides
+  - `getDifficultyProfile(difficulty)` - Gets profile by name
+  - `isValidDifficulty(difficulty)` - Validates difficulty string
 
 ### Utility Modules (`utils/`)
 
@@ -113,6 +197,7 @@ server/npc/
   - `findPath(start, target, grid, maxRows, maxCols)` - Returns path array
   - `getNextDirection(start, target, grid, maxRows, maxCols)` - Returns direction string
   - `findNearestWalkable(start, target, grid, maxRows, maxCols)` - Finds nearest accessible position
+  - `manhattanDistance(pos1, pos2)` - Calculates Manhattan distance
 
 #### `DangerDetector.js`
 **Danger detection utilities** - Calculates and identifies dangerous areas.
@@ -132,6 +217,23 @@ server/npc/
   - `evaluatePowerup(powerup, npcState, priority)` - Returns value score
   - `findBestPowerup(powerups, npcState, priority)` - Returns best powerup to collect
   - `isPowerupWorthCollecting(powerup, npcState, dangerZones, priority)` - Risk assessment
+
+#### `PositionHelpers.js`
+**Position utilities** - Position calculations and validation.
+
+- **Purpose**: Provides position manipulation and validation helpers
+- **Key Methods**:
+  - `getNextPosition(pos, direction)` - Calculates next position after move
+  - `isValidPosition(pos, maxRows, maxCols)` - Validates position bounds
+  - `isWalkable(npc, pos)` - Checks if position is walkable
+
+#### `StuckDetector.js`
+**Loop detection** - Detects and recovers from stuck states.
+
+- **Purpose**: Prevents NPCs from getting stuck in loops
+- **Key Methods**:
+  - `isStuck(npc)` - Detects if NPC is stuck
+  - `getUnstuck(npc)` - Provides escape action from stuck state
 
 ### Testing
 
@@ -153,22 +255,20 @@ server/npc/
 
 ### Documentation Files
 
-#### `PHASE3_SUMMARY.md`
-**Development notes** - Summary of Phase 3 Part 2 implementation.
+#### `NPC_EXPLANATION.md`
+**Detailed explanation** - Comprehensive guide to NPC system architecture.
 
-- Pathfinding implementation
-- Danger detection system
-- Escape logic
-- Safety checks
+- Decision-making process
+- State management
+- Behavior strategies
+- Difficulty system
 
-#### `PHASE3_BEHAVIOR_SUMMARY.md`
-**Development notes** - Summary of Phase 3 Part 3 implementation.
+#### `DIFFICULTY_AND_STRATEGY_EXPLANATION.md`
+**Difficulty and strategy guide** - Explains how difficulty and strategies work.
 
-- Behavior strategies system
-- Difficulty-specific behaviors
-- Target selection logic
-- Infinite loop prevention
-- Randomization and diversity
+- Difficulty attributes
+- Strategy behaviors
+- Interaction between difficulty and strategy
 
 ---
 
@@ -178,27 +278,24 @@ server/npc/
 
 ```javascript
 const { NPC } = require('./npc');
-const { ENABLE_NPC } = require('../config');
 
-if (ENABLE_NPC) {
-  // Create an NPC with default strategy (based on difficulty)
-  const npc = new NPC('npc-1', 'Bot Alice', 'medium');
-  
-  // Or create an NPC with custom strategy
-  const npcWithStrategy = new NPC('npc-2', 'Bot Bob', 'hard', { 
-    strategy: 'trapper' 
-  });
-  
-  // Update NPC with game state
-  npc.updateWorldState(gameState);
-  
-  // Get next action
-  const action = npc.getNextCommand(Date.now());
-  if (action) {
-    // action = { type: 'MOVE', direction: 'UP' } 
-    //       or { type: 'BOMB' }
-    // Process action in game server
-  }
+// Create an NPC with default strategy (based on difficulty)
+const npc = new NPC('npc-1', 'Bot Alice', 'medium');
+
+// Or create an NPC with custom strategy
+const npcWithStrategy = new NPC('npc-2', 'Bot Bob', 'hard', { 
+  strategy: 'trapper' 
+});
+
+// Update NPC with game state
+npc.updateWorldState(gameState);
+
+// Get next action
+const action = npc.getNextCommand(Date.now());
+if (action) {
+  // action = { type: 'MOVE', direction: 'UP' } 
+  //       or { type: 'BOMB' }
+  // Process action in game server
 }
 ```
 
@@ -234,30 +331,24 @@ NPCs return actions:
 
 ### Easy
 - **Default Strategy**: Defensive
-- **Speed**: 70% of normal
 - **Decision Interval**: 500ms
-- **Aggression**: 30%
 - **Bomb Placement Rate**: 20%
 - **Mistake Rate**: 30%
-- **Avoidance Success**: 85%
+- **Attack Range**: 2 tiles
 
 ### Medium
 - **Default Strategy**: Balanced
-- **Speed**: 100% of normal
 - **Decision Interval**: 400ms
-- **Aggression**: 60%
 - **Bomb Placement Rate**: 50%
 - **Mistake Rate**: 15%
-- **Avoidance Success**: 95%
+- **Attack Range**: 3 tiles
 
 ### Hard
 - **Default Strategy**: Aggressive
-- **Speed**: 130% of normal
 - **Decision Interval**: 300ms
-- **Aggression**: 90%
 - **Bomb Placement Rate**: 80%
 - **Mistake Rate**: 5%
-- **Avoidance Success**: 98%
+- **Attack Range**: 4 tiles
 
 ---
 
@@ -341,22 +432,24 @@ Each of the 15 possible combinations (3 difficulties × 5 strategies) produces d
 
 NPCs follow a **Sense-Think-Act** loop:
 
-1. **Sense** (`_sense()`): Perceives the world
+1. **Sense**: Perceives the world
    - Current position and state
    - Nearby players, bombs, powerups
    - Danger zones
    - Available paths
 
-2. **Think** (`_think()`): Makes decisions
+2. **Think**: Makes decisions
    - Priority 1: Escape danger (if in danger zone)
    - Priority 2: Collect powerups (if strategy prioritizes)
    - Priority 3: Place bomb (if opportunity and strategy allows)
    - Priority 4: Move toward target (player/powerup/block)
    - Priority 5: Wander (if strategy allows)
 
-3. **Act** (`_act()`): Executes decision
+3. **Act**: Executes decision
    - Returns action (MOVE or BOMB)
    - Updates internal state
+
+The decision-making is implemented in `core/DecisionLoop.js` which coordinates all behavior handlers.
 
 ---
 
@@ -387,12 +480,13 @@ See `test-npc.js` for examples of creating and testing NPCs with mock game state
 ## 📝 Notes
 
 - **Server-side only**: All NPC logic runs on the server for security and consistency
-- **Feature-flagged**: Can be disabled via `ENABLE_NPC` environment variable
+- **Feature-flagged**: Can be disabled via `ENABLE_NPC` environment variable (note: this flag no longer exists, NPCs are always enabled when single-player mode is enabled)
 - **Room-scoped**: NPCs are created per-room (not global)
 - **Identical to players**: NPCs follow the same game rules as human players
 - **No pause/quit**: NPCs cannot pause or quit games
-- **Decision intervals**: NPCs make decisions every 100-300ms (based on difficulty)
+- **Decision intervals**: NPCs make decisions every 300-500ms (based on difficulty)
 - **State management**: NPCs maintain their own internal world state representation
+- **Modular architecture**: NPC logic is split into focused modules for better maintainability
 
 ---
 
@@ -405,6 +499,3 @@ To integrate NPCs into the game server:
 3. Update NPCs in game loop: `npc.updateWorldState(gameState)`
 4. Get actions: `const action = npc.getNextCommand(Date.now())`
 5. Process actions same as player actions
-
-
-

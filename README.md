@@ -113,9 +113,18 @@ multi-player/
 │   ├── server.js             # Server entry point
 │   ├── config.js             # Configuration & feature flags
 │   ├── game-loop.js          # Main game loop (60 FPS)
-│   ├── utils.js              # Utility functions
+│   ├── utils.js              # Utility functions (backward compatibility)
+│   ├── utils/                # Modular utility functions
+│   │   ├── room-utils.js     # Room management
+│   │   ├── board-utils.js    # Board generation
+│   │   ├── game-state-utils.js  # State synchronization
+│   │   └── npc-utils.js      # NPC action processing
 │   ├── socket-handlers/      # Socket.io event handlers
-│   └── npc/                  # NPC AI system
+│   └── npc/                  # NPC AI system (modular)
+│       ├── core/             # Core NPC modules
+│       ├── behaviors/        # Behavior handlers
+│       ├── config/           # Configuration modules
+│       └── utils/            # NPC utilities
 │
 ├── documentation/            # Developer documentation
 └── README.md                 # This file
@@ -171,17 +180,17 @@ Create a `.env` file in the project root (optional):
 
 ```env
 PORT=3000
-ENABLE_NPC=true
 ENABLE_SINGLE_PLAYER_MODE=true
+CORS_ORIGIN=*
 ```
 
-### Feature Flags
+### Configuration
 
-Edit `server/config.js` to enable/disable features:
+Edit `server/config.js` or use environment variables to configure:
 
-- `ENABLE_NPC`: Enable/disable NPC system
-- `ENABLE_SINGLE_PLAYER_MODE`: Enable/disable single-player mode
+- `ENABLE_SINGLE_PLAYER_MODE`: Enable/disable single-player mode (default: true)
 - `PORT`: Server port (default: 3000)
+- `CORS_ORIGIN`: CORS allowed origin (default: '*' in development, false in production)
 
 ## 🏗️ Architecture
 
@@ -279,9 +288,9 @@ See `TESTING.md` for detailed testing documentation.
 
 ### NPCs not working
 
-- Check `ENABLE_NPC` flag in `server/config.js`
-- Verify single-player mode is enabled
+- Verify single-player mode is enabled (`ENABLE_SINGLE_PLAYER_MODE` environment variable)
 - Check server console for errors
+- Ensure game mode is set to 'single-player' when creating NPCs
 
 ## 🚢 Deployment
 
@@ -304,8 +313,8 @@ Set environment variables on your hosting platform:
 
 ```env
 PORT=3000
-ENABLE_NPC=true
 ENABLE_SINGLE_PLAYER_MODE=true
+CORS_ORIGIN=https://your-frontend-domain.com
 ```
 
 ## 👥 Development Team

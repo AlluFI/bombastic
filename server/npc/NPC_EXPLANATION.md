@@ -1,6 +1,8 @@
-# NPC.js Architecture and Functionality
+# NPC System Architecture and Functionality
 
-This document explains the main components of `NPC.js` and how they work together to create intelligent virtual opponents.
+This document explains the main components of the NPC system and how they work together to create intelligent virtual opponents.
+
+**Note**: The NPC system has been refactored into a modular structure. Methods that were previously in `NPC.js` are now organized into focused modules (`core/`, `behaviors/`, `config/`, `utils/`), but the concepts and logic remain the same. This document describes the system from a conceptual perspective, showing how these components work together.
 
 ## Table of Contents
 
@@ -49,9 +51,9 @@ When an NPC is created, it initializes:
 - `currentTarget`: What the NPC is currently pursuing (player, powerup, or block)
 - `state`: Current behavioral state (`idle`, `moving`, `escaping`, `attacking`, `collecting`)
 
-### Difficulty Profiles (`_loadDifficultyProfile()`)
+### Difficulty Profiles
 
-Each difficulty level modifies core attributes:
+Difficulty profiles are loaded from `config/DifficultyProfiles.js` during NPC initialization. Each difficulty level modifies core attributes:
 
 | Attribute | Easy | Medium | Hard |
 |-----------|------|--------|------|
@@ -105,18 +107,18 @@ This is the main entry point for NPC decision-making. It implements the Sense-Th
 - **Momentum**: NPCs continue moving in the same direction (humans don't constantly change direction)
 - **Observation**: Brief pause to "observe" the situation before acting
 
-### `_sense()` - Perception Gathering
+### Sense Phase (Perception Gathering)
 
-Collects information about the current situation:
+Implemented in `core/DecisionLoop.js`. Collects information about the current situation:
 
 - `inDanger`: Is the NPC in an explosion zone?
 - `hasNearbyPowerups`: Are there powerups nearby?
 - `isStuck`: Is the NPC stuck in a loop?
 - `strategy`: Current behavior strategy object
 
-### `_think(currentTime, perception)` - Decision Logic
+### Think Phase (Decision Logic)
 
-This is where the NPC decides what action to take. Priority order:
+Implemented in `core/DecisionLoop.js`. This is where the NPC decides what action to take. Priority order:
 
 1. **Escape Danger** (HIGHEST PRIORITY)
    - If in danger, immediately escape
@@ -147,17 +149,19 @@ This is where the NPC decides what action to take. Priority order:
 - **Stuck Check**: Detects loops and switches targets to get unstuck
 - **Target Commitment**: NPCs commit to targets for 30 seconds to prevent oscillation
 
-### `_act(decision)` - Action Execution
+### Act Phase (Action Execution)
 
-Currently a thin wrapper that validates and returns the decision. This could be extended for logging, validation, or additional safety checks.
+Implemented in `core/DecisionLoop.js`. Validates and returns the decision. This could be extended for logging, validation, or additional safety checks.
 
 ---
 
 ## Escape Behavior
 
-### `_decideEscape(preferredDirection, allowLessSafe)`
+Implemented in `behaviors/EscapeHandler.js`.
 
-When the NPC is in danger, this method handles escape:
+### `decideEscape(npc, preferredDirection, allowLessSafe)`
+
+When the NPC is in danger, this function handles escape:
 
 1. **Safety Check**: If already safe and no nearby active bombs, return null (no need to escape)
 2. **Escape Target**: If no escape target exists, find the nearest safe position using `DangerDetector.findNearestSafePosition()`
@@ -180,9 +184,11 @@ When the NPC is in danger, this method handles escape:
 
 ## Target Selection
 
-### `_selectTarget()`
+Implemented in `behaviors/TargetingHandler.js`.
 
-NPCs need goals to pursue. This method selects the best target based on strategy and game state.
+### `selectTarget(npc)`
+
+NPCs need goals to pursue. This function selects the best target based on strategy and game state.
 
 #### Target Types
 
@@ -219,7 +225,9 @@ NPCs need goals to pursue. This method selects the best target based on strategy
 
 ## Movement Decisions
 
-### `_decideMovement()`
+Implemented in `behaviors/MovementHandler.js`.
+
+### `decideMovement(npc)`
 
 Handles movement toward targets using pathfinding:
 
@@ -239,23 +247,23 @@ Handles movement toward targets using pathfinding:
 - For trappers, finds intermediate blocks in the direction toward the player
 - Falls back to safe exploration if no targets available
 
-### `_findBlockingBlock(target)`
+### `findBlockingBlock(npc, target)`
 
-When a player target is unreachable, finds blocks that block the path:
+When a player target is unreachable, finds blocks that block the path. Implemented in `behaviors/TargetingHandler.js`:
 - Checks blocks in direct path to target (within 2 tiles)
 - Prioritizes blocks in target direction
 - Used to clear paths to players
 
-### `_findIntermediateBlockTowardPlayer(player)`
+### `findIntermediateBlockTowardPlayer(npc, player)`
 
-For trappers pursuing far-away players, finds intermediate blocks as waypoints:
+For trappers pursuing far-away players, finds intermediate blocks as waypoints. Implemented in `behaviors/TargetingHandler.js`:
 - Searches 2-5 tiles away in player direction
 - Prioritizes blocks closer to the player
 - Prevents oscillation when player is very far away
 
-### `_decideSafeExploration()`
+### `decideSafeExploration(npc)`
 
-When no specific target, explores safely:
+When no specific target, explores safely. Implemented in `behaviors/MovementHandler.js`:
 - Randomly tries safe directions
 - Avoids danger zones and blocked paths
 - Used when no targets available
@@ -264,7 +272,9 @@ When no specific target, explores safely:
 
 ## Bomb Placement
 
-### `_decidePlaceBomb(hasBlockTarget, hasPlayerTarget)`
+Implemented in `behaviors/BombingHandler.js`.
+
+### `decidePlaceBomb(npc, hasBlockTarget, hasPlayerTarget)`
 
 Decides when to place bombs with multiple safety checks:
 
@@ -294,18 +304,18 @@ Decides when to place bombs with multiple safety checks:
 - **Medium**: Sometimes takes risks when bombing blocks
 - **Hard**: Takes calculated risks to trap players
 
-### `_evaluateBombTargets()`
+### `evaluateBombTargets(npc)`
 
-Evaluates what the NPC should bomb:
+Evaluates what the NPC should bomb. Implemented in `behaviors/BombingHandler.js`:
 
 - **Player Targets**: Players within attack range (default 2 tiles)
 - **Block Targets**: Destructible blocks adjacent to NPC (distance = 1)
 
 Returns `{ hasPlayerTarget: boolean, hasBlockTarget: boolean }`.
 
-### `_hasEscapeRoute()`
+### `hasEscapeRoute(npc)`
 
-Checks if NPC can escape after placing bomb:
+Checks if NPC can escape after placing bomb. Implemented in `behaviors/BombingHandler.js`:
 - Verifies at least one adjacent position is safe and walkable
 - Prevents suicide bomb placements
 
@@ -373,9 +383,9 @@ NPCs can get stuck in loops (e.g., moving back and forth). Multiple mechanisms p
 
 ## Collision and Safety Checks
 
-### `_isWalkable(pos)`
+### `isWalkable(npc, pos)`
 
-Checks if a position is walkable:
+Checks if a position is walkable. Implemented in `utils/PositionHelpers.js`:
 
 1. **Bounds Check**: Position must be within grid bounds
 2. **Bomb Check**: Can't walk through active bombs
@@ -388,15 +398,15 @@ Checks if a position is walkable:
 - Dead players have positions set to (-1, -1) and don't block
 - Navigation grid caches walkability for efficiency
 
-### `_isInDanger()`
+### `isInDanger(npc)`
 
-Checks if current position is in a danger zone:
+Checks if current position is in a danger zone. Implemented in `behaviors/EscapeHandler.js`:
 - Uses `dangerZones` Set calculated by `DangerDetector`
 - Danger zones updated whenever bombs are placed/exploded
 
-### `_isValidPosition(pos)`
+### `isValidPosition(pos, maxRows, maxCols)`
 
-Checks if position is within grid bounds (0 to maxRows-1, 0 to maxCols-1).
+Checks if position is within grid bounds (0 to maxRows-1, 0 to maxCols-1). Implemented in `utils/PositionHelpers.js`.
 
 ---
 
@@ -429,7 +439,7 @@ Current goal:
 
 ### Reset
 
-`reset()` method clears all state for a new game:
+`reset()` method (implemented in `core/NPCState.js`) clears all state for a new game:
 - Resets position, alive status, score, lives
 - Clears targets, paths, danger zones
 - Resets all tracking variables

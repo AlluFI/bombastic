@@ -116,25 +116,25 @@ Runs at 60 FPS using `requestAnimationFrame`.
 - **`npc-handlers.js`**: NPC configuration (single-player)
 
 #### Utilities
-**File**: `server/utils.js`
+**Directory**: `server/utils/` (modular utilities)
 
-- `generateRoomCode()`: Creates unique room codes
-- `generateBoard()`: Generates game board layout
-- `syncRoomGameState()`: Syncs room state for NPCs
-- `handleNPCAction()`: Processes NPC actions
-- `checkGameEnd()`: Detects winner
-- `calculateExplosionBlocks()`: Calculates block destruction
-- `calculateExplosionTiles()`: Calculates explosion area
+- **`room-utils.js`**: Room code generation, colors, positions, lobby functions
+- **`board-utils.js`**: Board generation, explosion calculations
+- **`game-state-utils.js`**: State synchronization, game end checking
+- **`npc-utils.js`**: NPC action processing
+
+**Backward compatibility**: `server/utils.js` re-exports all utilities for existing imports
 
 #### NPC System
-**Directory**: `server/npc/`
+**Directory**: `server/npc/` (modular AI system)
 
-- **`NPC.js`**: Main NPC AI class
-- **`DifficultyProfiles.js`**: Easy/Medium/Hard configurations
+- **`NPC.js`**: Main NPC class (orchestrator)
 - **`BehaviorStrategies.js`**: AI behavior strategies
-- **`utils/Pathfinder.js`**: Pathfinding algorithm
-- **`utils/DangerDetector.js`**: Danger zone detection
-- **`utils/ItemEvaluator.js`**: Power-up evaluation
+- **`core/NPCState.js`**: State management
+- **`core/DecisionLoop.js`**: Sense-Think-Act decision loop
+- **`behaviors/`**: Behavior handlers (Escape, Movement, Bombing, Targeting, Powerup, Planning)
+- **`config/DifficultyProfiles.js`**: Easy/Medium/Hard configurations
+- **`utils/`**: Utilities (Pathfinder, DangerDetector, ItemEvaluator, PositionHelpers, StuckDetector)
 
 See [NPC README](server/npc/README.md) for detailed documentation.
 
@@ -147,8 +147,8 @@ setInterval(() => {
         
         syncRoomGameState(room)
         
-        // Update NPCs
-        if (ENABLE_NPC && room.gameState.gameMode === 'single-player') {
+        // Update NPCs (single-player mode only)
+        if (room.gameState.gameMode === 'single-player') {
             room.npcs.forEach((npc, npcId) => {
                 npc.updateWorldState(room.gameState)
                 const action = npc.getNextCommand(Date.now())
