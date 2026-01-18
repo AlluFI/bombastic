@@ -1,5 +1,5 @@
 const {syncRoomGameState, broadcastLobbyUpdate, generateBoard, startPos} = require('../utils.js')
-const { logPlayerAction, logRoomEvent } = require('../logger')
+const { validateRoom, validatePlayer, emitError } = require('../errorHandler.js')
 
 
 
@@ -8,11 +8,11 @@ module.exports = function gameHandlers(io, socket, rooms) {
     // Handle game pause/resume
     //=============================
   socket.on('game:pause', (payload) => {
-
-    const room = rooms.get(socket.roomCode)
+    // Validate room and player
+    const room = validateRoom(socket, socket.roomCode, rooms)
     if (!room) return
     
-    const player = room.players.get(socket.id)
+    const player = validatePlayer(socket, room)
     if (!player) return
 
     // Update pause state in game state
@@ -33,8 +33,6 @@ module.exports = function gameHandlers(io, socket, rooms) {
       }
     }
 
-    // logPlayerAction(socket.id, player.name, `${payload.paused ? 'paused' : 'resumed'} the game`, { roomId: socket.roomCode })
-
     // Broadcast to ALL clients (including sender) for sync
     io.to(socket.roomCode).emit('game:pause', {
       paused: !!payload.paused,
@@ -45,12 +43,11 @@ module.exports = function gameHandlers(io, socket, rooms) {
   })
     
     socket.on('game:quit', () => {
-    const room = rooms.get(socket.roomCode)
+    const room = validateRoom(socket, socket.roomCode, rooms)
     if (!room) return
     
     const player = room.players.get(socket.id)
     if (player) {
-      // logPlayerAction(socket.id, player.name, 'quit game', { roomId: socket.roomCode })
       room.players.delete(socket.id)
       
       // Notify others
@@ -70,10 +67,6 @@ module.exports = function gameHandlers(io, socket, rooms) {
     const roomCode = socket.roomCode
     const player = room.players.get(socket.id)
     
-    if (player) {
-      // logPlayerAction(socket.id, player.name, 'disconnected from room', { roomId: roomCode })
-    }
-    
     // Remove player from room
     room.players.delete(socket.id);
 
@@ -88,7 +81,6 @@ module.exports = function gameHandlers(io, socket, rooms) {
     if (shouldDeleteRoom) {
       // Delete room
       rooms.delete(roomCode)
-      // logRoomEvent(roomCode, 'Room deleted (empty or single-player host left)')
       // Broadcast lobby update (room removed)
       broadcastLobbyUpdate(io, rooms)
       return
@@ -98,7 +90,6 @@ module.exports = function gameHandlers(io, socket, rooms) {
     if (isHostLeaving) {
       const nextHost = room.players.keys().next().value
       room.host = nextHost
-      // logRoomEvent(roomCode, 'Host transferred', { newHostId: nextHost, previousHostId: socket.id })
       // Clean up NPCs when host disconnects
       room.npcs.clear();
     }
@@ -124,28 +115,29 @@ module.exports = function gameHandlers(io, socket, rooms) {
     // Handle game start (host only, requires 2+ players)
     //===================================================
   socket.on('game:start', (data) => {
-    const room = rooms.get(socket.roomCode)
-    if (!room) {
-      socket.emit('error', { message: 'Room not found' })
-      return
-    }
+    // Validate room and player
+    const room = validateRoom(socket, socket.roomCode, rooms)
+    if (!room) return
+    
+    const player = validatePlayer(socket, room)
+    if (!player) return
     
     // Check if requester is the host
     if (room.host !== socket.id) {
-      socket.emit('error', { message: 'Only the host can start the game' })
+      emitError(socket, 'Only the host can start the game', 'NOT_HOST')
       return
     }
     
     // Check if game is already running
     if (room.gameState.isRunning) {
-      socket.emit('error', { message: 'Game is already running' })
+      emitError(socket, 'Game is already running', 'GAME_ALREADY_RUNNING')
       return
     }
     
     // Check if there are at least 2 players
     const playerCount = room.players.size
     if (playerCount < 2) {
-      socket.emit('error', { message: 'Need at least 2 players to start the game' })
+      emitError(socket, 'Need at least 2 players to start the game', 'NOT_ENOUGH_PLAYERS')
       return
     }
     
@@ -209,8 +201,6 @@ module.exports = function gameHandlers(io, socket, rooms) {
     room.gameState.isRunning = true
     room.gameStartTime = Date.now() // Track when game started for timer synchronization
     syncRoomGameState(room)
-    
-    // logRoomEvent(socket.roomCode, 'Game started', { hostId: socket.id, playerCount, gameMode: room.gameState.gameMode })
     
     // Broadcast game started event to all players in room
     io.to(socket.roomCode).emit('game:started', {

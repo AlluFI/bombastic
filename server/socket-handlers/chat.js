@@ -1,6 +1,7 @@
 const {validateRoom, validatePlayer, emitError} = require('../errorHandler.js')
 const {isRateLimited} = require('../rateLimiter.js')
 const {sanitizeChatMessage} = require('../validation.js')
+const CONSTANTS = require('../constants.js')
 
 module.exports = function chatHandlers(io, socket, rooms) {
 	//Send a message 
@@ -37,12 +38,12 @@ module.exports = function chatHandlers(io, socket, rooms) {
       timestamp: Date.now()
     }
 
-    // Store message in room history (limit to last 100 messages)
+    // Store message in room history (limit to configured max)
     if (!room.chats) {
       room.chats = []
     }
     room.chats.push(chatMessage)
-    if (room.chats.length > 100) {
+    if (room.chats.length > CONSTANTS.CHAT_HISTORY_LIMIT) {
       room.chats.shift() // Remove oldest message
     }
 

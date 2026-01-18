@@ -44,4 +44,11 @@ module.exports = {
   // Chat Configuration
   MAX_CHAT_MESSAGE_LENGTH: 200,
   MIN_CHAT_MESSAGE_LENGTH: 1,
+  
+  // Server Configuration
+  GAME_LOOP_FPS: 60,
+  GAME_LOOP_INTERVAL_MS: 1000 / 60, // ~16.67ms for 60 FPS
+  ROOM_STATUS_LOG_INTERVAL_MS: 60 * 1000, // 1 minute
+  PING_TIMEOUT_MS: 60000, // 60 seconds
+  CHAT_HISTORY_LIMIT: 100, // Maximum chat messages per room
 };

@@ -1,4 +1,4 @@
-const { ENABLE_NPC, ENABLE_SINGLE_PLAYER_MODE } = require('../config.js');
+const { ENABLE_SINGLE_PLAYER_MODE } = require('../config.js');
 const {
   syncRoomGameState,
   colors,
@@ -48,8 +48,8 @@ module.exports = function npcHandlers(io, socket, rooms) {
       return;
     }
     
-    if (!ENABLE_NPC || !ENABLE_SINGLE_PLAYER_MODE) {
-      socket.emit('error', { message: 'NPC mode is disabled' });
+    if (!ENABLE_SINGLE_PLAYER_MODE) {
+      socket.emit('error', { message: 'Single-player mode is disabled' });
       return;
     }
     

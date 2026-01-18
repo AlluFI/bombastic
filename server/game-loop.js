@@ -1,5 +1,4 @@
 const {syncRoomGameState, calculateExplosionBlocks, calculateExplosionTiles, handleNPCAction, checkGameEnd} = require('./utils')
-const {ENABLE_NPC} = require('./config')
 const CONSTANTS = require('./constants')
 // const { logRoomEvent, logPlayerAction, logNPCAction, logGameEvent, logger } = require('./logger')
 
@@ -35,7 +34,7 @@ module.exports = function gameLoop(io, rooms) {
         // logRoomEvent(roomId, 'Cleaning up empty room');
         rooms.delete(roomId);
       });
-    }, 60 * 1000); // Check every minute
+    }, CONSTANTS.ROOM_STATUS_LOG_INTERVAL_MS); // Check every minute
     
     // Game loop (runs at 60 FPS)
     setInterval(() => {
@@ -65,7 +64,7 @@ module.exports = function gameLoop(io, rooms) {
     syncRoomGameState(room);
     
     // Update NPCs (only in single-player mode)
-    if (ENABLE_NPC && room.gameState.gameMode === 'single-player') {
+    if (room.gameState.gameMode === 'single-player') {
       room.npcs.forEach((npc, npcId) => {
         // Update NPC with current game state
         npc.updateWorldState(room.gameState);
@@ -300,7 +299,7 @@ module.exports = function gameLoop(io, rooms) {
           // Also check NPCs directly from room.npcs to ensure we catch all NPCs
           explosionTiles.forEach(tile => {
             // First check NPCs directly (more reliable)
-            if (ENABLE_NPC && room.gameState.gameMode === 'single-player') {
+            if (room.gameState.gameMode === 'single-player') {
               room.npcs.forEach((npc, npcId) => {
                 if (!hitNPCs.has(npcId) && npc.alive && npc.position.x === tile.x && npc.position.y === tile.y) {
                   hitNPCs.add(npcId);
@@ -391,7 +390,7 @@ module.exports = function gameLoop(io, rooms) {
             // Then check human players (both from gameState.players and room.players)
             room.gameState.players.forEach(player => {
               // Skip if already hit or if it's an NPC (we checked NPCs above)
-              if (hitPlayers.has(player.id) || !player.alive || (ENABLE_NPC && room.npcs.has(player.id))) {
+              if (hitPlayers.has(player.id) || !player.alive || room.npcs.has(player.id)) {
                 return;
               }
               
@@ -629,5 +628,5 @@ module.exports = function gameLoop(io, rooms) {
       io.to(roomId).emit('game:state', room.gameState);
     }
   });
-}, 1000 / 60); // 60 FPS
+}, CONSTANTS.GAME_LOOP_INTERVAL_MS); // 60 FPS
 }

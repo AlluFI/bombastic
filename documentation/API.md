@@ -646,10 +646,16 @@ All errors are sent via `error` event with a descriptive message.
 
 ## Rate Limiting
 
-Currently no rate limiting implemented. Consider adding:
-- Movement rate limiting (max updates per second)
-- Bomb placement cooldown (handled client-side)
-- Chat message throttling
+Rate limiting is implemented server-side using a sliding window algorithm. Different actions have different rate limits:
+
+- **MOVE**: 20 actions per second (1000ms window)
+- **BOMB**: 10 actions per second (1000ms window)
+- **CHAT**: 5 messages per second (1000ms window)
+- **POWERUP_PICKUP**: 10 actions per second (1000ms window)
+
+Rate limits are enforced per socket connection. When a rate limit is exceeded, the server emits an `error` event to the client (except for BOMB actions, which are silently ignored to allow rapid chain reactions).
+
+Rate limit data is automatically cleaned up when a socket disconnects.
 
 ---
 

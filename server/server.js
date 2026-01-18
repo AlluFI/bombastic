@@ -2,7 +2,8 @@ const path = require('path')
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
-const {PORT} = require('./config')
+const {PORT, CORS_ORIGIN} = require('./config')
+const CONSTANTS = require('./constants')
 const allHandlers  = require('./socket-handlers')
 const gameLoop = require('./game-loop')
 const { logger } = require('./logger')
@@ -17,12 +18,12 @@ app.set('trust proxy', true)
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: CORS_ORIGIN,
     methods: ['GET', 'POST']
   },
   transports: ['websocket', 'polling'],
   allowEIO3: true,
-  pingTimeout: 60000,
+  pingTimeout: CONSTANTS.PING_TIMEOUT_MS,
   pingInterval: 25000,
   cookie: false,
   allowUpgrades: true,
@@ -35,6 +36,17 @@ const io = new Server(server, {
 app.use(express.static(path.join(__dirname, '../client')))
 
 const rooms = new Map()
+
+// Health check endpoint (must be after rooms is defined)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: Date.now(),
+    uptime: process.uptime(),
+    rooms: rooms.size,
+    environment: process.env.NODE_ENV || 'development'
+  })
+})
 
 // Log server start
 logger.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, 'Server starting')
@@ -60,7 +72,7 @@ setInterval(() => {
     }))
     logger.debug({ rooms: roomSummary, totalRooms: rooms.size }, 'Active rooms status')
   }
-}, 60000) // Log every minute
+}, CONSTANTS.ROOM_STATUS_LOG_INTERVAL_MS) // Log every minute
 
 gameLoop(io, rooms)
 
