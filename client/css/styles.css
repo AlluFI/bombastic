@@ -1183,6 +1183,8 @@ button.loading::after {
     position: relative;
     overflow-x: hidden;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 #game-wrapper {
@@ -1459,15 +1461,36 @@ button.loading::after {
         max-width: 100%;
     }
     
+    /* Disable vertical scrolling in portrait mode */
+    #game-screen {
+        overflow-y: hidden;
+        height: 100vh;
+        max-height: 100vh;
+    }
+    
+    /* Show controls header on mobile */
+    .game-controls-header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-shrink: 0;
+        padding: 8px 10px;
+        min-height: 50px;
+        gap: 8px;
+    }
+    
     #game-wrapper {
         flex-direction: column;
         align-items: center;
         margin-top: 0;
         padding: 10px;
         padding-bottom: 180px; /* Space for mobile controls */
+        padding-top: 0; /* No top padding - controls are in header */
         gap: 8px;
         min-height: auto;
-        max-height: calc(100vh - 180px); /* Account for mobile controls */
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
     
     #chat-container {
@@ -1494,19 +1517,20 @@ button.loading::after {
     
     /* Make instructions panel and info button more compact on mobile */
     .info-toggle {
+        position: static;
         width: 35px;
         height: 35px;
         font-size: 18px;
-        top: 50px;
-        right: 10px;
+        margin-left: auto;
+        margin-right: 10px;
     }
     
     .pause-toggle {
+        position: static;
         width: 35px;
         height: 35px;
         font-size: 18px;
-        top: 50px;
-        right: 55px;
+        margin-right: 10px;
     }
     
     #ins {
