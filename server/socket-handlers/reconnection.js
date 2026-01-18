@@ -29,8 +29,19 @@ function cleanupDisconnectedPlayers() {
   })
 }
 
+// Store interval ID for cleanup
+let reconnectionCleanupIntervalId = null
+
 // Run cleanup every 10 seconds
-setInterval(cleanupDisconnectedPlayers, 10 * 1000)
+reconnectionCleanupIntervalId = setInterval(cleanupDisconnectedPlayers, 10 * 1000)
+
+// Export cleanup function
+module.exports.cleanup = function() {
+  if (reconnectionCleanupIntervalId) {
+    clearInterval(reconnectionCleanupIntervalId)
+    reconnectionCleanupIntervalId = null
+  }
+}
 
 /**
  * Store disconnected player data for potential reconnection

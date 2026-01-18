@@ -90,6 +90,104 @@ Metrics endpoint for monitoring game health and performance.
 
 ---
 
+## Error Codes
+
+All error events from the server include an error code for programmatic handling. Error codes are case-sensitive and use UPPER_SNAKE_CASE.
+
+### Room Management Errors
+
+| Code | Description | User Message |
+|------|-------------|--------------|
+| `ROOM_NOT_FOUND` | Room does not exist or has been deleted | "Room not found. It may have been closed." |
+| `ROOM_FULL` | Room has reached maximum capacity | "Room is full. Please try another room." |
+| `LOBBY_FULL` | Lobby has reached maximum capacity | "Lobby is full." |
+| `SINGLE_PLAYER_MODE` | Attempted to join a single-player mode room | "Room is in single-player mode." |
+| `MISSING_ROOM_CODE` | Room code not provided | "Room code is required." |
+| `INVALID_ROOM_CODE` | Room code format is invalid | "Invalid room code. Please check and try again." |
+
+### Player Errors
+
+| Code | Description | User Message |
+|------|-------------|--------------|
+| `NAME_TAKEN` | Player name already exists in room | "This name is already taken in this room. Please choose another name." |
+| `INVALID_PLAYER_NAME` | Player name does not meet requirements | "Invalid player name. Please use 2-20 characters." |
+| `PLAYER_NOT_FOUND` | Player does not exist in room | "Player not found." |
+| `INVALID_PLAYER` | Attempted action for wrong player | "Cannot perform this action for another player." |
+
+### Game Flow Errors
+
+| Code | Description | User Message |
+|------|-------------|--------------|
+| `NOT_HOST` | Action requires host privileges | "Only the host can perform this action." |
+| `GAME_ALREADY_RUNNING` | Game is already in progress | "Game is already running." |
+| `NOT_ENOUGH_PLAYERS` | Not enough players to start game | "Need at least 2 players to start the game." |
+| `GAME_NOT_RUNNING` | Game is not currently running | "Game is not running." |
+
+### Action Validation Errors
+
+| Code | Description | User Message |
+|------|-------------|--------------|
+| `INVALID_DATA` | General invalid data error | "Invalid data provided. Please try again." |
+| `INVALID_MOVEMENT` | Invalid movement data or position | "Invalid movement. Please try again." |
+| `INVALID_POSITION` | Position is out of bounds | "Invalid position: out of bounds." |
+| `INVALID_BOMB_DATA` | Invalid bomb placement data | "Invalid bomb placement data." |
+| `INVALID_BOMB_POSITION` | Cannot place bomb at this position | "Cannot place bomb on non-walkable tile." |
+| `BOMB_EXISTS` | Bomb already exists at position | "Bomb already exists at this position." |
+| `INVALID_BLOCK_DATA` | Invalid block destruction data | "Invalid block destruction data." |
+| `INVALID_BLOCKS_DATA` | Invalid blocks destruction data | "Invalid blocks destruction data." |
+| `INVALID_BLOCK_COORDINATES` | Invalid block coordinates | "Invalid block coordinates." |
+| `INVALID_POWERUP_DATA` | Invalid power-up pickup data | "Invalid power-up pickup data." |
+| `POWERUP_NOT_FOUND` | Power-up does not exist | "Power-up not found." |
+| `POWERUP_POSITION_MISMATCH` | Power-up position mismatch | "Power-up position mismatch." |
+| `NO_POWERUPS` | No power-ups available | "No power-ups available." |
+| `INVALID_CHAT_DATA` | Invalid chat message data | "Invalid chat message data." |
+| `INVALID_CHAT_MESSAGE` | Chat message does not meet requirements | "Invalid chat message." |
+| `INVALID_DAMAGE_DATA` | Invalid damage data | "Invalid damage data." |
+| `INVALID_LIVES` | Invalid lives value | "Invalid lives value." |
+
+### Rate Limiting Errors
+
+| Code | Description | User Message |
+|------|-------------|--------------|
+| `RATE_LIMIT_EXCEEDED` | Action rate limit exceeded | "Action too fast. Please slow down." |
+
+### Reconnection Errors
+
+| Code | Description | User Message |
+|------|-------------|--------------|
+| `RECONNECTION_EXPIRED` | Reconnection time window expired | "Reconnection time expired. Please join a new game." |
+
+### Server Errors
+
+| Code | Description | User Message |
+|------|-------------|--------------|
+| `SERVER_ERROR` | Internal server error | "An unexpected server error occurred. Please try again." |
+| `UNKNOWN_ERROR` | Unknown error occurred | "An unexpected error occurred. Please try again." |
+
+### Error Event Format
+
+All error events follow this format:
+
+```javascript
+{
+    message: string,    // Human-readable error message
+    code: string,       // Error code (see table above)
+    timestamp: number  // Unix timestamp in milliseconds
+}
+```
+
+**Example:**
+```javascript
+socket.on('error', (error) => {
+    console.error('Error:', error.code, error.message)
+    // error.code: 'ROOM_NOT_FOUND'
+    // error.message: 'Room not found'
+    // error.timestamp: 1234567890123
+})
+```
+
+---
+
 ## Socket.io Event Protocol
 
 This document describes all Socket.io events used for client-server communication.

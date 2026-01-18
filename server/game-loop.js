@@ -3,9 +3,13 @@ const CONSTANTS = require('./constants')
 const metrics = require('./metrics')
 // const { logRoomEvent, logPlayerAction, logNPCAction, logGameEvent, logger } = require('./logger')
 
+// Store interval IDs for cleanup
+let cleanupIntervalId = null
+let gameLoopIntervalId = null
+
 module.exports = function gameLoop(io, rooms) {
     // Room cleanup loop (runs every minute)
-    setInterval(() => {
+    cleanupIntervalId = setInterval(() => {
       const now = Date.now();
       const roomsToDelete = [];
       
@@ -39,7 +43,7 @@ module.exports = function gameLoop(io, rooms) {
     }, CONSTANTS.ROOM_STATUS_LOG_INTERVAL_MS); // Check every minute
     
     // Game loop (runs at 60 FPS)
-    setInterval(() => {
+    gameLoopIntervalId = setInterval(() => {
       rooms.forEach((room, roomId) => {
     // Only process running games
     if (!room.gameState.isRunning) return;
@@ -645,4 +649,18 @@ module.exports = function gameLoop(io, rooms) {
     }
   });
 }, CONSTANTS.GAME_LOOP_INTERVAL_MS); // 60 FPS
+    
+    // Return cleanup function
+    return {
+        cleanup: () => {
+            if (cleanupIntervalId) {
+                clearInterval(cleanupIntervalId)
+                cleanupIntervalId = null
+            }
+            if (gameLoopIntervalId) {
+                clearInterval(gameLoopIntervalId)
+                gameLoopIntervalId = null
+            }
+        }
+    }
 }

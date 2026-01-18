@@ -76,8 +76,11 @@ io.on('connection', socket => {
   })
 })
 
+// Store interval ID for cleanup
+let statusLogIntervalId = null
+
 // Periodic logging of active rooms for debugging and metrics update
-setInterval(() => {
+statusLogIntervalId = setInterval(() => {
   // Update metrics with current counts
   let totalPlayers = 0
   rooms.forEach(room => {
@@ -96,7 +99,44 @@ setInterval(() => {
   }
 }, CONSTANTS.ROOM_STATUS_LOG_INTERVAL_MS) // Log every minute
 
-gameLoop(io, rooms)
+const gameLoopCleanup = gameLoop(io, rooms)
+
+// Graceful shutdown handler
+function gracefulShutdown() {
+  logger.info('Shutting down gracefully...')
+  
+  // Clear intervals
+  if (statusLogIntervalId) {
+    clearInterval(statusLogIntervalId)
+    statusLogIntervalId = null
+  }
+  
+  if (gameLoopCleanup && gameLoopCleanup.cleanup) {
+    gameLoopCleanup.cleanup()
+  }
+  
+  // Cleanup reconnection handler intervals
+  const reconnectionHandlers = require('./socket-handlers/reconnection.js')
+  if (reconnectionHandlers.cleanup) {
+    reconnectionHandlers.cleanup()
+  }
+  
+  // Close server
+  server.close(() => {
+    logger.info('Server closed')
+    process.exit(0)
+  })
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout')
+    process.exit(1)
+  }, 10000)
+}
+
+// Handle shutdown signals
+process.on('SIGTERM', gracefulShutdown)
+process.on('SIGINT', gracefulShutdown)
 
 server.listen(PORT, () => {
   logger.info({ port: PORT }, 'Server listening')

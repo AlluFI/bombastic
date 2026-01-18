@@ -16,6 +16,7 @@ import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, ini
 import { initializeSoundManager, playSound } from "./audio/soundManager.js"
 import { initializeConnectionStatus, updateConnectionStatus, setReconnectAttempts } from "./ui/connection-status.js"
 import { applyDeltaUpdate, resetCachedGameState } from "./delta-updates.js"
+import { initializeErrorHandlers, getSocketErrorMessage } from "./error-handler.js"
 import "./ui/audio-toggle.js"
 
 
@@ -30,6 +31,9 @@ const socket = io({
   reconnectionDelayMax: 5000
 })
 export { socket };
+
+// Initialize global error handlers first
+initializeErrorHandlers()
 
 initializeMenu()
 initializePauseMenu()
@@ -507,9 +511,12 @@ socket.on('game:end', (data) => {
 })
 
 socket.on('error', (data) => {
+    // Get user-friendly error message
+    const errorMessage = getSocketErrorMessage(data)
+    
     // Use toast notification instead of alert
     import('./ui/notifications.js').then(({ showError }) => {
-        showError(data.message)
+        showError(errorMessage)
     })
     
     // Handle reconnection-specific errors
