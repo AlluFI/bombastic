@@ -92,9 +92,14 @@ function getTileSize() {
     const isLandscape = window.innerWidth > window.innerHeight && window.innerWidth <= 768
     
     if (isLandscape) {
-        // Landscape: use viewport height, account for HUD
-        const availableHeight = window.innerHeight - 120 // Account for HUD, controls, padding
-        return Math.min(Math.floor(availableHeight / GRID_ROWS), 30)
+        // Landscape: calculate based on available space (width and height)
+        // In landscape, HUD is side-by-side, so we have more vertical space
+        const availableHeight = window.innerHeight - 40 // Account for padding
+        const availableWidth = window.innerWidth - 350 // Account for HUD on the side (250px) + padding
+        // Use the smaller dimension to ensure everything fits
+        const heightBased = Math.floor(availableHeight / GRID_ROWS)
+        const widthBased = Math.floor(availableWidth / GRID_COLS)
+        return Math.min(Math.min(heightBased, widthBased), 35)
     } else if (isSmallMobile) {
         // Small mobile portrait: calculate based on available vertical space
         // Account for: instructions (~60px), HUD elements (~200px), mobile controls (~170px), padding (20px)

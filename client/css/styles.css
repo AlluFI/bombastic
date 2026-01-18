@@ -1596,8 +1596,13 @@ button.loading::after {
 @media screen and (max-width: 768px) and (orientation: landscape) {
     #game-wrapper {
         flex-direction: row;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: center;
+        align-items: flex-start;
+        padding: 10px;
+        padding-bottom: 10px; /* No bottom padding needed - no mobile controls */
+        gap: 10px;
+        max-height: calc(100vh - 20px);
     }
     
     #ins {
@@ -1605,22 +1610,54 @@ button.loading::after {
         width: 100%;
         max-height: 120px;
         overflow-y: auto;
+        position: static;
     }
     
     #grid {
         order: 1;
         flex: 1;
         min-width: 0;
+        max-width: calc(100vw - 350px); /* Account for HUD width */
     }
     
     #hud {
         order: 2;
         flex: 0 0 auto;
-        min-width: 250px;
+        min-width: 280px;
+        max-width: 300px;
     }
     
-    #mobile-controls {
-        bottom: 5px;
+    /* Compact HUD in landscape */
+    #hud {
+        gap: 8px;
+    }
+    
+    #room-code {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    
+    #timer {
+        font-size: 18px;
+        padding: 8px 12px;
+    }
+    
+    #chat-container {
+        padding: 8px;
+    }
+    
+    #chat-messages {
+        height: 100px;
+        font-size: 11px;
+    }
+    
+    .info-toggle {
+        top: 5px;
+        right: 5px;
+    }
+    
+    #ins {
+        top: 40px;
     }
 }
 
