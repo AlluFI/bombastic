@@ -1,7 +1,7 @@
 /* base explosion */
 .explosion {
-    width: 40px;
-    height: 40px;
+    /* Size will be set by JavaScript based on tile size */
+    /* Default: 40px x 40px for 40px tiles (100%) */
     position: absolute;
     z-index: 5;  /* Above bombs and players */
     pointer-events: none;  /* Don't block clicks */
@@ -9,6 +9,12 @@
     /* Start animation immediately */
     animation: explosion-appear 0.1s ease-out forwards,
                explosion-fade 0.5s ease-in forwards;
+}
+
+/* Default sizes for desktop (40px tiles) */
+.explosion {
+    width: 40px;
+    height: 40px;
 }
 
 /* center explosion */

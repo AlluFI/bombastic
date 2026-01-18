@@ -89,4 +89,12 @@ export function initializePauseMenu() {
     document.addEventListener('keydown', handleEscapeKey)
     resumeButton.addEventListener('click', handleResumeClick)
     quitButton.addEventListener('click', handleQuitClick)
+    
+    // Add pause button for mobile (ESC key not available)
+    const pauseToggleButton = document.getElementById('pause-toggle')
+    if (pauseToggleButton) {
+        pauseToggleButton.addEventListener('click', () => {
+            togglePause()
+        })
+    }
 }

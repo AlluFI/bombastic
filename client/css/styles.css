@@ -562,6 +562,49 @@ button:active:not(:disabled) {
     border-color: #00bfff;
 }
 
+.info-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Pause toggle button */
+.pause-toggle {
+    position: absolute;
+    top: 10px;
+    right: 60px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0, 26, 51, 0.9);
+    border: 3px solid #ff4500;
+    color: #ff4500;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1401;
+    box-shadow: 
+        0 0 10px rgba(255, 69, 0, 0.4),
+        inset 0 0 15px rgba(255, 69, 0, 0.1);
+    transition: all 0.3s ease;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+    max-width: none;
+}
+
+.pause-toggle:hover {
+    background: rgba(255, 69, 0, 0.3);
+    box-shadow: 
+        0 0 15px rgba(255, 69, 0, 0.6),
+        inset 0 0 20px rgba(255, 69, 0, 0.2);
+    transform: scale(1.1);
+}
+
+.pause-toggle:active {
+    transform: scale(0.95);
+}
+
 /* Instructions panel (used in game-screen) */
 #ins {
     position: absolute;
@@ -1449,6 +1492,14 @@ button.loading::after {
         font-size: 18px;
         top: 5px;
         right: 5px;
+    }
+    
+    .pause-toggle {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+        top: 5px;
+        right: 50px;
     }
     
     #ins {

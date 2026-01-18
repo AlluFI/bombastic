@@ -1,6 +1,6 @@
 .bomb {
-    width: 30px;
-    height: 30px;
+    /* Size will be set by JavaScript based on tile size */
+    /* Default: 30px x 30px for 40px tiles (75%) */
     border-radius: 50%;
     position: absolute;
     z-index: 2;
@@ -16,26 +16,37 @@
     animation: bomb-pulse 1s ease-in-out infinite;
 }
 
+/* Default sizes for desktop (40px tiles) */
+.bomb {
+    width: 30px;
+    height: 30px;
+}
+
 .bomb-timer {
     position:  absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 14px;
+    /* Font size will be set by JavaScript based on tile size */
     font-weight: bold;
     color: #ff3333;
     text-shadow: 0 0 5px rgba(255, 51, 51, 0.8);
     pointer-events: none;
 }
 
+/* Default timer size for desktop (40px tiles) */
+.bomb-timer {
+    font-size: 14px;
+}
+
 .bomb::before {
     content: '';
     position: absolute;
-    top: -8px;
+    top: var(--fuse-top-offset, -8px);
     left: 50%;
     transform: translateX(-50%);
-    width: 2px;
-    height: 8px;
+    width: var(--fuse-width, 2px);
+    height: var(--fuse-height, 8px);
     background: linear-gradient(to bottom, #8B4513 0%, #654321 100%);
     border-radius: 1px;
 }
@@ -43,12 +54,12 @@
 .bomb::after {
     content: '';
     position: absolute;
-    top: -10px;
+    top: var(--spark-top-offset, -10px);
     left: 50%;
     transform: translateX(-50%);
     
-    width: 6px;
-    height: 6px;
+    width: var(--spark-size, 6px);
+    height: var(--spark-size, 6px);
     background: radial-gradient(circle, #ff9900 0%, #ff3300 100%);
     border-radius: 50%;
     box-shadow: 0 0 8px #ff6600;

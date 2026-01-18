@@ -145,6 +145,12 @@ function updateGridSize() {
     
     // Scale powerup elements
     scalePowerupElements(tileSize)
+    
+    // Scale bomb elements
+    scaleBombElements(tileSize)
+    
+    // Scale explosion elements
+    scaleExplosionElements(tileSize)
 }
 
 /**
@@ -211,6 +217,86 @@ function scalePowerupElements(tileSize) {
                     const gridRect = grid.getBoundingClientRect()
                     powerup.style.left = `${(tileRect.left - gridRect.left) + (tileRect.width / 2) - (powerupSize / 2)}px`
                     powerup.style.top = `${(tileRect.top - gridRect.top) + (tileRect.height / 2) - (powerupSize / 2)}px`
+                }
+            }
+        }
+    })
+}
+
+/**
+ * Scale bomb elements based on tile size
+ */
+function scaleBombElements(tileSize) {
+    const bombs = document.querySelectorAll('.bomb')
+    // Bomb size: 75% of tile size (30px at 40px tile)
+    const bombSize = Math.floor(tileSize * 0.75)
+    const bombOffset = Math.floor(tileSize * 0.125) // 5px at 40px tile (12.5%)
+    
+    bombs.forEach(bomb => {
+        bomb.style.width = `${bombSize}px`
+        bomb.style.height = `${bombSize}px`
+        
+        // Scale timer font size (14px at 40px tile = 35%)
+        const timerSize = Math.floor(tileSize * 0.35)
+        const timerElement = bomb.querySelector('.bomb-timer')
+        if (timerElement) {
+            timerElement.style.fontSize = `${timerSize}px`
+        }
+        
+        // Recalculate position with scaled offset
+        const x = parseInt(bomb.dataset.x)
+        const y = parseInt(bomb.dataset.y)
+        if (!isNaN(x) && !isNaN(y)) {
+            const tile = document.getElementById(`tile-${x}-${y}`)
+            if (tile) {
+                const grid = document.getElementById('grid')
+                if (grid) {
+                    const tileRect = tile.getBoundingClientRect()
+                    const gridRect = grid.getBoundingClientRect()
+                    bomb.style.left = `${(tileRect.left - gridRect.left) + bombOffset}px`
+                    bomb.style.top = `${(tileRect.top - gridRect.top) + bombOffset}px`
+                }
+            }
+        }
+        
+        // Set CSS variables for fuse sizing (::before and ::after pseudo-elements)
+        // Fuse width: 2px at 40px = 5%, fuse height: 8px at 40px = 20%
+        // Spark size: 6px at 40px = 15%
+        const fuseWidth = Math.max(1, Math.floor(tileSize * 0.05))
+        const fuseHeight = Math.floor(tileSize * 0.2)
+        const sparkSize = Math.floor(tileSize * 0.15)
+        bomb.style.setProperty('--fuse-width', `${fuseWidth}px`)
+        bomb.style.setProperty('--fuse-height', `${fuseHeight}px`)
+        bomb.style.setProperty('--spark-size', `${sparkSize}px`)
+        bomb.style.setProperty('--fuse-top-offset', `-${fuseHeight}px`)
+        bomb.style.setProperty('--spark-top-offset', `-${fuseHeight + 2}px`)
+    })
+}
+
+/**
+ * Scale explosion elements based on tile size
+ */
+function scaleExplosionElements(tileSize) {
+    const explosions = document.querySelectorAll('.explosion')
+    // Explosion size: 100% of tile size (40px at 40px tile)
+    const explosionSize = tileSize
+    
+    explosions.forEach(explosion => {
+        explosion.style.width = `${explosionSize}px`
+        explosion.style.height = `${explosionSize}px`
+        
+        // Recalculate position (no offset, explosions fill the tile)
+        const x = parseInt(explosion.dataset.x)
+        const y = parseInt(explosion.dataset.y)
+        if (!isNaN(x) && !isNaN(y)) {
+            const tile = document.getElementById(`tile-${x}-${y}`)
+            if (tile) {
+                const grid = document.getElementById('grid')
+                if (grid) {
+                    const tileRect = tile.getBoundingClientRect()
+                    const gridRect = grid.getBoundingClientRect()
+                    explosion.style.left = `${tileRect.left - gridRect.left}px`
+                    explosion.style.top = `${tileRect.top - gridRect.top}px`
                 }
             }
         }

@@ -43,9 +43,32 @@ function createBombElement(bombId, x, y, timer = 3) {
 
     bombElement.appendChild(timerElement)
 
+    // Get current tile size for scaling
+    const tileSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-size')) || 40
+    const bombSize = Math.floor(tileSize * 0.75) // 75% of tile size
+    const bombOffset = Math.floor(tileSize * 0.125) // 5px at 40px tile (12.5%)
+    
+    // Set bomb size
+    bombElement.style.width = `${bombSize}px`
+    bombElement.style.height = `${bombSize}px`
+    
+    // Set timer font size (35% of tile size)
+    const timerSize = Math.floor(tileSize * 0.35)
+    timerElement.style.fontSize = `${timerSize}px`
+    
+    // Set CSS variables for fuse sizing
+    const fuseWidth = Math.max(1, Math.floor(tileSize * 0.05))
+    const fuseHeight = Math.floor(tileSize * 0.2)
+    const sparkSize = Math.floor(tileSize * 0.15)
+    bombElement.style.setProperty('--fuse-width', `${fuseWidth}px`)
+    bombElement.style.setProperty('--fuse-height', `${fuseHeight}px`)
+    bombElement.style.setProperty('--spark-size', `${sparkSize}px`)
+    bombElement.style.setProperty('--fuse-top-offset', `-${fuseHeight}px`)
+    bombElement.style.setProperty('--spark-top-offset', `-${fuseHeight + 2}px`)
+
     const position = getTilePosition(x,y)
-    bombElement.style.left = `${position.left + 5}px`
-    bombElement.style.top = `${position.top + 5}px`
+    bombElement.style.left = `${position.left + bombOffset}px`
+    bombElement.style.top = `${position.top + bombOffset}px`
 
     return bombElement
 }

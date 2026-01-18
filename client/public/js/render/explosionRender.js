@@ -37,6 +37,14 @@ function createExplosionElement(x, y, type = 'center', direction = null) {
         explosionElement.classList.add(direction)
     }
 
+    // Get current tile size for scaling
+    const tileSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-size')) || 40
+    const explosionSize = tileSize // Explosions fill the tile (100%)
+    
+    // Set explosion size
+    explosionElement.style.width = `${explosionSize}px`
+    explosionElement.style.height = `${explosionSize}px`
+
     explosionElement.style.left = `${position.left}px`
     explosionElement.style.top = `${position.top}px`
 
