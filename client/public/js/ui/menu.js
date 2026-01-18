@@ -118,6 +118,11 @@ export function showGameScreen(roomCode, gameMode = null) {
         initializeMobileControls()
     })
     
+    // Initialize instructions toggle
+    import('./instructions-toggle.js').then(({ initializeInstructionsToggle }) => {
+        initializeInstructionsToggle()
+    })
+    
     // Hide chat in single-player mode, show in multiplayer
     // Check both playerData.mode (client-side) and gameMode (server-side)
     import('./chat.js').then(({ setChatVisibility }) => {

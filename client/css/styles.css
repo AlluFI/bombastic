@@ -522,8 +522,51 @@ button:active:not(:disabled) {
     flex-shrink: 0;
 }
 
+/* Info toggle button */
+.info-toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0, 26, 51, 0.9);
+    border: 3px solid #0077b6;
+    color: #00bfff;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1401;
+    box-shadow: 
+        0 0 10px rgba(0, 119, 182, 0.4),
+        inset 0 0 15px rgba(0, 191, 255, 0.1);
+    transition: all 0.3s ease;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+    max-width: none;
+}
+
+.info-toggle:hover {
+    background: rgba(0, 119, 182, 0.3);
+    box-shadow: 
+        0 0 15px rgba(0, 191, 255, 0.6),
+        inset 0 0 20px rgba(0, 191, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.info-toggle[aria-expanded="true"] {
+    background: rgba(0, 119, 182, 0.5);
+    border-color: #00bfff;
+}
+
 /* Instructions panel (used in game-screen) */
 #ins {
+    position: absolute;
+    top: 60px;
+    right: 10px;
     width: 260px;
     max-width: 280px;
     background: linear-gradient(180deg, rgba(2,12,26,0.7), rgba(2,12,26,0.55));
@@ -540,6 +583,18 @@ button:active:not(:disabled) {
     height: auto;
     max-height: 320px;
     overflow-y: auto;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#ins:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#ins.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
 }
 
 #ins p:first-child {
@@ -1387,14 +1442,23 @@ button.loading::after {
         height: 100%;
     }
     
-    /* Make instructions panel more compact on mobile */
+    /* Make instructions panel and info button more compact on mobile */
+    .info-toggle {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+        top: 5px;
+        right: 5px;
+    }
+    
     #ins {
-        width: 100%;
-        max-width: 100%;
+        top: 45px;
+        right: 5px;
+        width: calc(100% - 10px);
+        max-width: calc(100% - 10px);
         font-size: 10px;
         padding: 6px 8px;
-        margin-bottom: 6px;
-        max-height: 60px;
+        max-height: 200px;
         overflow-y: auto;
     }
     
@@ -1431,6 +1495,11 @@ button.loading::after {
         font-size: 11px;
     }
     
+    /* Hide instructions by default on mobile - show via info icon */
+    #ins.hidden {
+        display: none !important;
+    }
+    
     /* Hide FPS counter on mobile to save space */
     #fps-counter {
         display: none;
@@ -1461,11 +1530,17 @@ button.loading::after {
         max-height: calc(100vh - 170px);
     }
     
+    .info-toggle {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+    
     #ins {
+        top: 38px;
         font-size: 9px;
         padding: 4px 6px;
-        max-height: 50px;
-        margin-bottom: 4px;
+        max-height: 150px;
     }
     
     #room-code {

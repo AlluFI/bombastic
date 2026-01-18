@@ -127,11 +127,9 @@
     transform: scale(0.9);
 }
 
-/* Hide mobile controls on desktop */
-@media (min-width: 769px) {
-    #mobile-controls {
-        display: none !important;
-    }
+/* Hide mobile controls - no longer using D-pad, using drag instead */
+#mobile-controls {
+    display: none !important;
 }
 
 /* Responsive adjustments for smaller mobile screens */
