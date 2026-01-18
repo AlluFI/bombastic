@@ -83,6 +83,46 @@ export function initializeMap(serverBoard, forceRender = false) {
 // The server always provides the board via the 'game:started' event
 // No local fallback needed - server is the single source of truth
 
+/**
+ * Calculate responsive tile size based on available space
+ */
+function getTileSize() {
+    const isMobile = window.innerWidth <= 768
+    const isSmallMobile = window.innerWidth <= 480
+    const isLandscape = window.innerWidth > window.innerHeight && window.innerWidth <= 768
+    
+    if (isLandscape) {
+        // Landscape: use viewport height
+        const availableHeight = window.innerHeight - 100 // Account for controls and padding
+        return Math.min(Math.floor(availableHeight / GRID_ROWS), 30)
+    } else if (isSmallMobile) {
+        // Small mobile: use viewport width with padding
+        const availableWidth = window.innerWidth - 40 // Account for padding
+        return Math.min(Math.floor(availableWidth / GRID_COLS), 28)
+    } else if (isMobile) {
+        // Mobile: use viewport width with padding
+        const availableWidth = window.innerWidth - 60 // Account for padding
+        return Math.min(Math.floor(availableWidth / GRID_COLS), 35)
+    } else {
+        // Desktop: default size
+        return 40
+    }
+}
+
+/**
+ * Update grid size responsively
+ */
+function updateGridSize() {
+    if (!gridElement) return
+    
+    const tileSize = getTileSize()
+    gridElement.style.width = `${GRID_COLS * tileSize}px`
+    gridElement.style.height = `${GRID_ROWS * tileSize}px`
+    gridElement.style.display = 'grid'
+    gridElement.style.gridTemplateColumns = `repeat(${GRID_COLS}, ${tileSize}px)`
+    gridElement.style.gridTemplateRows = `repeat(${GRID_ROWS}, ${tileSize}px)`
+}
+
 //render map to DOM
 function renderMap() {
     if (!gridElement) {
@@ -90,10 +130,8 @@ function renderMap() {
         return
     }
     
-    gridElement.style.width = `${GRID_COLS * 40}px`
-    gridElement.style.height = `${GRID_ROWS * 40}px`
-    gridElement.style.display = 'grid'
-    gridElement.style.gridTemplateColumns = `repeat(${GRID_COLS}, 40px)`
+    // Update grid size responsively
+    updateGridSize()
     
     // Only clear innerHTML on first render to avoid removing player elements
     // But preserve any player elements that might already exist
@@ -126,6 +164,17 @@ function renderMap() {
     
     gridRendered = true
 }
+
+// Update grid size on window resize
+let resizeTimeout
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout)
+    resizeTimeout = setTimeout(() => {
+        if (gridRendered) {
+            updateGridSize()
+        }
+    }, 100)
+})
 
 // Note: Initial render happens when server sends board via initializeMap()
 // No need to render empty map on page load
