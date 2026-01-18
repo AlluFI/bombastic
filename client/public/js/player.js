@@ -372,14 +372,13 @@ export function updatePlayerMovement(player) {
         return
     }
         
-    // Check if target position is walkable (not a block/wall, not a bomb, and not another player/NPC)
+    // Check if target position is walkable (not a block/wall, not a bomb)
+    // Note: Players and NPCs can now overlap - no collision check needed
     const isWalkable = map[newX] && map[newX][newY] === 'empty'
     const bombPositions = getBombPositions()
     const hasBomb = bombPositions.some(bomb => bomb.x === newX && bomb.y === newY)
-    const playersAtTarget = getPlayersAtPosition(newX, newY)
-    const hasPlayer = playersAtTarget.length > 0 && !playersAtTarget.some(p => p.id === player.id)
     
-    if (isWalkable && !hasBomb && !hasPlayer) {
+    if (isWalkable && !hasBomb) {
         player.x = newX
         player.y = newY
         player.updatePosition()

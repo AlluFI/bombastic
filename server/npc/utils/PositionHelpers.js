@@ -59,20 +59,7 @@ function isWalkable(npc, pos) {
     }
   }
   
-  // Check if there's another player or NPC at this position (players/NPCs block movement)
-  // IMPORTANT: Only check ALIVE players - dead players don't block movement
-  if (npc.gameState && npc.gameState.players && npc.gameState.players.length > 0) {
-    const hasPlayer = npc.gameState.players.some(p => 
-      p.id !== npc.id && 
-      p.alive === true && // Explicitly check for true (only alive players block)
-      p.x === pos.x && 
-      p.y === pos.y &&
-      p.x >= 0 && p.y >= 0 // Also exclude off-board positions (-1, -1)
-    )
-    if (hasPlayer) {
-      return false // Another player/NPC blocks movement
-    }
-  }
+  // Note: Players and NPCs can now overlap - no collision check needed
   
   // Prefer navigation grid if available (more efficient, already processed)
   // BUT: Double-check bombs here too (defensive check in case gameState.bombs was stale)
