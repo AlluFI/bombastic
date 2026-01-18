@@ -2,15 +2,15 @@
 
 #mobile-controls {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     z-index: 1500;
     pointer-events: none;
-    gap: 20px;
+    gap: 15px;
     max-width: 600px;
     margin: 0 auto;
 }
@@ -137,26 +137,26 @@
 /* Responsive adjustments for smaller mobile screens */
 @media (max-width: 480px) {
     #mobile-controls {
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
-        gap: 15px;
+        bottom: 5px;
+        left: 5px;
+        right: 5px;
+        gap: 10px;
     }
     
     .mobile-dpad {
-        width: 120px;
-        height: 120px;
+        width: 110px;
+        height: 110px;
     }
     
     .dpad-btn {
-        font-size: 24px;
+        font-size: 20px;
         border-width: 2px;
     }
     
     .mobile-bomb-btn {
-        width: 70px;
-        height: 70px;
-        font-size: 32px;
+        width: 65px;
+        height: 65px;
+        font-size: 28px;
         border-width: 3px;
     }
 }

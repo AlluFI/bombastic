@@ -92,17 +92,27 @@ function getTileSize() {
     const isLandscape = window.innerWidth > window.innerHeight && window.innerWidth <= 768
     
     if (isLandscape) {
-        // Landscape: use viewport height
-        const availableHeight = window.innerHeight - 100 // Account for controls and padding
+        // Landscape: use viewport height, account for HUD
+        const availableHeight = window.innerHeight - 120 // Account for HUD, controls, padding
         return Math.min(Math.floor(availableHeight / GRID_ROWS), 30)
     } else if (isSmallMobile) {
-        // Small mobile: use viewport width with padding
-        const availableWidth = window.innerWidth - 40 // Account for padding
-        return Math.min(Math.floor(availableWidth / GRID_COLS), 28)
+        // Small mobile portrait: calculate based on available vertical space
+        // Account for: instructions (~60px), HUD elements (~200px), mobile controls (~170px), padding (20px)
+        const availableHeight = window.innerHeight - 450
+        const availableWidth = window.innerWidth - 20 // Account for padding
+        // Use the smaller dimension to ensure everything fits
+        const heightBased = Math.floor(availableHeight / GRID_ROWS)
+        const widthBased = Math.floor(availableWidth / GRID_COLS)
+        return Math.min(Math.min(heightBased, widthBased), 24)
     } else if (isMobile) {
-        // Mobile: use viewport width with padding
-        const availableWidth = window.innerWidth - 60 // Account for padding
-        return Math.min(Math.floor(availableWidth / GRID_COLS), 35)
+        // Mobile portrait: calculate based on available vertical space
+        // Account for: instructions (~70px), HUD elements (~250px), mobile controls (~180px), padding (20px)
+        const availableHeight = window.innerHeight - 520
+        const availableWidth = window.innerWidth - 40 // Account for padding
+        // Use the smaller dimension to ensure everything fits
+        const heightBased = Math.floor(availableHeight / GRID_ROWS)
+        const widthBased = Math.floor(availableWidth / GRID_COLS)
+        return Math.min(Math.min(heightBased, widthBased), 30)
     } else {
         // Desktop: default size
         return 40
