@@ -1,5 +1,5 @@
 import { keys } from "./controls.js"
-import { map } from "./grid.js"
+import { map, scalePlayerIfNeeded } from "./grid.js"
 import { tryPlaceBomb, getBombPositions } from "./game/bombController.js"
 import { isPlayerImmortal, initializePlayerStats } from "./game/powerupController.js"
 
@@ -195,6 +195,10 @@ export function createLocalPlayer(id, name, x, y, color, playerData = {}) {
     }
     
     gridElement.appendChild(localPlayer.element)
+    
+    // Scale player element based on current tile size
+    scalePlayerIfNeeded(localPlayer.element)
+    
     // Update position after element is added to DOM
     // Use requestAnimationFrame to ensure grid is rendered
     requestAnimationFrame(() => {
@@ -227,6 +231,9 @@ export function createRemotePlayer(playerData) {
     }
     
     gridElement.appendChild(player.element)
+    
+    // Scale player element based on current tile size
+    scalePlayerIfNeeded(player.element)
     
     // Initialize player stats for powerup tracking
    

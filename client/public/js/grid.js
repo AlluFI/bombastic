@@ -136,6 +136,85 @@ function updateGridSize() {
     gridElement.style.display = 'grid'
     gridElement.style.gridTemplateColumns = `repeat(${GRID_COLS}, ${tileSize}px)`
     gridElement.style.gridTemplateRows = `repeat(${GRID_ROWS}, ${tileSize}px)`
+    
+    // Update CSS custom property for tile size so other elements can scale
+    document.documentElement.style.setProperty('--tile-size', `${tileSize}px`)
+    
+    // Scale player elements
+    scalePlayerElements(tileSize)
+    
+    // Scale powerup elements
+    scalePowerupElements(tileSize)
+}
+
+/**
+ * Scale a single player element based on tile size
+ */
+export function scalePlayerIfNeeded(playerElement) {
+    const tileSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-size')) || 40
+    const playerWidth = Math.floor(tileSize * 0.75)
+    const playerHeight = Math.floor(tileSize * 0.875)
+    playerElement.style.width = `${playerWidth}px`
+    playerElement.style.height = `${playerHeight}px`
+    
+    // Scale immortal icon if applicable
+    if (playerElement.classList.contains('immortal')) {
+        const immortalIconSize = Math.floor(tileSize * 0.4) // 16px at 40px tile
+        playerElement.style.setProperty('--immortal-icon-size', `${immortalIconSize}px`)
+    }
+}
+
+/**
+ * Scale all player elements based on tile size
+ */
+function scalePlayerElements(tileSize) {
+    const players = document.querySelectorAll('.player')
+    // Player size: 75% of tile width, 87.5% of tile height (30/40, 35/40 ratio from original)
+    const playerWidth = Math.floor(tileSize * 0.75)
+    const playerHeight = Math.floor(tileSize * 0.875)
+    
+    players.forEach(player => {
+        player.style.width = `${playerWidth}px`
+        player.style.height = `${playerHeight}px`
+    })
+    
+    // Scale immortal icon
+    const immortalIconSize = Math.floor(tileSize * 0.4) // 16px at 40px tile
+    document.querySelectorAll('.player.immortal').forEach(player => {
+        player.style.setProperty('--immortal-icon-size', `${immortalIconSize}px`)
+    })
+}
+
+/**
+ * Scale powerup elements based on tile size
+ */
+function scalePowerupElements(tileSize) {
+    const powerups = document.querySelectorAll('.powerup')
+    // Powerup size: 50% of tile size (20px at 40px tile)
+    const powerupSize = Math.floor(tileSize * 0.5)
+    
+    powerups.forEach(powerup => {
+        powerup.style.width = `${powerupSize}px`
+        powerup.style.height = `${powerupSize}px`
+        powerup.style.fontSize = `${powerupSize}px`
+        powerup.style.lineHeight = `${powerupSize}px`
+        
+        // Recalculate position based on new size
+        const x = parseInt(powerup.dataset.x)
+        const y = parseInt(powerup.dataset.y)
+        if (!isNaN(x) && !isNaN(y)) {
+            const tile = document.getElementById(`tile-${x}-${y}`)
+            if (tile) {
+                const grid = document.getElementById('grid')
+                if (grid) {
+                    const tileRect = tile.getBoundingClientRect()
+                    const gridRect = grid.getBoundingClientRect()
+                    powerup.style.left = `${(tileRect.left - gridRect.left) + (tileRect.width / 2) - (powerupSize / 2)}px`
+                    powerup.style.top = `${(tileRect.top - gridRect.top) + (tileRect.height / 2) - (powerupSize / 2)}px`
+                }
+            }
+        }
+    })
 }
 
 //render map to DOM

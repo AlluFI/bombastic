@@ -157,17 +157,22 @@ export function renderPowerup(powerupData) {
     const tileRect = tileElement.getBoundingClientRect()
     const gridRect = grid.getBoundingClientRect()
     
+    // Get tile size from CSS custom property or calculate from grid
+    const tileSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-size')) || 
+                     (tileRect.width || 40)
+    const powerupSize = Math.floor(tileSize * 0.5) // 50% of tile size
+    
     powerupElement.style.position = 'absolute'
-    powerupElement.style.left = `${(tileRect.left - gridRect.left) + (tileRect.width / 2) - 10}px`
-    powerupElement.style.top = `${(tileRect.top - gridRect.top) + (tileRect.height / 2) - 10}px`
-    powerupElement.style.width = '20px'
-    powerupElement.style.height = '20px'
-    powerupElement.style.fontSize = '20px'
+    powerupElement.style.left = `${(tileRect.left - gridRect.left) + (tileRect.width / 2) - (powerupSize / 2)}px`
+    powerupElement.style.top = `${(tileRect.top - gridRect.top) + (tileRect.height / 2) - (powerupSize / 2)}px`
+    powerupElement.style.width = `${powerupSize}px`
+    powerupElement.style.height = `${powerupSize}px`
+    powerupElement.style.fontSize = `${powerupSize}px`
     powerupElement.style.zIndex = '100'
     powerupElement.style.pointerEvents = 'none'
     powerupElement.style.animation = 'powerup-float 2s ease-in-out infinite'
     powerupElement.style.textAlign = 'center'
-    powerupElement.style.lineHeight = '20px'
+    powerupElement.style.lineHeight = `${powerupSize}px`
     powerupElement.style.display = 'flex'
     powerupElement.style.alignItems = 'center'
     powerupElement.style.justifyContent = 'center'

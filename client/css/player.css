@@ -1,11 +1,17 @@
 .player {
-    width: 30px;
-    height: 35px;
+    /* Size will be set by JavaScript based on tile size */
+    /* Default: 30px x 35px for 40px tiles (75% x 87.5%) */
     position: absolute;
     z-index: 3;
     transition: top 0.1s linear, left 0.1s linear;
     background-color: transparent;
     transform: translate(6%, -2%);
+}
+
+/* Default sizes for desktop (40px tiles) */
+.player {
+    width: 30px;
+    height: 35px;
 }
 
 .player svg {
@@ -46,10 +52,10 @@
 .player.immortal::before {
     content: '✨';
     position: absolute;
-    top: -20px;
+    top: calc(var(--immortal-icon-size, 16px) * -1.25);
     left: 50%;
     transform: translateX(-50%);
-    font-size: 16px;
+    font-size: var(--immortal-icon-size, 16px);
     animation: float-up 2s ease-in-out infinite;
     pointer-events: none;
     z-index: 5;
