@@ -17,6 +17,7 @@ import { initializeSoundManager, playSound } from "./audio/soundManager.js"
 import { initializeConnectionStatus, updateConnectionStatus, setReconnectAttempts } from "./ui/connection-status.js"
 import { applyDeltaUpdate, resetCachedGameState } from "./delta-updates.js"
 import { initializeErrorHandlers, getSocketErrorMessage } from "./error-handler.js"
+import { initializeKeyboardNavigation } from "./ui/keyboard-navigation.js"
 import "./ui/audio-toggle.js"
 
 
@@ -34,6 +35,9 @@ export { socket };
 
 // Initialize global error handlers first
 initializeErrorHandlers()
+
+// Initialize keyboard navigation
+initializeKeyboardNavigation()
 
 initializeMenu()
 initializePauseMenu()

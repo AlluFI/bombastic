@@ -8,6 +8,7 @@ const allHandlers  = require('./socket-handlers')
 const gameLoop = require('./game-loop')
 const { logger } = require('./logger')
 const metrics = require('./metrics')
+const auth = require('./auth')
 
 
 //socket.io setup
@@ -68,11 +69,22 @@ logger.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, 'Server 
 io.on('connection', socket => {
   logger.info({ socketId: socket.id, transport: socket.conn.transport.name }, 'Client connected')
   metrics.recordConnection()
+  
+  // Create session for this connection
+  const sessionId = auth.createSession(socket.id)
+  socket.sessionId = sessionId
+  socket.emit('auth:session', { sessionId })
+  
   allHandlers(io, socket, rooms)
   
   socket.on('disconnect', (reason) => {
     logger.info({ socketId: socket.id, reason, roomCount: rooms.size }, 'Client disconnected')
     metrics.recordDisconnection()
+    
+    // Cleanup session on disconnect
+    if (socket.sessionId) {
+      auth.deleteSession(socket.sessionId)
+    }
   })
 })
 

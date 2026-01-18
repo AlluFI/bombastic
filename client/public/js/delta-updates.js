@@ -10,7 +10,7 @@ let cachedGameState = null;
  * @param {Object} delta - Delta update from server
  * @returns {Object} Complete game state after applying delta
  */
-function applyDeltaUpdate(delta) {
+export function applyDeltaUpdate(delta) {
   // If delta is a full state update, replace cached state
   if (delta.full) {
     cachedGameState = {
@@ -139,7 +139,7 @@ function applyDeltaUpdate(delta) {
 /**
  * Reset cached game state (call when game starts/ends)
  */
-function resetCachedGameState() {
+export function resetCachedGameState() {
   cachedGameState = null;
 }
 
@@ -147,6 +147,6 @@ function resetCachedGameState() {
  * Get current cached game state
  * @returns {Object|null} Cached game state or null
  */
-function getCachedGameState() {
+export function getCachedGameState() {
   return cachedGameState;
 }

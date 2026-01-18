@@ -19,9 +19,9 @@
             <button id="audio-toggle" class="audio-toggle" aria-label="Toggle sound">🔊</button>
             <h1>Bombastic Live</h1>
             <!-- Game Mode Selection at top -->
-            <div class="mode-toggle">
-                <button id="multi-mode-btn" class="mode-btn active">Multi</button>
-                <button id="single-mode-btn" class="mode-btn">Single</button>
+            <div class="mode-toggle" role="tablist" aria-label="Game mode selection">
+                <button id="multi-mode-btn" class="mode-btn active" role="tab" aria-selected="true" aria-controls="multi-player-section">Multi</button>
+                <button id="single-mode-btn" class="mode-btn" role="tab" aria-selected="false" aria-controls="single-player-section">Single</button>
             </div>
             
             <!-- Hidden select for compatibility -->
@@ -43,20 +43,20 @@
                 <h2>Join A Game</h2>
                 <div class="menue-section">
                     <label for="join-input">Lobby Code</label>
-                    <input type="text" id="join-input" placeholder="" spellcheck="false">
+                    <input type="text" id="join-input" placeholder="Enter room code" spellcheck="false" aria-label="Lobby code input" aria-required="true">
                 </div>
                 <div class="menue-section">
                     <label for="player-name-join">Your Name</label>
-                    <input type="text" id="player-name-join" placeholder="" maxlength="12" spellcheck="false">
+                    <input type="text" id="player-name-join" placeholder="Enter your name" maxlength="12" spellcheck="false" aria-label="Your name for joining game" aria-required="true">
                 </div>
-                <button id="join-button" class="menue-section" disabled>Join</button>
+                <button id="join-button" class="menue-section" disabled aria-label="Join game room">Join</button>
                 
                 <h2>Create A Lobby</h2>
                 <div class="menue-section">
                     <label for="player-name">Your Name</label>
-                    <input type="text" id="player-name" placeholder="" required minlength="2" maxlength="12" spellcheck="false">
+                    <input type="text" id="player-name" placeholder="Enter your name" required minlength="2" maxlength="12" spellcheck="false" aria-label="Your name for hosting game" aria-required="true">
                 </div>
-                <button id="host-button" class="menue-section" disabled>Create Lobby</button>
+                <button id="host-button" class="menue-section" disabled aria-label="Create new game lobby">Create Lobby</button>
             </div>
             
             <!-- Single-player section -->
@@ -64,11 +64,11 @@
                 <h2>Single player</h2>
                 <div class="menue-section">
                     <label for="player-name-single">Your Name</label>
-                    <input type="text" id="player-name-single" placeholder="" required minlength="2" maxlength="12" spellcheck="false">
+                    <input type="text" id="player-name-single" placeholder="Enter your name" required minlength="2" maxlength="12" spellcheck="false" aria-label="Your name for single player game" aria-required="true">
                 </div>
                 <div id="npc-count-section" class="menue-section">
                     <label for="npc-count">Number of Bots</label>
-                    <select id="npc-count">
+                    <select id="npc-count" aria-label="Select number of bot opponents">
                         <option value="1">1 Bot</option>
                         <option value="2" selected>2 Bots</option>
                         <option value="3">3 Bots</option>
@@ -77,8 +77,8 @@
                 <div id="npc-difficulties-section" class="menue-section">
                     <h2>Bot Configuration</h2>
                     <div style="margin-bottom: 15px; display: flex; gap: 10px;">
-                        <button id="custom-mode-btn" class="mode-toggle-btn active" style="flex: 1; padding: 8px; background: rgba(0, 191, 255, 0.2); border: 2px solid #0077b6; border-radius: 4px; color: #00bfff; cursor: pointer;">Custom</button>
-                        <button id="preset-mode-btn" class="mode-toggle-btn" style="flex: 1; padding: 8px; background: rgba(0, 119, 182, 0.1); border: 2px solid #0077b6; border-radius: 4px; color: #00bfff; cursor: pointer;">Presets</button>
+                        <button id="custom-mode-btn" class="mode-toggle-btn active" style="flex: 1; padding: 8px; background: rgba(0, 191, 255, 0.2); border: 2px solid #0077b6; border-radius: 4px; color: #00bfff; cursor: pointer;" aria-label="Custom bot configuration mode" aria-pressed="true">Custom</button>
+                        <button id="preset-mode-btn" class="mode-toggle-btn" style="flex: 1; padding: 8px; background: rgba(0, 119, 182, 0.1); border: 2px solid #0077b6; border-radius: 4px; color: #00bfff; cursor: pointer;" aria-label="Preset bot configuration mode" aria-pressed="false">Presets</button>
                     </div>
                     <div id="npc-custom-config">
                         <div id="npc-difficulty-list">
@@ -91,7 +91,7 @@
                         </div>
                     </div>
                 </div>
-                <button id="start-button" class="menue-section">Start Single-Player Game</button>
+                <button id="start-button" class="menue-section" aria-label="Start single player game">Start Single-Player Game</button>
             </div>
             </div>
         </div>
@@ -113,9 +113,9 @@
                 </div>
                 
                 <div id="lobby-actions">
-                    <button id="start-game-button" class="lobby-button" disabled>Start Game</button>
+                    <button id="start-game-button" class="lobby-button" disabled aria-label="Start the game" aria-describedby="start-game-hint">Start Game</button>
                     <p id="start-game-hint" class="lobby-hint">Need at least 2 players to start</p>
-                    <button id="leave-lobby-button" class="lobby-button secondary">Leave Lobby</button>
+                    <button id="leave-lobby-button" class="lobby-button secondary" aria-label="Leave the lobby">Leave Lobby</button>
                 </div>
             </div>
         </div>
@@ -158,8 +158,8 @@
         
         <div id="pause-overlay" class="hidden overlay">
             <h2 id="pause-message">Paused</h2>
-            <button id="resume-id">Resume</button>
-            <button id="quit-button">Quit</button>
+            <button id="resume-id" aria-label="Resume the game">Resume</button>
+            <button id="quit-button" aria-label="Quit the game">Quit</button>
         </div>
 
         <div id="end-screen" class="screen hidden">
@@ -169,7 +169,7 @@
                 <div class="final-scoreboard-title">Final Scores</div>
                 <div id="final-scoreboard-list" class="final-scoreboard"></div>
             </div>
-            <button id="restart-button">Back To Lobby</button>
+            <button id="restart-button" aria-label="Return to lobby">Back To Lobby</button>
         </div>
         
     </div>
