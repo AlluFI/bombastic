@@ -46,8 +46,8 @@ export function initializeConnectionStatus() {
             
             @media screen and (max-width: 768px) {
                 .connection-status {
-                    top: 60px;
-                    right: 5px;
+                    top: 95px;
+                    right: 10px;
                     font-size: 12px;
                     padding: 6px 12px;
                 }

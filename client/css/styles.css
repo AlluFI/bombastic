@@ -4,11 +4,18 @@
     box-sizing: border-box;
 }
 
+html {
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+}
+
 body {
     margin: 0;
     font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
     background: linear-gradient(180deg, #001a33 0%, #1b2d4e 50%, #001a33 100%);
     min-height: 100vh;
+    overscroll-behavior-y: none;
+    touch-action: pan-y;
 }
 
 .hidden {
@@ -1490,16 +1497,16 @@ button.loading::after {
         width: 35px;
         height: 35px;
         font-size: 18px;
-        top: 5px;
-        right: 5px;
+        top: 50px;
+        right: 10px;
     }
     
     .pause-toggle {
         width: 35px;
         height: 35px;
         font-size: 18px;
-        top: 5px;
-        right: 50px;
+        top: 50px;
+        right: 55px;
     }
     
     #ins {

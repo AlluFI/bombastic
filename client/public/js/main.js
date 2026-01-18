@@ -19,6 +19,7 @@ import { applyDeltaUpdate, resetCachedGameState } from "./delta-updates.js"
 import { initializeErrorHandlers, getSocketErrorMessage } from "./error-handler.js"
 import { initializeKeyboardNavigation } from "./ui/keyboard-navigation.js"
 import { initializeMobileControls } from "./ui/mobile-controls.js"
+import { initializeSwipePrevention } from "./ui/swipe-prevention.js"
 import "./ui/audio-toggle.js"
 
 
@@ -48,6 +49,7 @@ initializeChat(socket)
 initializeLobby()
 initializeSoundManager()
 initializeConnectionStatus()
+initializeSwipePrevention()
 
 // Store reconnection data
 let reconnectionData = {
