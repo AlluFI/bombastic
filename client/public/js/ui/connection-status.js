@@ -44,6 +44,15 @@ export function initializeConnectionStatus() {
                 transition: all 0.3s ease;
             }
             
+            @media screen and (max-width: 768px) {
+                .connection-status {
+                    top: 60px;
+                    right: 5px;
+                    font-size: 12px;
+                    padding: 6px 12px;
+                }
+            }
+            
             .connection-status.disconnected {
                 background: rgba(220, 53, 69, 0.9);
             }
@@ -59,6 +68,13 @@ export function initializeConnectionStatus() {
                 background: #28a745;
                 display: inline-block;
                 animation: pulse 2s infinite;
+            }
+            
+            @media screen and (max-width: 768px) {
+                .connection-indicator {
+                    width: 8px;
+                    height: 8px;
+                }
             }
             
             .connection-status.disconnected .connection-indicator {
