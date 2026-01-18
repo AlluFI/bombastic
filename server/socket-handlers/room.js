@@ -3,6 +3,7 @@ const {emitError} = require('../errorHandler.js')
 const {sanitizePlayerName, validateRoomCode} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
 const { logRoomEvent, logPlayerAction, logSocketEvent } = require('../logger')
+const metrics = require('../metrics')
 
 module.exports = function roomHandlers(io, socket, rooms) {
 
@@ -26,6 +27,7 @@ module.exports = function roomHandlers(io, socket, rooms) {
     logSocketEvent(socket.id, 'room:host', { name: sanitizedName })
     const roomId = generateRoomCode() 
     logRoomEvent(roomId, 'Creating room for host', { socketId: socket.id, playerName: sanitizedName })
+    metrics.recordRoomCreated()
     
     // Create room data structure with a NEW Map for players
     const now = Date.now()

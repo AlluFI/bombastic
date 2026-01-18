@@ -1,5 +1,95 @@
 # API Documentation
 
+This document describes all Socket.io events and HTTP endpoints used for client-server communication.
+
+## HTTP Endpoints
+
+### `GET /health`
+Health check endpoint for monitoring server status.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "timestamp": 1234567890123,
+  "uptime": 3600,
+  "rooms": 5,
+  "environment": "production"
+}
+```
+
+---
+
+### `GET /metrics`
+Metrics endpoint for monitoring game health and performance.
+
+**Response:**
+```json
+{
+  "timestamp": 1234567890123,
+  "uptime": 3600,
+  "connections": {
+    "total": 150,
+    "active": 12,
+    "totalDisconnections": 138,
+    "connectionRate": 2
+  },
+  "rooms": {
+    "totalCreated": 50,
+    "totalDeleted": 45,
+    "active": 5,
+    "activePlayers": 12
+  },
+  "games": {
+    "totalStarted": 45,
+    "totalEnded": 40,
+    "averageDuration": 180000,
+    "averageDurationFormatted": "3m 0s",
+    "totalDurationsTracked": 40
+  },
+  "errors": {
+    "total": 10,
+    "byType": {
+      "INVALID_MOVEMENT": 3,
+      "ROOM_NOT_FOUND": 2,
+      "RATE_LIMIT_EXCEEDED": 5
+    },
+    "recent": [
+      {
+        "timestamp": 1234567890000,
+        "code": "INVALID_MOVEMENT",
+        "message": "Invalid movement data"
+      }
+    ],
+    "errorRate": 0
+  },
+  "actions": {
+    "moves": 5000,
+    "bombs": 1200,
+    "chat": 300,
+    "powerups": 150,
+    "total": 6650
+  },
+  "rateLimiting": {
+    "MOVE": 25,
+    "BOMB": 10,
+    "CHAT": 5,
+    "POWERUP_PICKUP": 2,
+    "total": 42
+  }
+}
+```
+
+**Metrics Explained:**
+- **connections**: Total and active connection counts, connection rate per minute
+- **rooms**: Room creation/deletion counts, current active rooms and players
+- **games**: Game start/end counts, average game duration
+- **errors**: Total errors, breakdown by error code, recent error history
+- **actions**: Count of player actions (moves, bombs, chat, powerups)
+- **rateLimiting**: Count of rate limit hits by action type
+
+---
+
 ## Socket.io Event Protocol
 
 This document describes all Socket.io events used for client-server communication.

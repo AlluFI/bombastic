@@ -2,6 +2,7 @@ const {validateRoom, validatePlayer, emitError} = require('../errorHandler.js')
 const {isRateLimited} = require('../rateLimiter.js')
 const {validatePowerupPickup} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
+const metrics = require('../metrics')
 // const { logPlayerAction } = require('../logger')
 
 module.exports = function powerupHandlers(io, socket, rooms) {
@@ -11,6 +12,9 @@ module.exports = function powerupHandlers(io, socket, rooms) {
     if (isRateLimited(socket, 'POWERUP_PICKUP')) {
       return
     }
+    
+    // Record action
+    metrics.recordAction('POWERUP_PICKUP')
     
     // Validate input
     if (!validatePowerupPickup(data)) {

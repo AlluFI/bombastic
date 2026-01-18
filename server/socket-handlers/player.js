@@ -3,6 +3,7 @@ const { validateRoom, validatePlayer, emitError } = require('../errorHandler.js'
 const { isRateLimited } = require('../rateLimiter.js')
 const { validateMovement } = require('../validation.js')
 const { logPlayerAction } = require('../logger')
+const metrics = require('../metrics')
 
 module.exports = function playerHandlers(io, socket, rooms) {
 
@@ -14,6 +15,9 @@ module.exports = function playerHandlers(io, socket, rooms) {
     if (isRateLimited(socket, 'MOVE')) {
       return
     }
+    
+    // Record action
+    metrics.recordAction('MOVE')
     
     // Validate input
     if (!validateMovement(moveData)) {

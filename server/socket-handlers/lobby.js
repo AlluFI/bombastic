@@ -1,5 +1,6 @@
 const {getActiveLobbies, syncRoomGameState, broadcastLobbyUpdate} = require('../utils')
 const { logPlayerAction, logRoomEvent } = require('../logger')
+const metrics = require('../metrics')
 
 module.exports = function lobbyHandlers(io, socket, rooms) {
 	 // Handle lobby list request
@@ -54,6 +55,7 @@ module.exports = function lobbyHandlers(io, socket, rooms) {
     if (room.players.size === 0) {
       // Delete empty room
       rooms.delete(roomCode)
+      metrics.recordRoomDeleted()
       // logRoomEvent(roomCode, 'Room deleted (empty after lobby leave)')
       // Broadcast lobby update (room removed)
       broadcastLobbyUpdate(io, rooms)

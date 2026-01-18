@@ -5,6 +5,7 @@
  */
 
 const { logError, logWarning } = require('./logger');
+const metrics = require('./metrics');
 
 /**
  * Standard error response format
@@ -35,6 +36,9 @@ function emitError(socket, message, code) {
   
   const error = createError(message, code);
   socket.emit('error', error);
+  
+  // Record error in metrics
+  metrics.recordError(code || 'UNKNOWN_ERROR', message);
   
   // Log error for debugging
   logError(message, { code, socketId: socket.id, errorCode: code });

@@ -3,6 +3,7 @@ const {isRateLimited} = require('../rateLimiter.js')
 const {validateBombPlacement, validateCoordinates} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
 const { logPlayerAction, logGameEvent } = require('../logger')
+const metrics = require('../metrics')
 
 module.exports = function bombHandlers(io, socket, rooms) {
 
@@ -29,6 +30,9 @@ module.exports = function bombHandlers(io, socket, rooms) {
         // });
         return
       }
+      
+      // Record action
+      metrics.recordAction('BOMB')
       
       // Validate input
       if (!validateBombPlacement(bombData)) {

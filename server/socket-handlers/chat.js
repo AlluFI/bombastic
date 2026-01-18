@@ -2,6 +2,7 @@ const {validateRoom, validatePlayer, emitError} = require('../errorHandler.js')
 const {isRateLimited} = require('../rateLimiter.js')
 const {sanitizeChatMessage} = require('../validation.js')
 const CONSTANTS = require('../constants.js')
+const metrics = require('../metrics')
 
 module.exports = function chatHandlers(io, socket, rooms) {
 	//Send a message 
@@ -10,6 +11,9 @@ module.exports = function chatHandlers(io, socket, rooms) {
     if (isRateLimited(socket, 'CHAT')) {
       return
     }
+    
+    // Record action
+    metrics.recordAction('CHAT')
     
     // Validate input
     if (!data || typeof data !== 'object' || typeof data.chatMsg !== 'string') {

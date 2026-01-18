@@ -1,5 +1,6 @@
 const {syncRoomGameState, calculateExplosionBlocks, calculateExplosionTiles, handleNPCAction, checkGameEnd} = require('./utils')
 const CONSTANTS = require('./constants')
+const metrics = require('./metrics')
 // const { logRoomEvent, logPlayerAction, logNPCAction, logGameEvent, logger } = require('./logger')
 
 module.exports = function gameLoop(io, rooms) {
@@ -33,6 +34,7 @@ module.exports = function gameLoop(io, rooms) {
       roomsToDelete.forEach(roomId => {
         // logRoomEvent(roomId, 'Cleaning up empty room');
         rooms.delete(roomId);
+        metrics.recordRoomDeleted();
       });
     }, CONSTANTS.ROOM_STATUS_LOG_INTERVAL_MS); // Check every minute
     
@@ -606,6 +608,13 @@ module.exports = function gameLoop(io, rooms) {
     if (gameEndResult) {
       // Game has ended - stop the game and notify all players
       room.gameState.isRunning = false;
+      
+      // Calculate game duration and record metrics
+      if (room.gameStartTime) {
+        const gameDuration = Date.now() - room.gameStartTime;
+        metrics.recordGameEnd(gameDuration);
+      }
+      
       room.gameStartTime = null; // Clear timer
       
       // Emit game end event to all players in the room

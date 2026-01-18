@@ -6,6 +6,7 @@ const roomHandlers = require('./room')
 const npcHandlers = require('./npc-handlers')
 const playerHandlers = require('./player')
 const powerupHandlers = require('./powerup')
+const reconnectionHandlers = require('./reconnection')
 const { cleanupRateLimit } = require('../rateLimiter.js')
 
 function allHandlers(io, socket, rooms) {
@@ -22,6 +23,7 @@ function allHandlers(io, socket, rooms) {
     npcHandlers(io, socket, rooms)
     playerHandlers(io, socket, rooms)
     powerupHandlers(io, socket, rooms)
+    reconnectionHandlers(io, socket, rooms)
 }
 
 module.exports = allHandlers

@@ -6,6 +6,7 @@
  */
 
 const CONSTANTS = require('./constants');
+const metrics = require('./metrics');
 
 // Store rate limit data per socket
 const rateLimitStore = new Map();
@@ -50,6 +51,7 @@ function checkRateLimit(socketId, action) {
   
   // Check if we've exceeded the limit
   if (data.requests.length >= limits.max) {
+    metrics.recordRateLimitHit(action);
     return false; // Rate limited
   }
   

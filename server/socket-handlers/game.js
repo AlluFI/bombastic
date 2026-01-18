@@ -1,5 +1,7 @@
 const {syncRoomGameState, broadcastLobbyUpdate, generateBoard, startPos} = require('../utils.js')
 const { validateRoom, validatePlayer, emitError } = require('../errorHandler.js')
+const metrics = require('../metrics')
+const { storeDisconnectedPlayer } = require('./reconnection.js')
 
 
 
@@ -67,6 +69,11 @@ module.exports = function gameHandlers(io, socket, rooms) {
     const roomCode = socket.roomCode
     const player = room.players.get(socket.id)
     
+    // Store player data for potential reconnection (only if game is running)
+    if (player && room.gameState.isRunning) {
+      storeDisconnectedPlayer(player, roomCode)
+    }
+    
     // Remove player from room
     room.players.delete(socket.id);
 
@@ -81,6 +88,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     if (shouldDeleteRoom) {
       // Delete room
       rooms.delete(roomCode)
+      metrics.recordRoomDeleted()
       // Broadcast lobby update (room removed)
       broadcastLobbyUpdate(io, rooms)
       return
@@ -200,6 +208,7 @@ module.exports = function gameHandlers(io, socket, rooms) {
     // Start the game
     room.gameState.isRunning = true
     room.gameStartTime = Date.now() // Track when game started for timer synchronization
+    metrics.recordGameStart()
     syncRoomGameState(room)
     
     // Broadcast game started event to all players in room

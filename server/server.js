@@ -7,6 +7,7 @@ const CONSTANTS = require('./constants')
 const allHandlers  = require('./socket-handlers')
 const gameLoop = require('./game-loop')
 const { logger } = require('./logger')
+const metrics = require('./metrics')
 
 
 //socket.io setup
@@ -48,21 +49,42 @@ app.get('/health', (req, res) => {
   })
 })
 
+// Metrics endpoint
+app.get('/metrics', (req, res) => {
+  // Update active counts before returning metrics
+  let totalPlayers = 0
+  rooms.forEach(room => {
+    totalPlayers += room.players.size
+  })
+  metrics.updateActiveCounts(rooms.size, totalPlayers)
+  
+  res.status(200).json(metrics.getMetrics())
+})
+
 // Log server start
 logger.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, 'Server starting')
 
 //Connect client
 io.on('connection', socket => {
   logger.info({ socketId: socket.id, transport: socket.conn.transport.name }, 'Client connected')
+  metrics.recordConnection()
   allHandlers(io, socket, rooms)
   
   socket.on('disconnect', (reason) => {
     logger.info({ socketId: socket.id, reason, roomCount: rooms.size }, 'Client disconnected')
+    metrics.recordDisconnection()
   })
 })
 
-// Periodic logging of active rooms for debugging
+// Periodic logging of active rooms for debugging and metrics update
 setInterval(() => {
+  // Update metrics with current counts
+  let totalPlayers = 0
+  rooms.forEach(room => {
+    totalPlayers += room.players.size
+  })
+  metrics.updateActiveCounts(rooms.size, totalPlayers)
+  
   if (rooms.size > 0) {
     const roomSummary = Array.from(rooms.entries()).map(([code, room]) => ({
       code,

@@ -14,6 +14,7 @@ import { initializeMap } from "./grid.js"
 import { initializeLobby, showLobbyScreen, hideLobbyScreen, updateLobbyPlayers } from "./ui/lobby.js"
 import { renderPowerup, removePowerup, checkPowerupPickup, clearAllPowerups, initializePlayerStats, addPowerupToPlayer } from "./game/powerupController.js"
 import { initializeSoundManager, playSound } from "./audio/soundManager.js"
+import { initializeConnectionStatus, updateConnectionStatus, setReconnectAttempts } from "./ui/connection-status.js"
 import "./ui/audio-toggle.js"
 
 
@@ -36,6 +37,14 @@ initializeScoreboard()
 initializeChat(socket)
 initializeLobby()
 initializeSoundManager()
+initializeConnectionStatus()
+
+// Store reconnection data
+let reconnectionData = {
+    roomCode: null,
+    playerName: null,
+    wasInGame: false
+}
 
 let player
 let lastPosition = { x: 1, y: 1 }
@@ -48,10 +57,53 @@ export function resetPlayer() {
 // Socket event handlers
 socket.on('connect', () => {
     // Socket connected
+    updateConnectionStatus('connected')
+    
+    // Attempt automatic rejoin if we were in a game
+    if (reconnectionData.roomCode && reconnectionData.playerName && reconnectionData.wasInGame) {
+        console.log('Attempting to rejoin room:', reconnectionData.roomCode)
+        socket.emit('room:rejoin', {
+            roomCode: reconnectionData.roomCode,
+            playerName: reconnectionData.playerName
+        })
+    }
 })
 
-socket.on('disconnect', () => {
+socket.on('disconnect', (reason) => {
     // Socket disconnected
+    updateConnectionStatus('disconnected')
+    
+    // Store reconnection data if we're in a game
+    if (player && playerData.name) {
+        reconnectionData.playerName = playerData.name
+        reconnectionData.wasInGame = document.getElementById('game-screen') && 
+                                     !document.getElementById('game-screen').classList.contains('hidden')
+        
+        // Get room code from socket or current screen
+        const roomCodeElement = document.getElementById('room-code')
+        if (roomCodeElement) {
+            reconnectionData.roomCode = roomCodeElement.textContent.trim()
+        }
+    }
+    
+    console.log('Disconnected:', reason)
+})
+
+socket.on('reconnect_attempt', (attemptNumber) => {
+    setReconnectAttempts(attemptNumber)
+    updateConnectionStatus('reconnecting')
+})
+
+socket.on('reconnect', (attemptNumber) => {
+    console.log('Reconnected after', attemptNumber, 'attempts')
+    updateConnectionStatus('connected')
+})
+
+socket.on('reconnect_failed', () => {
+    updateConnectionStatus('disconnected', 'Connection failed')
+    import('./ui/notifications.js').then(({ showError }) => {
+        showError('Failed to reconnect. Please refresh the page.')
+    })
 })
 
 socket.on('connect_error', (error) => {
@@ -113,6 +165,9 @@ socket.on('game:state', (state) => {
 })
 
 socket.on('room:created', (state) => {
+    // Store reconnection data
+    reconnectionData.roomCode = state.roomCode
+    reconnectionData.playerName = playerData.name
     
     // Clear loading states
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
@@ -167,6 +222,13 @@ socket.on('room:created', (state) => {
 })
 
 socket.on('room:updated', (state) => {
+    // Update reconnection data
+    if (state.roomCode) {
+        reconnectionData.roomCode = state.roomCode
+    }
+    if (playerData.name) {
+        reconnectionData.playerName = playerData.name
+    }
     
     // Clear loading states (if any menu buttons were in loading state)
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
@@ -386,11 +448,86 @@ socket.on('error', (data) => {
         showError(data.message)
     })
     
+    // Handle reconnection-specific errors
+    if (data.code === 'RECONNECTION_EXPIRED' || data.code === 'ROOM_NOT_FOUND') {
+        // Clear reconnection data if rejoin failed
+        reconnectionData.roomCode = null
+        reconnectionData.playerName = null
+        reconnectionData.wasInGame = false
+    }
+    
     // Clear loading states on error
     import('./ui/menu.js').then(({ clearButtonLoading }) => {
         if (clearButtonLoading) {
             clearButtonLoading()
         }
+    })
+})
+
+// Handle successful rejoin
+socket.on('room:rejoined', (state) => {
+    console.log('Successfully rejoined room:', state.roomCode)
+    
+    import('./ui/notifications.js').then(({ showSuccess }) => {
+        showSuccess('Reconnected to game!')
+    })
+    
+    // Restore game state
+    if (state.gameState) {
+        // Initialize board
+        if (state.gameState.board) {
+            initializeMap(state.gameState.board, true)
+        }
+        
+        // Clear previous state
+        clearAllPlayers()
+        clearAllPowerups()
+        clearAllBombs()
+        clearDestroyedBlocks()
+        resetPlayer()
+        
+        // Show game screen
+        showGameScreen(state.roomCode, state.gameMode)
+        
+        // Create local player
+        const myPlayer = state.players?.find(p => p.id === socket.id)
+        if (myPlayer) {
+            player = createLocalPlayer(myPlayer.id, myPlayer.name, myPlayer.x, myPlayer.y, myPlayer.color, myPlayer)
+            initializePlayerStats(player.id)
+        }
+        
+        // Create remote players
+        state.players?.forEach(p => {
+            if (p.id !== socket.id) {
+                createRemotePlayer(p)
+                initializePlayerStats(p.id)
+            }
+        })
+        
+        // Render powerups
+        if (state.gameState.powerups) {
+            state.gameState.powerups.forEach(powerup => {
+                renderPowerup(powerup.x, powerup.y, powerup.type)
+            })
+        }
+        
+        // Render scoreboard
+        renderScoreboard(state.players, socket.id)
+        
+        // Load chat history
+        loadChatHistory(state.chats || [])
+    }
+    
+    // Update reconnection data
+    reconnectionData.roomCode = state.roomCode
+    reconnectionData.wasInGame = true
+})
+
+// Handle player rejoin notification (for other players)
+socket.on('player:rejoined', (data) => {
+    console.log('Player rejoined:', data.playerName)
+    import('./ui/notifications.js').then(({ showInfo }) => {
+        showInfo(`${data.playerName} reconnected`, 3000)
     })
 })
 
