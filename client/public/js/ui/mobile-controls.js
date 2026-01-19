@@ -13,7 +13,8 @@ let lastTapTime = 0
 let lastTapX = 0
 let lastTapY = 0
 const DOUBLE_TAP_DELAY = 300 // ms
-const MIN_DRAG_DISTANCE = 20 // pixels
+const MIN_DRAG_DISTANCE = 10 // pixels - reduced for better responsiveness
+const DRAG_UPDATE_THRESHOLD = 20 // pixels - update movement direction after this distance
 
 /**
  * Initialize mobile controls
@@ -52,6 +53,7 @@ function setupTouchHandlers() {
   
   let isDragging = false
   let dragStartPos = null
+  let lastMoveDirection = null
   
   // Touch start - detect initial touch
   gridElement.addEventListener('touchstart', (e) => {
@@ -65,6 +67,7 @@ function setupTouchHandlers() {
     // Store drag start position
     dragStartPos = { x: touch.clientX, y: touch.clientY }
     isDragging = false
+    lastMoveDirection = null
     
     // Check for double tap
     const currentTime = Date.now()
@@ -81,6 +84,7 @@ function setupTouchHandlers() {
         keys.space = false
       }, 50)
       lastTapTime = 0 // Reset to prevent triple-tap
+      return
     } else {
       // First tap - record for potential double tap
       lastTapTime = currentTime
@@ -99,44 +103,50 @@ function setupTouchHandlers() {
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
     
     // If movement exceeds threshold, it's a drag
-    if (distance > MIN_DRAG_DISTANCE && !isDragging) {
-      isDragging = true
-      e.preventDefault()
-    }
-    
-    if (isDragging && dragStartPos) {
-      e.preventDefault()
-      
-      // Calculate drag direction
-      const moveX = touch.clientX - dragStartPos.x
-      const moveY = touch.clientY - dragStartPos.y
-      const absX = Math.abs(moveX)
-      const absY = Math.abs(moveY)
-      
-      // Determine primary direction (prefer horizontal or vertical based on larger movement)
-      if (absX > absY) {
-        // Horizontal movement
-        keys.left = false
-        keys.right = false
-        if (moveX > 0) {
-          keys.right = true
-        } else {
-          keys.left = true
-        }
-      } else {
-        // Vertical movement
-        keys.up = false
-        keys.down = false
-        if (moveY > 0) {
-          keys.down = true
-        } else {
-          keys.up = true
-        }
+    if (distance > MIN_DRAG_DISTANCE) {
+      if (!isDragging) {
+        isDragging = true
+        e.preventDefault()
       }
       
-      // Update drag start position for continuous movement
-      if (absX > 30 || absY > 30) {
-        dragStartPos = { x: touch.clientX, y: touch.clientY }
+      if (dragStartPos) {
+        e.preventDefault()
+        
+        // Calculate drag direction from start position
+        const moveX = touch.clientX - dragStartPos.x
+        const moveY = touch.clientY - dragStartPos.y
+        const absX = Math.abs(moveX)
+        const absY = Math.abs(moveY)
+        
+        // Only update direction if movement is significant enough
+        if (absX > DRAG_UPDATE_THRESHOLD || absY > DRAG_UPDATE_THRESHOLD) {
+          // Determine primary direction (prefer horizontal or vertical based on larger movement)
+          let newDirection = null
+          
+          if (absX > absY) {
+            // Horizontal movement
+            newDirection = moveX > 0 ? 'right' : 'left'
+          } else {
+            // Vertical movement
+            newDirection = moveY > 0 ? 'down' : 'up'
+          }
+          
+          // Only update keys if direction changed
+          if (newDirection !== lastMoveDirection) {
+            // Clear all movement keys first
+            keys.up = false
+            keys.down = false
+            keys.left = false
+            keys.right = false
+            
+            // Set new direction
+            keys[newDirection] = true
+            lastMoveDirection = newDirection
+            
+            // Update drag start position for next movement calculation
+            dragStartPos = { x: touch.clientX, y: touch.clientY }
+          }
+        }
       }
     }
   }, { passive: false })
@@ -151,6 +161,7 @@ function setupTouchHandlers() {
     
     isDragging = false
     dragStartPos = null
+    lastMoveDirection = null
   }, { passive: false })
   
   // Touch cancel - stop movement
@@ -162,14 +173,7 @@ function setupTouchHandlers() {
     
     isDragging = false
     dragStartPos = null
-  }, { passive: false })
-  
-  // Prevent default touch behaviors that might interfere
-  gridElement.addEventListener('touchstart', (e) => {
-    // Only prevent default if it's not a single tap (potential double tap)
-    if (e.touches.length === 1 && isDragging) {
-      e.preventDefault()
-    }
+    lastMoveDirection = null
   }, { passive: false })
 }
 

@@ -1140,6 +1140,21 @@ button.loading::after {
     flex-direction: column;
 }
 
+/* Game controls header */
+.game-controls-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0, 26, 51, 0.5);
+    border-bottom: 2px solid rgba(0, 119, 182, 0.3);
+    z-index: 1000;
+}
+
 #game-wrapper {
     display: flex;
     justify-content: center;
@@ -1421,7 +1436,12 @@ button.loading::after {
         max-height: 100vh;
     }
     
-    /* Game controls header already shown */
+    /* Compact header on mobile */
+    .game-controls-header {
+        padding: 6px 10px;
+        gap: 6px;
+        min-height: 44px; /* Ensure touch target size */
+    }
     
     #game-wrapper {
         flex-direction: column;
